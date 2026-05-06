@@ -31,6 +31,7 @@ import {
   BREAKFAST_ONLY_OR_COMPLEMENTARY,
   FREE_PORTION_FOODS,
 } from './data/mealRules';
+import { FOOD_ALIASES, normalizeFoodText, resolveFoodAlias } from './data/foodAliases';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
