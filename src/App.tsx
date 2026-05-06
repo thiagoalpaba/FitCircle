@@ -12,7 +12,16 @@ import {
   Book, PlusCircle, Users, User, LayoutGrid, Shuffle, Sliders, Settings, AlertCircle, ShieldCheck,
   Smartphone, Share, ChevronRight, Sparkles, UserPlus, Share2, Camera
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react'
+function MobileFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full min-h-[100dvh] bg-[#E5E7EB] flex justify-center">
+      <div className="relative w-full max-w-[430px] h-[100dvh] bg-[#F9FAFB] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 
@@ -1261,6 +1270,13 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     setOnboarded(true);
     setIsLoggedIn(true);
   };
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('e2eDemo') === '1') {
+    fillDemo();
+  }
+}, []);
 
   return (
     <Ctx.Provider value={{
@@ -2506,7 +2522,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
   const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+    <div className="w-full bg-gray-50 min-h-screen pb-32">
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
       
       {/* Header */}
@@ -4675,7 +4691,9 @@ function RegisterWorkoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
 export default function App() {
   return (
     <AppProvider>
-      <Navigation />
+      <MobileFrame>
+        <Navigation />
+      </MobileFrame>
     </AppProvider>
   );
 }
@@ -4725,8 +4743,8 @@ function Navigation() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
-      <main className="flex-1 overflow-y-auto w-full no-scrollbar scroll-smooth">
+        <div className="relative flex flex-col h-full min-h-0 overflow-hidden bg-gray-50">
+        <main className="flex-1 min-h-0 overflow-y-auto w-full no-scrollbar scroll-smooth pb-28">
         {screen === 'hoje' && <HojeScreen onGoToList={() => setScreen('lista')} onNavigate={setScreen} />}
         {screen === 'lista' && (
           <RefeicoesListScreen 
@@ -4777,9 +4795,10 @@ function Navigation() {
 
       {/* Bottom Nav */}
       {screen !== 'registrar' && (
-        <div className="fixed bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-2xl">
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-2xl">
           {navItems.map((item) => (
             <button
+            data-testid={item.central ? 'nav-add' : `nav-${item.key}`}
               key={item.key}
               onClick={() => {
                 if (item.key === 'registrar') {
