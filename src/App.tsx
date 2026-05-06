@@ -1270,6 +1270,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     setOnboarded(true);
     setIsLoggedIn(true);
   };
+  
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
 
@@ -4674,9 +4675,13 @@ function RegisterWorkoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
               </div>
 
               <div className="pt-4 space-y-4">
-                <button onClick={handleSave} className="w-full bg-orange-500 text-white font-black py-5 rounded-3xl shadow-xl shadow-orange-100 text-xs uppercase tracking-widest active:scale-95 transition-all">
-                  Salvar Treino
-                </button>
+                <button
+  data-testid="save-workout"
+  onClick={handleSave}
+  className="w-full bg-orange-500 text-white font-black py-5 rounded-3xl shadow-xl shadow-orange-100 text-xs uppercase tracking-widest active:scale-95 transition-all"
+>
+  Salvar Treino
+</button>
                 <p className="text-[10px] text-gray-400 font-bold italic text-center leading-relaxed">
                   As calorias do treino são estimativas. Use como referência.
                 </p>
@@ -4774,13 +4779,13 @@ function Navigation() {
              <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative z-10 space-y-6 text-gray-900">
                 <h3 className="text-xl font-black text-center">O que fazer agora?</h3>
                 <div className="grid grid-cols-2 gap-4">
-                   <button onClick={() => handleQuickAdd('meal')} className="bg-green-50 p-6 rounded-3xl flex flex-col items-center gap-3 border border-green-100 active:scale-95 transition-all">
+                   <button onClick={() => handleQuickAdd('meal')} data-testid="quick-add-meal" className="bg-green-50 p-6 rounded-3xl flex flex-col items-center gap-3 border border-green-100 active:scale-95 transition-all">
                       <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-100">
                         <Utensils size={24} />
                       </div>
                       <span className="text-xs font-black uppercase tracking-tighter text-green-700 text-center">Registrar Refeição</span>
                    </button>
-                   <button onClick={() => handleQuickAdd('workout')} className="bg-orange-50 p-6 rounded-3xl flex flex-col items-center gap-3 border border-orange-100 active:scale-95 transition-all">
+                   <button onClick={() => handleQuickAdd('workout')} data-testid="quick-add-workout" className="bg-orange-50 p-6 rounded-3xl flex flex-col items-center gap-3 border border-orange-100 active:scale-95 transition-all">
                       <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-100">
                         <Dumbbell size={24} />
                       </div>
@@ -4798,15 +4803,9 @@ function Navigation() {
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-2xl">
           {navItems.map((item) => (
             <button
-            data-testid={item.central ? 'nav-add' : `nav-${item.key}`}
               key={item.key}
-              onClick={() => {
-                if (item.key === 'registrar') {
-                  setShowQuickAdd(true);
-                  return;
-                }
-                setScreen(item.key as any);
-              }}
+              data-testid={item.central ? 'nav-add' : `nav-${item.key}`}
+                onClick={() => item.central ? setShowQuickAdd(true) : setScreen(item.key as any)}
               className={`flex flex-col items-center gap-1.5 transition-all ${
                 item.central ? 'mb-8' : ''
               } ${screen === item.key ? 'text-green-600' : 'text-gray-400'}`}
