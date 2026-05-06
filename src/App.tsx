@@ -790,31 +790,184 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const validatePlan = (plan: Record<string, any[]>) => {
-    const keys = Object.keys(plan);
-    keys.forEach(k => {
-      const options = plan[k];
-      if (!options || options.length === 0) return;
-      
-      const recommendedCount = options.filter(o => o.badge === 'Recomendada').length;
-      if (recommendedCount !== 1) {
-        options.forEach(o => { if (o.badge === 'Recomendada') o.badge = 'Completa'; });
-        options[0].badge = 'Recomendada';
-      }
-      
-      if (k === 'almoco' || k === 'jantar') {
-        options.forEach(opt => {
-          const lower = opt.qty.toLowerCase();
-          const hasProt = lower.includes('frango') || lower.includes('carne') || lower.includes('patinho') || lower.includes('peixe') || lower.includes('tilápia') || lower.includes('ovo') || lower.includes('proteína') || lower.includes('proteina');
-          if (!hasProt) {
-            opt.name = 'Refeição Proteica Balanceada';
-            opt.qty = 'Proteína Principal (Frango/Carne) 120g + ' + opt.qty;
-            opt.cal += 240;
-          }
-        });
-      }
-    });
-    return plan;
+  const isMainMealKey = (mealKey: string) => mealKey === 'almoco' || mealKey === 'jantar';
+
+  const normalizeText = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+  const optionText = (opt: any) => normalizeText(`${opt.name || ''} ${opt.qty || ''}`);
+
+  const hasSupplementInMainMeal = (opt: any) => {
+    const text = optionText(opt);
+
+    return SUPPLEMENTS.some(supplement =>
+      text.includes(normalizeText(supplement))
+    );
   };
+
+  const hasGenericProteinPatch = (opt: any) => {
+    const text = optionText(opt);
+
+    return (
+      text.includes('proteina principal') ||
+      text.includes('frango/carne') ||
+      text.includes('refeicao proteica balanceada')
+    );
+  };
+
+  const hasRealMainProtein = (opt: any) => {
+    const text = optionText(opt);
+
+    return MAIN_MEAL_PROTEINS.some(protein => {
+      const normalizedProtein = normalizeText(protein);
+
+      // Whey e achocolatado nunca podem contar como proteína de almoço/jantar.
+      if (normalizedProtein.includes('whey') || normalizedProtein.includes('achocolatado')) {
+        return false;
+      }
+
+      return text.includes(normalizedProtein);
+    });
+  };
+
+  const isDuplicateOption = (option: any, existing: any[]) => {
+    const text = optionText(option);
+
+    return existing.some(old => optionText(old) === text);
+  };
+
+  const getFallbackOptions = (mealKey: string) => {
+    if (mealKey === 'jantar') {
+      return [
+        {
+          name: 'Frango com mandioca e salada',
+          qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+          cal: 485,
+          badge: 'Recomendada',
+          badgeDesc: '',
+          score: 1000,
+        },
+        {
+          name: 'Peixe com batata e legumes',
+          qty: 'Tilápia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 150g',
+          cal: 420,
+          badge: 'Completa',
+          badgeDesc: '',
+          score: 900,
+        },
+        {
+          name: 'Patinho com arroz e legumes',
+          qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 150g',
+          cal: 520,
+          badge: 'Completa',
+          badgeDesc: '',
+          score: 850,
+        },
+      ];
+    }
+
+    return [
+      {
+        name: 'Arroz, feijão preto e frango',
+        qty: 'Arroz branco cozido 150g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+        cal: 555,
+        badge: 'Recomendada',
+        badgeDesc: '',
+        score: 1000,
+      },
+      {
+        name: 'Arroz, feijão e carne moída',
+        qty: 'Arroz branco cozido 150g + Feijão preto cozido 100g + Patinho moído 140g + Salada verde à vontade',
+        cal: 610,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Peixe com batata e legumes',
+        qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 150g',
+        cal: 450,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 850,
+      },
+    ];
+  };
+
+  const ensureOneRecommended = (options: any[]) => {
+    if (!options.length) return options;
+
+    const sorted = [...options].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    return sorted.map((option, index) => ({
+      ...option,
+      badge: index === 0 ? 'Recomendada' : option.badge === 'Recomendada' ? 'Completa' : option.badge || 'Completa',
+    }));
+  };
+
+  const validatedPlan: Record<string, any[]> = {};
+
+  Object.keys(plan).forEach(mealKey => {
+    const options = plan[mealKey] || [];
+    const cleanedOptions: any[] = [];
+
+    for (const opt of options) {
+      if (!opt) continue;
+
+      // Remove opção duplicada.
+      if (isDuplicateOption(opt, cleanedOptions)) continue;
+
+      if (isMainMealKey(mealKey)) {
+        // Almoço/jantar não podem ter whey/achocolatado.
+        if (hasSupplementInMainMeal(opt)) continue;
+
+        // Não aceitar remendo genérico.
+        if (hasGenericProteinPatch(opt)) continue;
+
+        // Almoço/jantar precisam ter proteína real.
+        if (!hasRealMainProtein(opt)) continue;
+      }
+
+      cleanedOptions.push(opt);
+    }
+
+    let finalOptions = cleanedOptions;
+
+    // Se almoço/jantar ficou com poucas opções, completar com opções reais.
+    if (isMainMealKey(mealKey) && finalOptions.length < 3) {
+      const fallbacks = getFallbackOptions(mealKey);
+
+      for (const fallback of fallbacks) {
+        if (finalOptions.length >= 3) break;
+        if (!isDuplicateOption(fallback, finalOptions)) {
+          finalOptions.push(fallback);
+        }
+      }
+    }
+
+    // Nunca deixar refeição vazia.
+    if (finalOptions.length === 0) {
+      finalOptions = [
+        {
+          name: 'Pão integral com queijo minas',
+          qty: 'Pão integral 2 fatias + Queijo minas frescal 1 fatia',
+          cal: 280,
+          badge: 'Recomendada',
+          badgeDesc: '',
+          score: 500,
+        },
+      ];
+    }
+
+    validatedPlan[mealKey] = ensureOneRecommended(finalOptions).slice(0, 3);
+  });
+
+  return validatedPlan;
+};
 
   const swapMealItem = (mealKey: string, index: number) => {
     if (!userProfile) return;
