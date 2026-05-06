@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileFrame } from './components/MobileFrame';
+import { MEAL_CONFIGS } from './data/mealConfigs';
+import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES } from './data/workouts';
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 
 const C = {
@@ -440,59 +442,6 @@ const findFuzzyMatch = (input: string) => {
   return bestMatch?.name || null;
 };
 
-// ─── MEAL CONFIGS ─────────────────────────────────────────────────────────────
-
-const MEAL_CONFIGS: Record<number, MealConfig[]> = {
-  3: [
-    { key: 'cafe', label: 'Café da manhã', icon: Coffee, color: '#F59E0B' },
-    { key: 'almoco', label: 'Almoço', icon: Sun, color: '#22C55E' },
-    { key: 'jantar', label: 'Jantar', icon: Moon, color: '#8B5CF6' },
-  ],
-  4: [
-    { key: 'cafe', label: 'Café da manhã', icon: Coffee, color: '#F59E0B' },
-    { key: 'almoco', label: 'Almoço', icon: Sun, color: '#22C55E' },
-    { key: 'lanche', label: 'Lanche da tarde', icon: Apple, color: '#3B82F6' },
-    { key: 'jantar', label: 'Jantar', icon: Moon, color: '#8B5CF6' },
-  ],
-  5: [
-    { key: 'cafe', label: 'Café da manhã', icon: Coffee, color: '#F59E0B' },
-    { key: 'lancheManha', label: 'Lanche da manhã', icon: Apple, color: '#F97316' },
-    { key: 'almoco', label: 'Almoço', icon: Sun, color: '#22C55E' },
-    { key: 'lanche', label: 'Lanche da tarde', icon: Apple, color: '#3B82F6' },
-    { key: 'jantar', label: 'Jantar', icon: Moon, color: '#8B5CF6' },
-  ],
-  6: [
-    { key: 'cafe', label: 'Café da manhã', icon: Coffee, color: '#F59E0B' },
-    { key: 'lancheManha', label: 'Lanche da manhã', icon: Apple, color: '#F97316' },
-    { key: 'almoco', label: 'Almoço', icon: Sun, color: '#22C55E' },
-    { key: 'lanche', label: 'Lanche da tarde', icon: Apple, color: '#3B82F6' },
-    { key: 'jantar', label: 'Jantar', icon: Moon, color: '#8B5CF6' },
-    { key: 'ceia', label: 'Ceia', icon: CloudMoon, color: '#6366F1' },
-  ],
-};
-
-// ─── WORKOUT CONSTANTS ────────────────────────────────────────────────────────
-
-const WORKOUT_TYPES: { key: WorkoutType; label: string; icon: any }[] = [
-  { key: 'caminhada', label: 'Caminhada', icon: Footprints },
-  { key: 'corrida', label: 'Corrida', icon: Gauge },
-  { key: 'musculacao', label: 'Musculação', icon: Dumbbell },
-  { key: 'bike', label: 'Bike', icon: Bike },
-  { key: 'hidroginastica', label: 'Hidroginástica', icon: Shield },
-  { key: 'pilates', label: 'Pilates', icon: Activity },
-  { key: 'outro', label: 'Outro', icon: Activity },
-];
-
-const INTENSITIES: { key: Intensity; label: string; color: string }[] = [
-  { key: 'leve', label: 'Leve', color: '#22C55E' },
-  { key: 'moderada', label: 'Moderada', color: '#F59E0B' },
-  { key: 'intensa', label: 'Intensa', color: '#EF4444' },
-];
-
-const BASE_CALS: Record<string, number> = {
-  caminhada: 4, corrida: 9, musculacao: 6, bike: 7, hidroginastica: 4, pilates: 3.5, outro: 5,
-};
-const INT_MULT: Record<string, number> = { leve: 0.8, moderada: 1.0, intensa: 1.3 };
 
 // ─── CIRCULO CONSTANTS ────────────────────────────────────────────────────────
 
