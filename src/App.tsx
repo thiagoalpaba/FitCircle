@@ -30,6 +30,7 @@ import {
   SUPPLEMENTS,
   BREAKFAST_ONLY_OR_COMPLEMENTARY,
   FREE_PORTION_FOODS,
+  sanitizeOptionQtyText,
 } from './data/mealRules';
 import { resolveFoodName } from './data/foodAliases';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -932,7 +933,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
         if (!hasRealMainProtein(opt)) continue;
       }
 
-      cleanedOptions.push(opt);
+      cleanedOptions.push({
+  ...opt,
+  qty: sanitizeOptionQtyText(opt.qty || ''),
+});
     }
 
     let finalOptions = cleanedOptions;
@@ -962,8 +966,12 @@ function AppProvider({ children }: { children: React.ReactNode }) {
         },
       ];
     }
+    const sanitizedOptions = finalOptions.map(option => ({
+  ...option,
+  qty: sanitizeOptionQtyText(option.qty || ''),
+}));
 
-    validatedPlan[mealKey] = ensureOneRecommended(finalOptions).slice(0, 3);
+validatedPlan[mealKey] = ensureOneRecommended(sanitizedOptions).slice(0, 3);
   });
 
   return validatedPlan;

@@ -72,3 +72,86 @@ export const BREAKFAST_ONLY_OR_COMPLEMENTARY = [
 export const FREE_PORTION_FOODS = [
   'Salada verde',
 ];
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function sanitizeOptionQtyText(qty: string) {
+  let text = qty;
+
+  // Salada deve aparecer como livre, não em gramas.
+  text = text.replace(/Salada verde\s+\d+\s*g/gi, 'Salada verde à vontade');
+
+  // Morango não deve aparecer como 33 unidades.
+  text = text.replace(/Morango\s+\d+\s+unidades?/gi, 'Morango 150g');
+
+  Object.entries(PORTION_LIMITS).forEach(([foodName, limit]) => {
+    const escapedFood = escapeRegExp(foodName);
+
+    // Limite para gramas: "Whey Protein 100g" -> "Whey Protein 40g"
+    text = text.replace(
+      new RegExp(`(${escapedFood}\\s+)(\\d+)(\\s*g)`, 'gi'),
+      (_match, prefix, qtyValue, suffix) => {
+        const n = Number(qtyValue);
+
+        if (!Number.isFinite(n)) return `${prefix}${qtyValue}${suffix}`;
+
+        const capped = Math.min(n, limit.max);
+
+        return `${prefix}${capped}${suffix}`;
+      }
+    );
+
+    // Limite para unidades: "Ovo de galinha 3 unidades" -> "Ovo de galinha 2 unidades"
+    text = text.replace(
+      new RegExp(`(${escapedFood}\\s+)(\\d+)(\\s+unidades?)`, 'gi'),
+      (_match, prefix, qtyValue, suffix) => {
+        const n = Number(qtyValue);
+
+        if (!Number.isFinite(n)) return `${prefix}${qtyValue}${suffix}`;
+
+        const capped = Math.min(n, limit.max);
+
+        return `${prefix}${capped}${suffix}`;
+      }
+    );
+
+    // Limite para fatias: "Pão integral 3 fatias" -> "Pão integral 2 fatias"
+    text = text.replace(
+      new RegExp(`(${escapedFood}\\s+)(\\d+)(\\s+fatias?)`, 'gi'),
+      (_match, prefix, qtyValue, suffix) => {
+        const n = Number(qtyValue);
+
+        if (!Number.isFinite(n)) return `${prefix}${qtyValue}${suffix}`;
+
+        const capped = Math.min(n, limit.max);
+
+        return `${prefix}${capped}${suffix}`;
+      }
+    );
+
+    // Limite para colheres: "Requeijão light 4 colheres..." -> limite pelo max configurado
+    text = text.replace(
+      new RegExp(`(${escapedFood}\\s+)(\\d+)(\\s+colheres?[^+\\n]*)`, 'gi'),
+      (_match, prefix, qtyValue, suffix) => {
+        const n = Number(qtyValue);
+
+        if (!Number.isFinite(n)) return `${prefix}${qtyValue}${suffix}`;
+
+        // Para colher, usar limite visual mais conservador.
+        const maxSpoons = foodName === 'Requeijão light' ? 2 : 1;
+        const capped = Math.min(n, maxSpoons);
+
+        return `${prefix}${capped}${suffix}`;
+      }
+    );
+  });
+
+  // Higiene textual de plurais errados.
+  text = text.replace(/unidadees/gi, 'unidades');
+  text = text.replace(/fatiaes/gi, 'fatias');
+  text = text.replace(/colher(es)?s/gi, 'colheres');
+
+  return text;
+}

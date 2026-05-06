@@ -55,7 +55,10 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
 
   test('não mostra porções absurdas conhecidas', async ({ page }) => {
     const bodyText = await page.locator('body').innerText();
-
+    expect(bodyText).not.toMatch(/Pão integral\s+3\s+fatias/i);
+    expect(bodyText).not.toMatch(/Ovo de galinha\s+3\s+unidades/i);
+    expect(bodyText).not.toMatch(/Requeijão light\s+4\s+colheres/i);
+    expect(bodyText).not.toMatch(/Manteiga\s+4\s+pontas/i);
     expect(bodyText).not.toMatch(/Whey Protein\s+100g/i);
     expect(bodyText).not.toMatch(/Morango\s+33/i);
     expect(bodyText).not.toMatch(/Salada verde\s+\d+g/i);
@@ -92,3 +95,4 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
     }
   });
 });
+
