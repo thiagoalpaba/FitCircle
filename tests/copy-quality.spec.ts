@@ -63,7 +63,8 @@ test.describe('FitCircle - qualidade textual', () => {
     expect(bodyText).toMatch(/Musculação/i);
     expect(bodyText).toMatch(/Hidroginástica/i);
     expect(bodyText).toMatch(/Pilates/i);
-
+    expect(bodyText).toMatch(/Yoga/i);
+    expect(bodyText).toMatch(/Outro treino/i);
     expect(bodyText).not.toMatch(/musculacao/i);
     expect(bodyText).not.toMatch(/hidroginastica/i);
   });

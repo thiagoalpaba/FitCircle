@@ -4,7 +4,10 @@ import {
   Dumbbell,
   Footprints,
   Gauge,
-  Shield,
+  Waves,
+  CircleEllipsis,
+  Flower2,
+  StretchHorizontal,
 } from 'lucide-react';
 
 export type WorkoutType =
@@ -14,6 +17,7 @@ export type WorkoutType =
   | 'bike'
   | 'hidroginastica'
   | 'pilates'
+  | 'yoga'
   | 'outro';
 
 export type Intensity = 'leve' | 'moderada' | 'intensa';
@@ -23,9 +27,10 @@ export const WORKOUT_TYPES: { key: WorkoutType; label: string; icon: any }[] = [
   { key: 'corrida', label: 'Corrida', icon: Gauge },
   { key: 'musculacao', label: 'Musculação', icon: Dumbbell },
   { key: 'bike', label: 'Bike', icon: Bike },
-  { key: 'hidroginastica', label: 'Hidroginástica', icon: Shield },
-  { key: 'pilates', label: 'Pilates', icon: Activity },
-  { key: 'outro', label: 'Outro', icon: Activity },
+  { key: 'hidroginastica', label: 'Hidroginástica', icon: Waves },
+  { key: 'pilates', label: 'Pilates', icon: StretchHorizontal },
+  { key: 'yoga', label: 'Yoga', icon: Flower2 },
+  { key: 'outro', label: 'Outro treino', icon: CircleEllipsis },
 ];
 
 export const INTENSITIES: { key: Intensity; label: string; color: string }[] = [
@@ -41,6 +46,7 @@ export const BASE_CALS: Record<WorkoutType, number> = {
   bike: 7,
   hidroginastica: 4,
   pilates: 3.5,
+  yoga: 3,
   outro: 5,
 };
 
