@@ -2408,7 +2408,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <span className="text-sm font-black text-green-500">+{burned}</span>
          </div>
          <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-            <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">Saldo</span>
+            <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">Consumido</span>
             <span className="text-sm font-black text-gray-900">{totals.cal}</span>
          </div>
       </div>
@@ -3323,7 +3323,7 @@ function CirculoScreen() {
   const { userProfile, myCheckin, getTotals, calorieGoal, meals, workouts } = useApp();
   const totals = getTotals();
   const workoutCalories = workouts.reduce((sum, workout) => sum + workout.burned, 0);
-  const saldoHoje = Math.max(0, calorieGoal + workoutCalories - totals.cal);
+  const restanteHoje = Math.max(0, calorieGoal - totals.cal);
   const burned = workouts.reduce((acc, w) => acc + safeNumber(w.burned), 0);
   
   const [activeCircle, setActiveCircle] = useState('Thiago & Partners');
