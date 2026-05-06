@@ -32,6 +32,7 @@ import {
   FREE_PORTION_FOODS,
   sanitizeOptionQtyText,
   orderMealQtyText,
+  applySmartBadges,
 } from './data/mealRules';
 import { resolveFoodName } from './data/foodAliases';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -978,7 +979,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   ),
 }));
 
-validatedPlan[mealKey] = ensureOneRecommended(sanitizedOptions).slice(0, 3);
+validatedPlan[mealKey] = applySmartBadges(mealKey, sanitizedOptions).slice(0, 3);
   });
 
   return validatedPlan;

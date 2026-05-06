@@ -141,3 +141,21 @@ test('salada aparece depois da proteína em almoço e jantar', async ({ page }) 
     }
   }
 });
+test('badges do plano fazem sentido básico', async ({ page }) => {
+  const bodyText = await page.locator('body').innerText();
+
+  expect(bodyText).not.toMatch(/Poca Prot\./i);
+  expect(bodyText).not.toMatch(/Pouca Prot\./i);
+  expect(bodyText).not.toMatch(/Menos proteína/i);
+
+  const lines = bodyText.split('\n').map(line => line.trim()).filter(Boolean);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (/leve/i.test(line)) {
+      const nearby = lines.slice(i, i + 8).join(' ');
+      expect(nearby).not.toMatch(/[6-9]\d{2}\s*CALORIAS/i);
+    }
+  }
+});

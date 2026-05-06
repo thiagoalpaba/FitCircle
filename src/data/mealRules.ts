@@ -214,3 +214,152 @@ export function orderMealQtyText(qty: string, mealKey: string) {
 
   return qty;
 }
+function normalizeBadgeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function mealOptionText(option: any) {
+  return normalizeBadgeText(`${option.name || ''} ${option.qty || ''}`);
+}
+
+function hasAnyFood(text: string, foods: string[]) {
+  return foods.some(food => text.includes(normalizeBadgeText(food)));
+}
+
+function hasMainCarb(text: string) {
+  return hasAnyFood(text, [
+    'arroz',
+    'batata',
+    'inhame',
+    'mandioca',
+    'macarrao',
+    'cuscuz',
+  ]);
+}
+
+function hasLegume(text: string) {
+  return hasAnyFood(text, [
+    'feijao',
+    'lentilha',
+    'grao-de-bico',
+  ]);
+}
+
+function hasVegetable(text: string) {
+  return hasAnyFood(text, [
+    'salada',
+    'legumes',
+    'brocolis',
+  ]);
+}
+
+function hasMainProtein(text: string) {
+  return hasAnyFood(text, [
+    'frango',
+    'patinho',
+    'tilapia',
+    'atum',
+    'carne',
+    'ovo',
+    'tofu',
+    'lentilha',
+    'grao-de-bico',
+    'proteina de soja',
+  ]);
+}
+
+function hasHighProteinPortion(text: string) {
+  const patterns = [
+    /frango.*?(1[2-9]\d|2\d\d)g/i,
+    /peito de frango.*?(1[2-9]\d|2\d\d)g/i,
+    /patinho.*?(1[2-9]\d|2\d\d)g/i,
+    /tilapia.*?(1[2-9]\d|2\d\d)g/i,
+    /atum.*?(1[0-9]\d|120)g/i,
+    /carne.*?(1[2-9]\d|2\d\d)g/i,
+    /tofu.*?(1[5-9]\d|200)g/i,
+    /ovo.*?2 unidades/i,
+  ];
+
+  return patterns.some(pattern => pattern.test(text));
+}
+
+function classifyMealOption(mealKey: string, option: any) {
+  const text = mealOptionText(option);
+  const cal = Number(option.cal || 0);
+
+  const isMainMeal = mealKey === 'almoco' || mealKey === 'jantar';
+  const isBreakfastLike = ['cafe', 'lancheManha', 'lanche', 'ceia'].includes(mealKey);
+
+  if (isMainMeal) {
+    const hasProtein = hasMainProtein(text);
+    const hasCarb = hasMainCarb(text);
+    const hasVeg = hasVegetable(text);
+    const hasLeg = hasLegume(text);
+
+    if (hasHighProteinPortion(text) && cal <= 650) {
+      return 'Mais proteína';
+    }
+
+    if (hasProtein && hasCarb && (hasVeg || hasLeg)) {
+      return 'Completa';
+    }
+
+    if (cal <= 380) {
+      return 'Leve';
+    }
+
+    return 'Completa';
+  }
+
+  if (isBreakfastLike) {
+    const isSimple =
+      text.split('+').length <= 2 ||
+      hasAnyFood(text, ['pao frances', 'manteiga', 'requeijao']);
+
+    if (isSimple && cal <= 350) {
+      return 'Simples';
+    }
+
+    if (cal <= 250) {
+      return 'Leve';
+    }
+
+    if (hasAnyFood(text, ['ovo', 'whey', 'iogurte', 'queijo'])) {
+      return 'Completa';
+    }
+
+    return 'Simples';
+  }
+
+  return 'Completa';
+}
+
+export function applySmartBadges(mealKey: string, options: any[]) {
+  if (!options.length) return options;
+
+  const sorted = [...options].sort((a, b) => {
+    const scoreA = Number(a.score || 0);
+    const scoreB = Number(b.score || 0);
+
+    if (scoreA !== scoreB) return scoreB - scoreA;
+
+    const calA = Number(a.cal || 0);
+    const calB = Number(b.cal || 0);
+
+    return calB - calA;
+  });
+
+  return sorted.map((option, index) => {
+    const smartBadge = index === 0 ? 'Recomendada' : classifyMealOption(mealKey, option);
+
+    return {
+      ...option,
+      badge: smartBadge,
+      badgeDesc: '',
+    };
+  });
+}
