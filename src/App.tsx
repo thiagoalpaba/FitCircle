@@ -18,6 +18,7 @@ import { MEAL_CONFIGS } from './data/mealConfigs';
 import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES } from './data/workouts';
 import { CATEGORIES, FOOD_DATABASE, FOODS } from './data/foods';
 import { formatKcal, formatMacro, safeNumber, scrollToTop } from './utils/formatters';
+import { CHECKIN_OPTIONS, QUICK_MSGS, SUBSTITUTIONS } from './data/social';
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 
 const C = {
@@ -350,14 +351,6 @@ const findFuzzyMatch = (input: string) => {
 
 // ─── CIRCULO CONSTANTS ────────────────────────────────────────────────────────
 
-const CHECKIN_OPTIONS = [
-  { key: 'bem', label: 'Estou bem', icon: Smile, color: '#22C55E' },
-  { key: 'fome', label: 'Com fome', icon: Utensils, color: '#F59E0B' },
-  { key: 'doce', label: 'Vontade de doce', icon: IceCream, color: '#EC4899' },
-  { key: 'dificil', label: 'Dia difícil', icon: CloudMoon, color: '#6366F1' },
-  { key: 'treino', label: 'Treinei hoje', icon: Dumbbell, color: '#3B82F6' },
-  { key: 'apoio', label: 'Preciso de apoio', icon: Heart, color: '#EF4444' },
-];
 
 const DAILY_TIPS = [
   "Priorize proteína nas refeições principais.",
@@ -404,13 +397,6 @@ const REACTIONS = [
   { key: 'top', label: 'Top', icon: Star },
 ];
 
-const QUICK_MSGS = [
-  'Bora fechar o dia bem 💪',
-  'Boa refeição! 🥗',
-  'Toma água! 💧',
-  'Amanhã ajusta',
-  'Você está indo bem ✨',
-];
 
 // ─── PLAN DATA ────────────────────────────────────────────────────────────────
 
@@ -446,13 +432,6 @@ const PLAN_OPTIONS: Record<string, { name: string; qty: string; cal: number }[]>
     { name: 'Cottage com frutas vermelhas', qty: 'Cottage 80g + morangos 50g', cal: 100 },
   ],
 };
-
-const SUBSTITUTIONS = [
-  { group: 'Carboidratos', items: ['Arroz branco → Arroz integral','Pão branco → Pão integral','Batata inglesa → Batata-doce','Cuscuz → Quinoa'] },
-  { group: 'Proteínas', items: ['Frango → Peixe (tilápia, salmão)','Carne bovina → Frango grelhado','Ovo inteiro → Claras de ovo','Whey → Iogurte grego'] },
-  { group: 'Gorduras', items: ['Manteiga → Azeite de oliva','Queijo amarelo → Queijo cottage','Amendoim → Castanha de caju'] },
-  { group: 'Frutas', items: ['Banana → Maçã (menos carb)','Uva → Morango (menos açúcar)','Suco industrializado → Fruta in natura'] },
-];
 
 // ─── CONTEXT ──────────────────────────────────────────────────────────────────
 
