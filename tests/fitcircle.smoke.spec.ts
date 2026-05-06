@@ -49,8 +49,8 @@ test.describe('FitCircle - smoke test geral', () => {
   test('fluxo inicial: começar jornada, validação de login e demo', async ({ page }) => {
     await clickIfVisible(page, /começar jornada/i);
 
-    await expect(page.getByText(/bem-vindo|entre|crie/i)).toBeVisible();
-
+  await expect(page.getByRole('heading', { name: /bem-vindo de volta/i })).toBeVisible();
+  
     // Testa botão entrar sem preencher.
     await clickIfVisible(page, /^entrar$/i);
 
