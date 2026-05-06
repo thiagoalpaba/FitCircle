@@ -82,6 +82,9 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
     expect(bodyText).not.toMatch(/Salada verde\s+\d+g/i);
     expect(bodyText).not.toMatch(/Legumes variados\s+[6-9]\d{2}g/i);
     expect(bodyText).not.toMatch(/Batata inglesa cozida\s+[4-9]\d{2}g/i);
+    expect(bodyText).not.toMatch(/Manteiga\s+(1[1-9]|[2-9]\d)g/i);
+    expect(bodyText).not.toMatch(/Requeijão light\s+(3[1-9]|[4-9]\d|\d{3,})g/i);
+    expect(bodyText).not.toMatch(/Whey Protein\s+(4[1-9]|[5-9]\d|\d{3,})g/i);
   });
 
   test('almoço e jantar têm alguma proteína principal real', async ({ page }) => {

@@ -152,7 +152,32 @@ export function sanitizeOptionQtyText(qty: string) {
   text = text.replace(/unidadees/gi, 'unidades');
   text = text.replace(/fatiaes/gi, 'fatias');
   text = text.replace(/colher(es)?s/gi, 'colheres');
+    const hardCaps = [
+    { name: 'Manteiga', max: 10, unit: 'g' },
+    { name: 'Margarina', max: 10, unit: 'g' },
+    { name: 'Requeijão light', max: 30, unit: 'g' },
+    { name: 'Geleia', max: 20, unit: 'g' },
+    { name: 'Whey Protein', max: 40, unit: 'g' },
+  ];
 
+  hardCaps.forEach(({ name, max, unit }) => {
+    const escapedName = escapeRegExp(name);
+
+    text = text.replace(
+      new RegExp(`(${escapedName}\\s+)(\\d+)(\\s*${unit})`, 'gi'),
+      (_match, prefix, qtyValue, suffix) => {
+        const n = Number(qtyValue);
+
+        if (!Number.isFinite(n)) return `${prefix}${qtyValue}${suffix}`;
+
+        return `${prefix}${Math.min(n, max)}${suffix}`;
+      }
+    );
+  });
+
+  text = text.replace(/Café sem açúcar\s+\d+\s*xícaras?/gi, 'Café sem açúcar 1 xícara');
+  text = text.replace(/Chá sem açúcar\s+\d+\s*xícaras?/gi, 'Chá sem açúcar 1 xícara');
+  
   return text;
 }
 
