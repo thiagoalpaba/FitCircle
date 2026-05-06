@@ -21,6 +21,8 @@ export interface Meal {
   c: number;
   f: number;
   time: string;
+shared?: boolean;
+
 }
 
 export interface Workout {

@@ -8,9 +8,11 @@
   "dev:test": "vite --host=127.0.0.1 --port=3010 --strictPort",
   "build": "vite build",
   "preview": "vite preview",
+  "typecheck": "tsc --noEmit",
   "test:e2e": "playwright test",
   "test:e2e:ui": "playwright test --ui",
-  "test:e2e:report": "playwright show-report"
+  "test:e2e:report": "playwright show-report",
+  "check": "npm run build && npm run test:e2e"
 },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -28,6 +30,8 @@
     "@playwright/test": "^1.59.1",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
