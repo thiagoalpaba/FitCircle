@@ -31,7 +31,7 @@ import {
   BREAKFAST_ONLY_OR_COMPLEMENTARY,
   FREE_PORTION_FOODS,
 } from './data/mealRules';
-import { FOOD_ALIASES, normalizeFoodText, resolveFoodAlias } from './data/foodAliases';
+import { resolveFoodName } from './data/foodAliases';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
@@ -2565,29 +2565,41 @@ function PlanoScreen() {
   const [suggestion, setSuggestion] = useState<string | null>(null);
 
   const handleAddBlock = (val: string) => {
-    if (!val.trim()) return;
-    const suggested = findFuzzyMatch(val.trim());
-    if (suggested && suggested.toLowerCase() !== val.trim().toLowerCase()) {
-      setSuggestion(suggested);
-      return;
-    }
-    const finalName = suggested || val.trim();
-    const current = userProfile.blockedFoods || [];
-    if (!current.includes(finalName)) {
-      handleProfileUpdate({ blockedFoods: [...current, finalName] });
-    }
-    setNewPref('');
-    setSuggestion(null);
-  };
+  if (!val.trim()) return;
+
+  const resolvedName = resolveFoodName(val, FOODS);
+
+  if (!resolvedName) {
+    setSuggestion(`Alimento não encontrado: ${val.trim()}`);
+    return;
+  }
+
+  if (resolvedName.toLowerCase() !== val.trim().toLowerCase()) {
+    setSuggestion(resolvedName);
+    return;
+  }
+
+  const current = userProfile.blockedFoods || [];
+
+  if (!current.includes(resolvedName)) {
+    handleProfileUpdate({ blockedFoods: [...current, resolvedName] });
+  }
+
+  setNewPref('');
+  setSuggestion(null);
+};
 
   const confirmBlock = (name: string) => {
-    const current = userProfile.blockedFoods || [];
-    if (!current.includes(name)) {
-      handleProfileUpdate({ blockedFoods: [...current, name] });
-    }
-    setNewPref('');
-    setSuggestion(null);
-  };
+  const resolvedName = resolveFoodName(name, FOODS) || name;
+  const current = userProfile.blockedFoods || [];
+
+  if (!current.includes(resolvedName)) {
+    handleProfileUpdate({ blockedFoods: [...current, resolvedName] });
+  }
+
+  setNewPref('');
+  setSuggestion(null);
+};
   const [activeCategory, setActiveCategory] = useState<'breakfast' | 'main' | 'snacks'>('breakfast');
 
   if (!userProfile) return null;
@@ -2596,18 +2608,26 @@ function PlanoScreen() {
   const configs = MEAL_CONFIGS[count];
 
   const handleAddPref = () => {
-    if (!newPref.trim()) return;
-    const suggested = findFuzzyMatch(newPref.trim());
-    const finalName = suggested || newPref.trim();
-    
-    const current = userProfile.preferredIngredients[activeCategory] || [];
-    if (!current.includes(finalName)) {
-      const updatedPrefs = { ...userProfile.preferredIngredients };
-      updatedPrefs[activeCategory] = [...current, finalName];
-      handleProfileUpdate({ preferredIngredients: updatedPrefs });
-    }
-    setNewPref('');
-  };
+  if (!newPref.trim()) return;
+
+  const resolvedName = resolveFoodName(newPref, FOODS);
+
+  if (!resolvedName) {
+    setSuggestion(`Alimento não encontrado: ${newPref.trim()}`);
+    return;
+  }
+
+  const current = userProfile.preferredIngredients[activeCategory] || [];
+
+  if (!current.includes(resolvedName)) {
+    const updatedPrefs = { ...userProfile.preferredIngredients };
+    updatedPrefs[activeCategory] = [...current, resolvedName];
+    handleProfileUpdate({ preferredIngredients: updatedPrefs });
+  }
+
+  setNewPref('');
+  setSuggestion(null);
+};
 
   const handleRemovePref = (item: string) => {
     const updatedPrefs = { ...userProfile.preferredIngredients };
