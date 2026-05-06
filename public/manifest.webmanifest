@@ -1,0 +1,19 @@
+{
+  "name": "FitCircle",
+  "short_name": "FitCircle",
+  "description": "Plano alimentar, treinos e círculo de apoio em um só lugar.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#22C55E",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
