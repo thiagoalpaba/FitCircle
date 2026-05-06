@@ -19,6 +19,7 @@ import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES } from './data/workouts
 import { CATEGORIES, FOOD_DATABASE, FOODS } from './data/foods';
 import { formatKcal, formatMacro, safeNumber, scrollToTop } from './utils/formatters';
 import { CHECKIN_OPTIONS, QUICK_MSGS, SUBSTITUTIONS } from './data/social';
+import { ProgressBar } from './components/ProgressBar';
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 
 const C = {
@@ -1171,19 +1172,6 @@ useEffect(() => {
 
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 
-function ProgressBar({ val, max, color }: { val: number; max: number; color: string }) {
-  const pct = Math.min((val / max) * 100, 100);
-  return (
-    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-      <motion.div 
-        initial={{ width: 0 }}
-        animate={{ width: `${pct}%` }}
-        className="h-full rounded-full" 
-        style={{ backgroundColor: color }} 
-      />
-    </div>
-  );
-}
 
 // ─── REFEICAO SEARCH MODAL ────────────────────────────────────────────────────
 
