@@ -14,9 +14,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileFrame } from './components/MobileFrame';
-import { MEAL_CONFIGS } from './data/mealConfigs';
-import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES } from './data/workouts';
-import { CATEGORIES, FOOD_DATABASE, FOODS } from './data/foods';
+import { MEAL_CONFIGS, type MealConfig, type MealCount } from './data/mealConfigs';
+import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES, type Intensity, type WorkoutType } from './data/workouts';
+import { CATEGORIES, FOOD_DATABASE, FOODS, type FoodItem } from './data/foods';
 import { formatKcal, formatMacro, safeNumber, scrollToTop } from './utils/formatters';
 import { CHECKIN_OPTIONS, QUICK_MSGS, SUBSTITUTIONS } from './data/social';
 import { ProgressBar } from './components/ProgressBar';
@@ -24,29 +24,6 @@ import { Logo } from './components/Logo';
 import { C } from './data/theme';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
-
-type MealCount = 3 | 4 | 5 | 6;
-type WorkoutType = 'caminhada' | 'corrida' | 'musculacao' | 'bike' | 'hidroginastica' | 'pilates' | 'outro';
-type Intensity = 'leve' | 'moderada' | 'intensa';
-
-interface MealConfig { key: string; label: string; icon: any; color: string; }
-
-interface FoodItem {
-  name: string;
-  category: string;
-  cal: number;
-  p: number;
-  c: number;
-  f: number;
-  source?: string;
-  un?: string;
-  amountPerUn?: number; // Grams per unit
-  isGluten?: boolean;
-  isLactose?: boolean;
-  isEgg?: boolean;
-  isSupplement?: boolean;
-  tags?: string[]; // cafe, lanche, principal
-}
 
 interface MealEntry {
   food: FoodItem;
