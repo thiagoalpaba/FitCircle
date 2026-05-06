@@ -31,6 +31,7 @@ import {
   BREAKFAST_ONLY_OR_COMPLEMENTARY,
   FREE_PORTION_FOODS,
   sanitizeOptionQtyText,
+  orderMealQtyText,
 } from './data/mealRules';
 import { resolveFoodName } from './data/foodAliases';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -935,7 +936,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
 
       cleanedOptions.push({
   ...opt,
-  qty: sanitizeOptionQtyText(opt.qty || ''),
+  qty: orderMealQtyText(
+    sanitizeOptionQtyText(opt.qty || ''),
+    mealKey
+  ),
 });
     }
 
@@ -968,7 +972,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     }
     const sanitizedOptions = finalOptions.map(option => ({
   ...option,
-  qty: sanitizeOptionQtyText(option.qty || ''),
+  qty: orderMealQtyText(
+    sanitizeOptionQtyText(option.qty || ''),
+    mealKey
+  ),
 }));
 
 validatedPlan[mealKey] = ensureOneRecommended(sanitizedOptions).slice(0, 3);

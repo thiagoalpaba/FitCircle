@@ -35,23 +35,41 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
   });
 
   test('não mostra whey em almoço ou jantar', async ({ page }) => {
-    const bodyText = await page.locator('body').innerText();
+  const bodyText = await page.locator('body').innerText();
 
-    const lunchIndex = bodyText.toLowerCase().indexOf('almoço');
-    const dinnerIndex = bodyText.toLowerCase().indexOf('jantar');
+  function getMealSection(text: string, mealName: string) {
+    const headings = [
+      'Café da manhã',
+      'Lanche da manhã',
+      'Almoço',
+      'Lanche da tarde',
+      'Jantar',
+      'Ceia',
+    ];
 
-    if (lunchIndex !== -1 && dinnerIndex !== -1) {
-      const lunchToDinner = bodyText.slice(lunchIndex, dinnerIndex);
-      expect(lunchToDinner).not.toMatch(/whey protein/i);
-      expect(lunchToDinner).not.toMatch(/achocolatado/i);
-    }
+    const start = text.indexOf(mealName);
 
-    if (dinnerIndex !== -1) {
-      const dinnerSection = bodyText.slice(dinnerIndex);
-      expect(dinnerSection).not.toMatch(/whey protein/i);
-      expect(dinnerSection).not.toMatch(/achocolatado/i);
-    }
-  });
+    if (start === -1) return '';
+
+    const possibleEnds = headings
+      .filter((heading) => heading !== mealName)
+      .map((heading) => text.indexOf(heading, start + mealName.length))
+      .filter((index) => index > start);
+
+    const end = possibleEnds.length > 0 ? Math.min(...possibleEnds) : text.length;
+
+    return text.slice(start, end);
+  }
+
+  const lunchSection = getMealSection(bodyText, 'Almoço');
+  const dinnerSection = getMealSection(bodyText, 'Jantar');
+
+  expect(lunchSection).not.toMatch(/whey protein/i);
+  expect(lunchSection).not.toMatch(/achocolatado/i);
+
+  expect(dinnerSection).not.toMatch(/whey protein/i);
+  expect(dinnerSection).not.toMatch(/achocolatado/i);
+});
 
   test('não mostra porções absurdas conhecidas', async ({ page }) => {
     const bodyText = await page.locator('body').innerText();
@@ -96,3 +114,30 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
   });
 });
 
+test('salada aparece depois da proteína em almoço e jantar', async ({ page }) => {
+  const bodyText = await page.locator('body').innerText();
+
+  const sections = ['Almoço', 'Jantar'];
+
+  for (const sectionName of sections) {
+    const sectionIndex = bodyText.indexOf(sectionName);
+
+    if (sectionIndex === -1) continue;
+
+    const sectionText = bodyText.slice(sectionIndex, sectionIndex + 1200);
+
+    const saladIndex = sectionText.toLowerCase().indexOf('salada');
+    const proteinIndexes = [
+      sectionText.toLowerCase().indexOf('frango'),
+      sectionText.toLowerCase().indexOf('patinho'),
+      sectionText.toLowerCase().indexOf('tilápia'),
+      sectionText.toLowerCase().indexOf('carne'),
+      sectionText.toLowerCase().indexOf('atum'),
+      sectionText.toLowerCase().indexOf('tofu'),
+    ].filter(index => index >= 0);
+
+    if (saladIndex >= 0 && proteinIndexes.length > 0) {
+      expect(saladIndex).toBeGreaterThan(Math.min(...proteinIndexes));
+    }
+  }
+});

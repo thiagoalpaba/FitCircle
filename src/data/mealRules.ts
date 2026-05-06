@@ -155,3 +155,62 @@ export function sanitizeOptionQtyText(qty: string) {
 
   return text;
 }
+
+function splitMealItems(qty: string) {
+  return qty
+    .split('+')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function includesAny(value: string, words: string[]) {
+  const normalized = value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  return words.some(word =>
+    normalized.includes(
+      word
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+    )
+  );
+}
+
+export function orderMealQtyText(qty: string, mealKey: string) {
+  const items = splitMealItems(qty);
+
+  if (items.length <= 1) return qty;
+
+  const breakfastKeys = ['cafe', 'lancheManha', 'lanche', 'ceia'];
+  const mainMealKeys = ['almoco', 'jantar'];
+
+  if (breakfastKeys.includes(mealKey)) {
+    const itemScore = (item: string) => {
+      if (includesAny(item, ['pão', 'tapioca', 'aveia', 'cuscuz', 'iogurte'])) return 1;
+      if (includesAny(item, ['ovo', 'queijo', 'requeijão', 'manteiga', 'pasta de amendoim', 'whey'])) return 2;
+      if (includesAny(item, ['banana', 'maçã', 'morango', 'mamão', 'fruta'])) return 3;
+      if (includesAny(item, ['café', 'achocolatado', 'leite', 'bebida'])) return 4;
+      return 2;
+    };
+
+    return [...items].sort((a, b) => itemScore(a) - itemScore(b)).join(' + ');
+  }
+
+  if (mainMealKeys.includes(mealKey)) {
+    const itemScore = (item: string) => {
+      if (includesAny(item, ['arroz', 'batata', 'inhame', 'mandioca', 'macarrão', 'cuscuz'])) return 1;
+      if (includesAny(item, ['feijão', 'lentilha', 'grão-de-bico'])) return 2;
+      if (includesAny(item, ['frango', 'patinho', 'tilápia', 'atum', 'carne', 'ovo', 'tofu', 'proteína de soja'])) return 3;
+      if (includesAny(item, ['legumes', 'brócolis'])) return 4;
+      if (includesAny(item, ['salada'])) return 5;
+      return 3;
+    };
+
+    return [...items].sort((a, b) => itemScore(a) - itemScore(b)).join(' + ');
+  }
+
+  return qty;
+}
