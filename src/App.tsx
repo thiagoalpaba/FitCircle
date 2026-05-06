@@ -12,17 +12,8 @@ import {
   Book, PlusCircle, Users, User, LayoutGrid, Shuffle, Sliders, Settings, AlertCircle, ShieldCheck,
   Smartphone, Share, ChevronRight, Sparkles, UserPlus, Share2, Camera
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react'
-function MobileFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="w-full min-h-[100dvh] bg-[#E5E7EB] flex justify-center">
-      <div className="relative w-full max-w-[430px] h-[100dvh] bg-[#F9FAFB] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
-        {children}
-      </div>
-    </div>
-  );
-}
-
+import { motion, AnimatePresence } from 'motion/react';
+import { MobileFrame } from './components/MobileFrame';
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 
 const C = {
