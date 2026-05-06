@@ -24,6 +24,13 @@ import { Logo } from './components/Logo';
 import { C } from './data/theme';
 import type { AppCtx, Meal, MealEntry, UserProfile, Workout } from './types';
 import { INIT_MEALS } from './data/demo';
+import {
+  PORTION_LIMITS,
+  MAIN_MEAL_PROTEINS,
+  SUPPLEMENTS,
+  BREAKFAST_ONLY_OR_COMPLEMENTARY,
+  FREE_PORTION_FOODS,
+} from './data/mealRules';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
