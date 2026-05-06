@@ -22,62 +22,8 @@ import { CHECKIN_OPTIONS, QUICK_MSGS, SUBSTITUTIONS } from './data/social';
 import { ProgressBar } from './components/ProgressBar';
 import { Logo } from './components/Logo';
 import { C } from './data/theme';
-
+import type { AppCtx, Meal, MealEntry, UserProfile, Workout } from './types';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
-
-interface MealEntry {
-  food: FoodItem;
-  qty: number;
-  unit: 'g' | 'un'; // Added unit selection
-  cal: number;
-  p: number;
-  c: number;
-  f: number;
-}
-
-interface Meal {
-  id: string;
-  type: string;
-  items: MealEntry[];
-  cal: number;
-  p: number;
-  c: number;
-  f: number;
-  time: string;
-  photo?: string;
-  shared?: boolean;
-}
-
-interface Workout {
-  id: string;
-  type: WorkoutType;
-  duration: number;
-  intensity: Intensity;
-  burned: number;
-  time: string;
-}
-
-interface UserProfile {
-  name: string;
-  age: number;
-  weight: number;
-  height: number;
-  gender: 'masculino' | 'feminino';
-  goal: 'perda' | 'ganho' | 'manutencao';
-  trainingsPerWeek: number;
-  mealCount: MealCount;
-  dietaryProfile?: 'sem_restricao' | 'vegetariano' | 'vegano' | 'pescetariano';
-  mainDifficulty: string;
-  restrictions: string[];
-  blockedFoods?: string[];
-  profilePicture?: string;
-  preferredIngredients: {
-    breakfast: string[];
-    main: string[];
-    snacks: string[];
-  };
-  mealStyles?: Record<string, 'balanced' | 'simple'>;
-}
 
 const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
   'Pão integral': { max: 2, unit: 'fatia' },
@@ -112,47 +58,6 @@ const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
   'Mamão papaia': { max: 200, unit: 'g' },
 };
 
-interface AppCtx {
-  meals: Meal[];
-  customFoods: FoodItem[];
-  workouts: Workout[];
-  mealCount: MealCount;
-  pendingMealType: string | null;
-  pendingEditMealId: string | null;
-  myCheckin: string;
-  calorieGoal: number;
-  macros: { p: number; c: number; f: number };
-  userProfile: UserProfile | null;
-  isLoggedIn: boolean;
-  onboarded: boolean;
-  selectedDate: Date;
-  setSelectedDate: (d: Date) => void;
-  setMeals: (m: Meal[]) => void;
-  addMeal: (m: Omit<Meal, 'id'>) => void;
-  updateMeal: (id: string, m: Partial<Meal>) => void;
-  deleteMeal: (id: string) => void;
-  addCustomFood: (f: FoodItem) => void;
-  setWorkouts: (w: Workout[]) => void;
-  addWorkout: (w: Workout) => void;
-  deleteWorkout: (id: string) => void;
-  setMealCount: (n: MealCount) => void;
-  setPendingMealType: (t: string | null) => void;
-  setPendingEditMealId: (id: string | null) => void;
-  setMyCheckin: (s: string) => void;
-  getTotals: () => { cal: number; p: number; c: number; f: number };
-  estimateBurned: (type: WorkoutType, dur: number, intensity: Intensity) => number;
-  login: (email: string) => void;
-  signup: (email: string) => void;
-  logout: () => void;
-  updateProfile: (profile: Partial<UserProfile>, forceRefresh?: boolean) => void;
-  handleProfileUpdate: (profile: Partial<UserProfile>) => void;
-  completeScreening: (profile: UserProfile) => void; 
-  resetApp: () => void;
-  fillDemo: () => void;
-  mealPlan: Record<string, { name: string; qty: string; cal: number; category?: string; isLowProt?: boolean; isLighter?: boolean; badge?: string; badgeDesc?: string }[]>;
-  generateNewPlan: (mealKey?: string) => void;
-  swapMealItem: (mealKey: string, index: number) => void;
-}
 
 const formatUnit = (qty: number, singular: string, plural: string) => {
   if (qty <= 1) return `1 ${singular}`;
