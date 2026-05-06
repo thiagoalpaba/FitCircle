@@ -508,15 +508,30 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     setIsLoggedIn(false);
   };
 
-  const updateProfile = (p: Partial<UserProfile>, forceRefresh = false) => {
-    setUserProfile(prev => {
-      const next = prev ? { ...prev, ...p } : null;
-      if (next) {
-        if (p.mealCount) setMealCount(next.mealCount);
-      }
-      return next;
-    });
-  };
+  const updateProfile = (p: Partial<UserProfile>) => {
+  setUserProfile(prev => {
+    if (!prev) return null;
+
+    const nextProfile = { ...prev, ...p };
+
+    if (typeof p.mealCount === 'number') {
+      setMealCount(p.mealCount);
+
+      setTimeout(() => {
+        const configs = MEAL_CONFIGS[p.mealCount] ?? MEAL_CONFIGS[4];
+        const nextPlan: Record<string, { name: string; qty: string; cal: number; category?: string }[]> = {};
+
+        configs.forEach(cfg => {
+          nextPlan[cfg.key] = getMealOptions(cfg.key);
+        });
+
+        setMealPlan(nextPlan);
+      }, 0);
+    }
+
+    return nextProfile;
+  });
+};
 
   const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     setUserProfile(prev => {
