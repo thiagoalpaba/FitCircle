@@ -159,3 +159,65 @@ test('badges do plano fazem sentido básico', async ({ page }) => {
     }
   }
 });
+test('não mostra opções duplicadas na mesma refeição', async ({ page }) => {
+  const bodyText = await page.locator('body').innerText();
+
+  const mealHeadings = [
+    'Café da manhã',
+    'Lanche da manhã',
+    'Almoço',
+    'Lanche da tarde',
+    'Jantar',
+    'Ceia',
+  ];
+
+  function getMealSection(mealName: string) {
+    const start = bodyText.indexOf(mealName);
+
+    if (start === -1) return '';
+
+    const possibleEnds = mealHeadings
+      .filter((heading) => heading !== mealName)
+      .map((heading) => bodyText.indexOf(heading, start + mealName.length))
+      .filter((index) => index > start);
+
+    const end = possibleEnds.length > 0 ? Math.min(...possibleEnds) : bodyText.length;
+
+    return bodyText.slice(start, end);
+  }
+
+  for (const meal of mealHeadings) {
+    const section = getMealSection(meal);
+    if (!section) continue;
+
+    const optionTitles = section
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => {
+        const upper = line.toUpperCase();
+
+        return (
+          upper === line &&
+          !upper.includes('OPÇÕES GERADAS') &&
+          !upper.includes('RECOMENDADA') &&
+          !upper.includes('COMPLETA') &&
+          !upper.includes('SIMPLES') &&
+          !upper.includes('LEVE') &&
+          !upper.includes('CALORIAS')
+        );
+      });
+
+    const normalized = optionTitles.map((title) =>
+      title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+    );
+
+    const unique = new Set(normalized);
+
+    expect(unique.size).toBe(normalized.length);
+  }
+});

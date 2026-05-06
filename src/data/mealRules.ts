@@ -363,3 +363,32 @@ export function applySmartBadges(mealKey: string, options: any[]) {
     };
   });
 }
+export function normalizeMealOptionSignature(option: any) {
+  const raw = `${option.name || ''} ${option.qty || ''}`;
+
+  return raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\d+\s*(g|unidades?|fatias?|colheres?|potes?|xicara|xicaras)/gi, '')
+    .replace(/\b(recomendada|completa|simples|leve|mais proteina|menos proteina)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function removeDuplicateMealOptions(options: any[]) {
+  const seen = new Set<string>();
+  const result: any[] = [];
+
+  for (const option of options) {
+    const signature = normalizeMealOptionSignature(option);
+
+    if (!signature) continue;
+    if (seen.has(signature)) continue;
+
+    seen.add(signature);
+    result.push(option);
+  }
+
+  return result;
+}

@@ -33,6 +33,7 @@ import {
   sanitizeOptionQtyText,
   orderMealQtyText,
   applySmartBadges,
+  removeDuplicateMealOptions,
 } from './data/mealRules';
 import { resolveFoodName } from './data/foodAliases';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -979,7 +980,9 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   ),
 }));
 
-validatedPlan[mealKey] = applySmartBadges(mealKey, sanitizedOptions).slice(0, 3);
+const uniqueOptions = removeDuplicateMealOptions(sanitizedOptions);
+
+validatedPlan[mealKey] = applySmartBadges(mealKey, uniqueOptions).slice(0, 3);
   });
 
   return validatedPlan;
