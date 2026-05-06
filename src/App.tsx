@@ -17,6 +17,7 @@ import { MobileFrame } from './components/MobileFrame';
 import { MEAL_CONFIGS } from './data/mealConfigs';
 import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES } from './data/workouts';
 import { CATEGORIES, FOOD_DATABASE, FOODS } from './data/foods';
+import { formatKcal, formatMacro, safeNumber, scrollToTop } from './utils/formatters';
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 
 const C = {
@@ -271,22 +272,6 @@ const RECIPE_LIBRARY = {
     { title: 'Batata com lentilha e salada', items: ['Batata inglesa cozida', 'Lentilha cozida', 'Salada verde'] },
     { title: 'Cuscuz com grão-de-bico e legumes', items: ['Cuscuz de milho cozido', 'Grão-de-bico cozido', 'Legumes variados'] },
   ]
-};
-
-// ─── UTILS ──────────────────────────────────────────────────────────────────
-
-const safeNumber = (val: any, fallback = 0) => {
-  const num = typeof val === 'number' ? val : parseFloat(val);
-  return isNaN(num) ? fallback : num;
-};
-
-const formatKcal = (val: any) => `${Math.round(safeNumber(val))} calorias`;
-const formatMacro = (val: any) => `${Math.round(safeNumber(val))}g`;
-
-const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  const main = document.querySelector('main');
-  if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 // ─── FOOD DATABASE ────────────────────────────────────────────────────────────
