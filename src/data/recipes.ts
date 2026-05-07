@@ -13,6 +13,7 @@ export type FitnessRecipe = {
   description: string;
   mealSlots: RecipeMealSlot[];
   emoji: string;
+  image?: string;
 
   cal: number;
   p: number;
