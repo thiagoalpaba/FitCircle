@@ -101,4 +101,35 @@ test.describe('FitCircle - qualidade textual', () => {
     expect(bodyText).toMatch(/consumido/i);
     expect(bodyText).toMatch(/meta/i);
   });
+
+  test('círculo não trata treino como crédito calórico', async ({ page }) => {
+    await page.getByTestId('nav-circulo').click();
+
+    await expect(
+      page.getByText(/membros do círculo|atividade recente|círculo/i).first()
+    ).toBeVisible();
+
+    const bodyText = await page.locator('body').innerText();
+
+    expect(bodyText).not.toMatch(/treino compensou/i);
+    expect(bodyText).not.toMatch(/compensou/i);
+    expect(bodyText).not.toMatch(/saldo líquido/i);
+    expect(bodyText).not.toMatch(/crédito/i);
+
+    const verDiaButton = page.getByRole('button', { name: /ver dia/i }).first();
+
+    if (await verDiaButton.isVisible().catch(() => false)) {
+      await verDiaButton.click();
+
+      await expect(
+        page.getByText(/refeições de hoje|treinos de hoje|calorias/i).first()
+      ).toBeVisible();
+
+      const modalText = await page.locator('body').innerText();
+
+      expect(modalText).not.toMatch(/treino compensou/i);
+      expect(modalText).not.toMatch(/crédito/i);
+      expect(modalText).not.toMatch(/saldo líquido/i);
+    }
+  });
 });
