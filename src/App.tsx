@@ -4525,30 +4525,46 @@ function RecipeLibrary() {
   return (
     <>
       <div className="px-6 mt-4">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="w-full bg-white rounded-[30px] border border-gray-100 shadow-lg shadow-gray-100/70 p-5 text-left active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div>
+  <button
+    type="button"
+    onClick={() => setIsOpen(true)}
+    className="relative w-full overflow-hidden rounded-[34px] p-5 text-left shadow-xl shadow-green-900/10 active:scale-[0.99] transition-all"
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-green-700 via-emerald-600 to-lime-500" />
+
+    <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15" />
+    <div className="absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-black/10" />
+
+    <div className="relative z-10 flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/75">
+          Receitas Fitness
+        </p>
+
+        <h3 className="text-2xl font-black leading-tight text-white">
+          Ver receitas prontas
+        </h3>
+
+        <p className="mt-2 max-w-[230px] text-xs font-bold leading-relaxed text-white/80">
+          {visibleRecipes.length} receitas práticas com preparo, ingredientes e macros.
+        </p>
+
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 shadow-sm">
+          Abrir biblioteca
+          <ChevronRight size={14} />
+        </div>
+      </div>
+
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[26px] bg-white/20 text-white backdrop-blur-sm border border-white/20">
+        <Utensils size={28} />
+      </div>
+    </div>
+  </button>
+</div>
               <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
                 Receitas Fitness
               </p>
-              <h3 className="text-xl font-black text-gray-900 leading-tight">
-                Ver receitas prontas
-              </h3>
-              <p className="text-xs font-bold text-gray-400 mt-2 leading-relaxed">
-                {visibleRecipes.length} receitas com preparo, ingredientes e macros.
-              </p>
-            </div>
-
-            <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
-              <Utensils size={22} className="text-green-600" />
-            </div>
-          </div>
-        </button>
-      </div>
+              
 
       <AnimatePresence>
         {isOpen && (
