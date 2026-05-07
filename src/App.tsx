@@ -3920,223 +3920,468 @@ function EditProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     </AnimatePresence>
   );
 }
-
 function PerfilScreen() {
-  const { calorieGoal, macros, userProfile, logout, resetApp, fillDemo, getTotals, remaining, myCheckin, setMyCheckin } = useApp();
+  const {
+    calorieGoal,
+    macros,
+    userProfile,
+    logout,
+    resetApp,
+    fillDemo,
+  } = useApp();
+
   const [isEditing, setIsEditing] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const totals = getTotals();
-  const progress = Math.min((totals.cal / calorieGoal) * 100, 100);
-  
+
+  const bmi = userProfile
+    ? userProfile.weight / Math.pow(userProfile.height / 100, 2)
+    : 0;
+
+  const bmiValue = userProfile ? bmi.toFixed(1) : '0';
+
+  const getBmiInfo = () => {
+    if (!userProfile) {
+      return {
+        label: 'Não informado',
+        color: '#9CA3AF',
+        position: 0,
+      };
+    }
+
+    if (bmi < 18.5) {
+      return {
+        label: 'Abaixo do peso',
+        color: '#60A5FA',
+        position: 12,
+      };
+    }
+
+    if (bmi < 25) {
+      return {
+        label: 'Faixa saudável',
+        color: '#22C55E',
+        position: 38,
+      };
+    }
+
+    if (bmi < 30) {
+      return {
+        label: 'Sobrepeso',
+        color: '#F59E0B',
+        position: 63,
+      };
+    }
+
+    if (bmi < 35) {
+      return {
+        label: 'Obesidade I',
+        color: '#F97316',
+        position: 80,
+      };
+    }
+
+    return {
+      label: 'Obesidade II+',
+      color: '#EF4444',
+      position: 94,
+    };
+  };
+
+  const bmiInfo = getBmiInfo();
+
+  const goalLabel =
+    userProfile?.goal === 'perda'
+      ? 'Perda de Peso'
+      : userProfile?.goal === 'ganho'
+      ? 'Ganho de Massa'
+      : userProfile?.goal === 'manutencao'
+      ? 'Manutenção'
+      : 'Recomposição';
+
+  const StatCard = ({
+    label,
+    value,
+    sub,
+    highlight = false,
+    children,
+  }: {
+    label: string;
+    value: string;
+    sub?: string;
+    highlight?: boolean;
+    children?: React.ReactNode;
+  }) => (
+    <div
+      className={`rounded-[28px] p-4 shadow-lg border min-h-[118px] flex flex-col justify-center ${
+        highlight
+          ? 'bg-green-50 border-green-100 text-green-700'
+          : 'bg-white border-gray-50 text-gray-900'
+      }`}
+    >
+      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
+        {label}
+      </p>
+
+      <p className="text-2xl font-black leading-none">
+        {value}
+      </p>
+
+      {sub && (
+        <p className="text-[10px] font-bold text-gray-400 mt-2 leading-tight">
+          {sub}
+        </p>
+      )}
+
+      {children}
+    </div>
+  );
+
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
-       <div className="bg-[#16A34A] pt-12 px-6 pb-12 rounded-b-[40px] text-white text-center relative shadow-lg">
-          <div className="absolute top-4 right-6">
-             <button onClick={() => setShowInfo(true)} className="p-2 bg-white/20 rounded-[14px] active:scale-90 transition-all">
-               <Info size={16}/>
-             </button>
-          </div>
-          <div className="w-16 h-16 bg-white/20 rounded-[28px] mx-auto mb-3 border-2 border-white/30 flex items-center justify-center p-0.5 overflow-hidden">
-             <div className="w-full h-full bg-white rounded-[24px] flex items-center justify-center overflow-hidden">
-                {userProfile?.profilePicture ? (
-                  <img src={userProfile.profilePicture} alt="Perfil" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-black text-[#16A34A] text-xl">{userProfile?.name?.[0] || 'T'}</span>
-                )}
-             </div>
-          </div>
-          <h1 className="text-lg font-black">{userProfile?.name || 'Usuário FitCircle'}</h1>
-          <p className="text-[9px] font-bold opacity-70 mt-0.5 uppercase tracking-widest">
-            Objetivo: {userProfile?.goal === 'perda' ? 'Perda de Peso' : userProfile?.goal === 'ganho' ? 'Ganho de Massa' : userProfile?.goal === 'manutencao' ? 'Manutenção' : 'Recomposição'} 🔥
-          </p>
-          
-          <div className="flex justify-center gap-2 mt-4">
-            <button 
-              onClick={() => setIsEditing(true)}
-              className="bg-white text-green-600 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-            >
-               Editar Perfil
-            </button>
-            <button onClick={fillDemo} className="bg-green-600 border border-white/30 text-white px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">
-               Usar Demo
-            </button>
-          </div>
-       </div>
-
-       <div className="px-5 mt-6 gap-6 flex flex-col mb-10">
-          <div className="grid grid-cols-2 gap-4">
-             {[
-               { l: 'Peso Atual', v: `${userProfile?.weight || 0} kg`, c: 'bg-white' },
-               { l: 'Altura', v: `${userProfile?.height || 0} cm`, c: 'bg-white' },
-               { 
-                 l: 'IMC', 
-                 v: userProfile ? (userProfile.weight / (Math.pow(userProfile.height/100, 2))).toFixed(1) : '0', 
-                 c: 'bg-white col-span-2 py-4',
-                 extra: (() => {
-                    if (!userProfile) return null;
-                    const bmi = userProfile.weight / (Math.pow(userProfile.height/100, 2));
-                    let label = "";
-                    let color = "";
-                    let pos = 0;
-                    if (bmi < 18.5) { label = "Abaixo do peso"; color = "text-blue-400"; pos = 10; }
-                    else if (bmi < 25) { label = "Faixa saudável"; color = "text-green-500"; pos = 40; }
-                    else if (bmi < 30) { label = "Sobrepeso"; color = "text-amber-500"; pos = 65; }
-                    else if (bmi < 35) { label = "Obesidade I"; color = "text-orange-500"; pos = 80; }
-                    else { label = "Obesidade II+"; color = "text-red-500"; pos = 95; }
-                    return (
-                      <div className="mt-3 pt-3 border-t border-gray-50 w-full">
-                        <p className={`text-[8px] font-black uppercase ${color} mb-2 tracking-tighter`}>{label}</p>
-                        <div className="h-1.5 bg-gray-100 rounded-full relative overflow-visible mx-1">
-                          <div className="absolute inset-y-0 left-[18%] right-[55%] bg-green-100 rounded-full" />
-                          <motion.div initial={{ left: 0 }} animate={{ left: `${pos}%` }} className={`absolute -top-1 w-3.5 h-3.5 ${color.replace('text', 'bg')} border-2 border-white rounded-full shadow-sm`} />
-                        </div>
-                      </div>
-                    );
-                 })()
-               },
-               { l: 'Meta de calorias', v: `${calorieGoal}`, c: 'bg-green-50 text-green-600 border-green-100' },
-             ].map(s => (
-               <div key={s.l} className={`${s.c} rounded-[32px] p-6 shadow-xl shadow-gray-100 border border-gray-50 text-center flex flex-col justify-center items-center min-h-[120px]`}>
-                  <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{s.l}</p>
-                    <p className="text-xl font-black">{s.v}</p>
-                  </div>
-                  {(s as any).extra}
-               </div>
-             ))}
-          </div>
-
-          <div className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50">
-             <h3 className="font-black text-gray-900 border-l-4 border-green-500 pl-3 uppercase text-xs tracking-tighter mb-6">Divisão de Macros</h3>
-             <div className="space-y-4">
-                <div className="space-y-2">
-                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      <span>Proteínas</span>
-                      <span className="text-blue-500">{macros.p}g</span>
-                   </div>
-                   <ProgressBar val={macros.p} max={macros.p} color={C.protein} />
-                </div>
-                <div className="space-y-2">
-                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      <span>Carboidratos</span>
-                      <span className="text-green-500">{macros.c}g</span>
-                   </div>
-                   <ProgressBar val={macros.c} max={macros.c} color={C.carbs} />
-                </div>
-                <div className="space-y-2">
-                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      <span>Gorduras</span>
-                      <span className="text-orange-500">{macros.f}g</span>
-                   </div>
-                   <ProgressBar val={macros.f} max={macros.f} color={C.fat} />
-                </div>
-             </div>
-          </div>
-
-          <button 
-            onClick={() => setShowResetConfirm(true)}
-            className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 flex items-center justify-between group overflow-hidden active:bg-red-50 transition-colors"
+      <div className="bg-[#16A34A] pt-12 px-6 pb-12 rounded-b-[40px] text-white text-center relative shadow-lg">
+        <div className="absolute top-4 right-6">
+          <button
+            onClick={() => setShowInfo(true)}
+            className="p-2 bg-white/20 rounded-[14px] active:scale-90 transition-all"
           >
-             <div className="flex items-center gap-4">
-                <div className="p-3 bg-red-50 rounded-2xl flex items-center justify-center">
-                   <Rocket size={20} className="text-red-500 rotate-180"/>
-                </div>
-                <span className="font-black text-red-500 text-sm uppercase tracking-tight">Resetar App / Limpar Dados</span>
-             </div>
-             <ChevronUp size={20} className="text-gray-200 rotate-90"/>
+            <Info size={16} />
+          </button>
+        </div>
+
+        <div className="w-16 h-16 bg-white/20 rounded-[28px] mx-auto mb-3 border-2 border-white/30 flex items-center justify-center p-0.5 overflow-hidden">
+          <div className="w-full h-full bg-white rounded-[24px] flex items-center justify-center overflow-hidden">
+            {userProfile?.profilePicture ? (
+              <img
+                src={userProfile.profilePicture}
+                alt="Perfil"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="font-black text-[#16A34A] text-xl">
+                {userProfile?.name?.[0] || 'T'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <h1 className="text-lg font-black">
+          {userProfile?.name || 'Usuário FitCircle'}
+        </h1>
+
+        <p className="text-[9px] font-bold opacity-70 mt-0.5 uppercase tracking-widest">
+          Objetivo: {goalLabel} 🔥
+        </p>
+
+        <div className="flex justify-center gap-2 mt-4">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="bg-white text-green-600 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+          >
+            Editar Perfil
           </button>
 
-          <button 
-            onClick={() => setShowLogoutConfirm(true)}
-            className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 flex items-center justify-between group overflow-hidden active:bg-gray-100 transition-colors"
+          <button
+            onClick={fillDemo}
+            className="bg-green-600 border border-white/30 text-white px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
           >
-             <div className="flex items-center gap-4">
-                <div className="p-3 bg-gray-50 rounded-2xl flex items-center justify-center">
-                   <X size={20} className="text-gray-500"/>
-                </div>
-                <span className="font-black text-gray-800 text-sm uppercase tracking-tight">Sair da Conta</span>
-             </div>
-             <ChevronUp size={20} className="text-gray-200 rotate-90"/>
+            Usar Demo
           </button>
+        </div>
+      </div>
 
-          {!((window.matchMedia('(display-mode: standalone)').matches) || (window.navigator as any).standalone) && (
-            <div className="bg-green-50 rounded-[32px] p-6 border border-green-100 mt-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-green-500 rounded-xl">
-                  <Smartphone className="text-white" size={20} />
-                </div>
-                <h3 className="font-black text-green-700 text-sm uppercase tracking-tight">Instalar FitCircle</h3>
+      <div className="px-5 mt-6 gap-6 flex flex-col mb-10">
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard
+            label="Peso atual"
+            value={`${userProfile?.weight || 0} kg`}
+            sub="Registrado no perfil"
+          />
+
+          <StatCard
+            label="Altura"
+            value={`${userProfile?.height || 0} cm`}
+            sub="Base do cálculo"
+          />
+
+          <StatCard
+            label="IMC"
+            value={bmiValue}
+            sub={bmiInfo.label}
+          >
+            <div className="mt-3">
+              <div className="h-1.5 bg-gray-100 rounded-full relative overflow-visible">
+                <div className="absolute inset-y-0 left-[23%] right-[45%] bg-green-100 rounded-full" />
+
+                <motion.div
+                  initial={{ left: 0 }}
+                  animate={{ left: `${bmiInfo.position}%` }}
+                  className="absolute -top-1 w-3.5 h-3.5 border-2 border-white rounded-full shadow-sm -translate-x-1/2"
+                  style={{ backgroundColor: bmiInfo.color }}
+                />
               </div>
-              <p className="text-[10px] font-bold text-green-600/80 leading-relaxed space-y-2">
-                <span className="block">• No iPhone: Toque em <Share size={12} className="inline mx-1" /> Compartilhar e depois "Adicionar à Tela de Início".</span>
-                <span className="block mt-2">• No Android: Toque nos três pontos do navegador e selecione "Instalar App".</span>
+
+              <p
+                className="text-[8px] font-black uppercase mt-2 tracking-tight"
+                style={{ color: bmiInfo.color }}
+              >
+                {bmiInfo.label}
               </p>
             </div>
-          )}
-       </div>
+          </StatCard>
 
-       <EditProfileModal isOpen={isEditing} onClose={() => setIsEditing(false)} />
+          <StatCard
+            label="Meta calórica"
+            value={`${calorieGoal}`}
+            sub="kcal por dia"
+            highlight
+          />
+        </div>
 
-       <AnimatePresence>
-          {showInfo && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInfo(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative z-10 text-gray-900 text-left">
-                <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center mb-6 text-green-500">
-                  <ShieldCheck size={24} />
-                </div>
-                <h3 className="text-xl font-black mb-4 uppercase tracking-tighter">Privacidade e Dados</h3>
-                <div className="space-y-4 text-sm text-gray-500 font-medium leading-relaxed">
-                  <p>Seus dados são usados exclusivamente para calcular suas metas nutricionais e personalizar seu plano alimentar.</p>
-                  <p>Nenhuma informação pessoal é compartilhada com terceiros sem seu consentimento explícito.</p>
-                  <p>Você pode excluir sua conta e todos os dados associados a qualquer momento nas configurações.</p>
-                </div>
-                <button onClick={() => setShowInfo(false)} className="w-full py-4 bg-gray-900 text-white font-black rounded-2xl mt-8 text-[10px] uppercase tracking-widest active:scale-95 transition-all">Entendido</button>
-              </motion.div>
+        <div className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50">
+          <h3 className="font-black text-gray-900 border-l-4 border-green-500 pl-3 uppercase text-xs tracking-tighter mb-6">
+            Divisão de Macros
+          </h3>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                <span>Proteínas</span>
+                <span className="text-blue-500">{macros.p}g</span>
+              </div>
+              <ProgressBar val={macros.p} max={macros.p} color={C.protein} />
             </div>
-          )}
-       </AnimatePresence>
 
-       <AnimatePresence>
-          {showLogoutConfirm && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLogoutConfirm(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white p-8 rounded-[40px] w-full max-w-sm relative z-10 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                     <User size={32} className="text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-black text-gray-900 mb-2">Deseja sair?</h3>
-                  <p className="text-gray-400 font-medium text-sm mb-8 leading-relaxed">Você voltará para a tela de login. Seus dados serão mantidos.</p>
-                  <div className="flex flex-col gap-3">
-                     <button onClick={() => { setShowLogoutConfirm(false); logout(); }} className="w-full py-4 bg-gray-900 text-white font-black rounded-3xl uppercase text-xs tracking-widest transition-all active:scale-95">Sim, Sair</button>
-                     <button onClick={() => setShowLogoutConfirm(false)} className="w-full py-4 bg-gray-50 text-gray-400 font-black rounded-3xl uppercase text-xs tracking-widest transition-all active:scale-95">Cancelar</button>
-                  </div>
-               </motion.div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                <span>Carboidratos</span>
+                <span className="text-green-500">{macros.c}g</span>
+              </div>
+              <ProgressBar val={macros.c} max={macros.c} color={C.carbs} />
             </div>
-          )}
 
-          {showResetConfirm && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 text-center">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowResetConfirm(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white p-8 rounded-[40px] w-full max-w-sm relative z-10">
-                  <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                     <Rocket size={32} className="text-red-500 rotate-180" />
-                  </div>
-                  <h3 className="text-xl font-black text-gray-900 mb-2">Limpar dados?</h3>
-                  <p className="text-gray-400 font-medium text-sm mb-8 leading-relaxed">Tem certeza que deseja limpar os dados desta conta? Isso apagará perfil, treinos e refeições permanentemente.</p>
-                  <div className="flex flex-col gap-3">
-                     <button onClick={() => { setShowResetConfirm(false); resetApp(); }} className="w-full py-4 bg-red-500 text-white font-black rounded-3xl uppercase text-xs tracking-widest shadow-xl shadow-red-100 transition-all active:scale-95">Limpar dados</button>
-                     <button onClick={() => setShowResetConfirm(false)} className="w-full py-4 bg-gray-50 text-gray-400 font-black rounded-3xl uppercase text-xs tracking-widest transition-all active:scale-95">Cancelar</button>
-                  </div>
-               </motion.div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                <span>Gorduras</span>
+                <span className="text-orange-500">{macros.f}g</span>
+              </div>
+              <ProgressBar val={macros.f} max={macros.f} color={C.fat} />
             </div>
-          )}
-       </AnimatePresence>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 flex items-center justify-between group overflow-hidden active:bg-red-50 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-50 rounded-2xl flex items-center justify-center">
+              <Rocket size={20} className="text-red-500 rotate-180" />
+            </div>
+            <span className="font-black text-red-500 text-sm uppercase tracking-tight">
+              Resetar App / Limpar Dados
+            </span>
+          </div>
+          <ChevronUp size={20} className="text-gray-200 rotate-90" />
+        </button>
+
+        <button
+          onClick={() => setShowLogoutConfirm(true)}
+          className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 flex items-center justify-between group overflow-hidden active:bg-gray-100 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gray-50 rounded-2xl flex items-center justify-center">
+              <X size={20} className="text-gray-500" />
+            </div>
+            <span className="font-black text-gray-800 text-sm uppercase tracking-tight">
+              Sair da Conta
+            </span>
+          </div>
+          <ChevronUp size={20} className="text-gray-200 rotate-90" />
+        </button>
+
+        {!(
+          window.matchMedia('(display-mode: standalone)').matches ||
+          (window.navigator as any).standalone
+        ) && (
+          <div className="bg-green-50 rounded-[32px] p-6 border border-green-100 mt-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-500 rounded-xl">
+                <Smartphone className="text-white" size={20} />
+              </div>
+              <h3 className="font-black text-green-700 text-sm uppercase tracking-tight">
+                Instalar FitCircle
+              </h3>
+            </div>
+
+            <p className="text-[10px] font-bold text-green-600/80 leading-relaxed space-y-2">
+              <span className="block">
+                • No iPhone: Toque em <Share size={12} className="inline mx-1" /> Compartilhar e depois "Adicionar à Tela de Início".
+              </span>
+              <span className="block mt-2">
+                • No Android: Toque nos três pontos do navegador e selecione "Instalar App".
+              </span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      <EditProfileModal isOpen={isEditing} onClose={() => setIsEditing(false)} />
+
+      <AnimatePresence>
+        {showInfo && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInfo(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative z-10 text-gray-900 text-left"
+            >
+              <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center mb-6 text-green-500">
+                <ShieldCheck size={24} />
+              </div>
+
+              <h3 className="text-xl font-black mb-4 uppercase tracking-tighter">
+                Privacidade e Dados
+              </h3>
+
+              <div className="space-y-4 text-sm text-gray-500 font-medium leading-relaxed">
+                <p>
+                  Seus dados são usados exclusivamente para calcular suas metas nutricionais e personalizar seu plano alimentar.
+                </p>
+                <p>
+                  Nenhuma informação pessoal é compartilhada com terceiros sem seu consentimento explícito.
+                </p>
+                <p>
+                  Você pode excluir sua conta e todos os dados associados a qualquer momento nas configurações.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowInfo(false)}
+                className="w-full py-4 bg-gray-900 text-white font-black rounded-2xl mt-8 text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Entendido
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLogoutConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white p-8 rounded-[40px] w-full max-w-sm relative z-10 text-center"
+            >
+              <div className="w-16 h-16 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <User size={32} className="text-gray-400" />
+              </div>
+
+              <h3 className="text-xl font-black text-gray-900 mb-2">
+                Deseja sair?
+              </h3>
+
+              <p className="text-gray-400 font-medium text-sm mb-8 leading-relaxed">
+                Você voltará para a tela de login. Seus dados serão mantidos.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowLogoutConfirm(false);
+                    logout();
+                  }}
+                  className="w-full py-4 bg-gray-900 text-white font-black rounded-3xl uppercase text-xs tracking-widest transition-all active:scale-95"
+                >
+                  Sim, Sair
+                </button>
+
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="w-full py-4 bg-gray-50 text-gray-400 font-black rounded-3xl uppercase text-xs tracking-widest transition-all active:scale-95"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showResetConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 text-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowResetConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white p-8 rounded-[40px] w-full max-w-sm relative z-10"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <Rocket size={32} className="text-red-500 rotate-180" />
+              </div>
+
+              <h3 className="text-xl font-black text-gray-900 mb-2">
+                Limpar dados?
+              </h3>
+
+              <p className="text-gray-400 font-medium text-sm mb-8 leading-relaxed">
+                Tem certeza que deseja limpar os dados desta conta? Isso apagará perfil, treinos e refeições permanentemente.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowResetConfirm(false);
+                    resetApp();
+                  }}
+                  className="w-full py-4 bg-red-500 text-white font-black rounded-3xl uppercase text-xs tracking-widest shadow-xl shadow-red-100 transition-all active:scale-95"
+                >
+                  Limpar dados
+                </button>
+
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="w-full py-4 bg-gray-50 text-gray-400 font-black rounded-3xl uppercase text-xs tracking-widest transition-all active:scale-95"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
 function RefeicoesListScreen({ onBack, onEdit, onAdd }: { onBack: () => void; onEdit: (id: string) => void; onAdd: (type: string) => void }) {
   const { mealCount, meals, deleteMeal } = useApp();
   const configs = MEAL_CONFIGS[mealCount];
