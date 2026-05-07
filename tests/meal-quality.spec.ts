@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { FOOD_DATABASE } from '../src/data/foods';
 
 async function expectHealthyScreen(page: Page) {
   await expect(page.locator('body')).not.toContainText(/\bNaN\b/);
@@ -58,7 +59,7 @@ function extractOptionTitles(section: string) {
     'CÍRCULO',
     'PERFIL',
 
-    // Novos cards de macros do plano
+    // Cards de macros do plano
     'PROT.',
     'PROT',
     'CARBO',
@@ -147,6 +148,7 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
     expect(bodyText).not.toMatch(/Manteiga\s+(1[1-9]|[2-9]\d|\d{3,})g/i);
     expect(bodyText).not.toMatch(/Requeijão light\s+(3[1-9]|[4-9]\d|\d{3,})g/i);
     expect(bodyText).not.toMatch(/Whey Protein\s+(4[1-9]|[5-9]\d|\d{3,})g/i);
+    expect(bodyText).not.toMatch(/Clara de ovo\s+(1[3-9]\d|[2-9]\d{2,})g/i);
   });
 
   test('café da manhã não sugere frango por padrão nem manteiga exagerada', async ({ page }) => {
@@ -175,6 +177,8 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
       'lentilha',
       'grão-de-bico',
       'proteína de soja',
+      'salmão',
+      'sardinha',
     ];
 
     const lunchSection = normalize(getMealSection(bodyText, 'Almoço'));
@@ -233,9 +237,7 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
       if (!section) continue;
 
       const optionTitles = extractOptionTitles(section);
-
       const normalized = optionTitles.map((title) => normalize(title));
-
       const unique = new Set(normalized);
 
       expect(unique.size).toBe(normalized.length);
@@ -266,10 +268,48 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
       if (!section) continue;
 
       const optionTitles = extractOptionTitles(section);
-
       const normalized = optionTitles.map((title) => normalize(title));
 
       expect(new Set(normalized).size).toBe(normalized.length);
+    }
+  });
+});
+
+test.describe('FitCircle - banco de alimentos', () => {
+  test('banco de alimentos contém opções expandidas e receitas fitness', async () => {
+    const names = FOOD_DATABASE.map((food) => food.name);
+
+    const requiredFoods = [
+      'Pão árabe',
+      'Pão sírio',
+      'Wrap integral',
+      'Suco verde',
+      'Suco de laranja natural',
+      'Vitamina de banana com aveia',
+      'Bolo fitness de banana com aveia',
+      'Wrap de frango',
+      'Homus',
+      'Iogurte grego light',
+    ];
+
+    for (const foodName of requiredFoods) {
+      expect(names).toContain(foodName);
+    }
+
+    const recipeFoods = [
+      'Suco verde',
+      'Bolo fitness de banana com aveia',
+      'Wrap de frango',
+      'Panqueca proteica',
+    ];
+
+    for (const foodName of recipeFoods) {
+      const food = FOOD_DATABASE.find((item) => item.name === foodName);
+
+      expect(food).toBeTruthy();
+      expect(food?.recipe?.length).toBeGreaterThan(0);
+      expect(food?.prep).toBeTruthy();
+      expect(food?.portionNote).toBeTruthy();
     }
   });
 });
