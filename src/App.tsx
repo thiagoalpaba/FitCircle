@@ -590,17 +590,6 @@ function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (typeof p.mealCount === 'number') {
       setMealCount(p.mealCount);
-
-      setTimeout(() => {
-        const configs = MEAL_CONFIGS[p.mealCount] ?? MEAL_CONFIGS[4];
-        const nextPlan: Record<string, { name: string; qty: string; cal: number; category?: string }[]> = {};
-
-        configs.forEach(cfg => {
-          nextPlan[cfg.key] = getMealOptions(cfg.key);
-        });
-
-        setMealPlan(nextPlan);
-      }, 0);
     }
 
     return nextProfile;
@@ -636,15 +625,17 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     onboarded
   ]);
 
-  const getMealOptions = (targetCal: number, profile: UserProfile, mealKey: string) => {
-  const isMainMeal = mealKey === 'almoco' || mealKey === 'jantar';
-  const isSnack = mealKey.includes('lanche') || mealKey === 'ceia';
-  const isBreakfast = mealKey === 'cafe';
+ const getMealOptions = (targetCal: number, profile: UserProfile, mealKey?: string) => {
+  const safeMealKey = mealKey || 'lanche';
+
+  const isMainMeal = safeMealKey === 'almoco' || safeMealKey === 'jantar';
+  const isSnack = safeMealKey.includes('lanche') || safeMealKey === 'ceia';
+  const isBreakfast = safeMealKey === 'cafe';
 
   const templateKey = isBreakfast
     ? 'cafe'
     : isMainMeal
-    ? mealKey === 'jantar'
+    ? safeMealKey === 'jantar'
       ? 'jantar'
       : 'main'
     : 'snacks';
@@ -654,9 +645,11 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   if (isBreakfast) prefKey = 'breakfast';
   else if (isMainMeal) prefKey = 'main';
 
-  const mealStyle = (profile.mealStyles?.[mealKey] || 'balanced') as 'balanced' | 'simple';
-  const userPrefs = profile.preferredIngredients?.[prefKey] || [];
+  const userPrefs = (profile.preferredIngredients?.[prefKey] || [])
+    .filter(Boolean)
+    .map(item => String(item));
 
+  const mealStyle = (profile.mealStyles?.[safeMealKey] || 'balanced') as 'balanced' | 'simple';
   const normalizeLocal = (value: string = '') =>
     value
       .toLowerCase()
@@ -1219,7 +1212,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       ];
     }
 
-    if (mealKey === 'almoco') {
+    if (safeMealKey === 'almoco') {
       return [
         {
           name: 'Arroz, feijão preto e frango',
@@ -1251,7 +1244,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       ];
     }
 
-    if (mealKey === 'jantar') {
+    if (safeMealKey === 'jantar') {
       return [
         {
           name: 'Frango com mandioca e salada',
@@ -1650,6 +1643,7 @@ const swapMealItem = (mealKey: string, index: number) => {
   const count = userProfile.mealCount;
   const configs = MEAL_CONFIGS[count];
   const cfg = configs.find(c => c.key === mealKey);
+
   if (!cfg) return;
 
   const getTargetCalForMeal = () => {
@@ -1686,43 +1680,100 @@ const swapMealItem = (mealKey: string, index: number) => {
     return calorieGoal / Math.max(configs.length, 1);
   };
 
+  const normalizeSwapText = (value: string = '') =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\d+(?:[.,]\d+)?\s*(g|gramas|unidade|unidades|un|fatia|fatias|pote|potes|colher de sopa|colheres de sopa|colher|colheres|xícara|xícaras)/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const getSwapSignature = (option: any) => {
+    const name = normalizeSwapText(option?.name || '');
+    const qty = normalizeSwapText(sanitizeOptionQtyText(option?.qty || ''));
+
+    return `${name}|${qty}`;
+  };
+
+  const getComponents = (option: any) =>
+    normalizeSwapText(sanitizeOptionQtyText(option?.qty || ''))
+      .split('+')
+      .map(part => part.trim())
+      .filter(Boolean);
+
+  const areTooSimilar = (a: any, b: any) => {
+    const aName = normalizeSwapText(a?.name || '');
+    const bName = normalizeSwapText(b?.name || '');
+
+    if (aName === bName) return true;
+    if (getSwapSignature(a) === getSwapSignature(b)) return true;
+
+    const aComponents = new Set(getComponents(a));
+    const bComponents = new Set(getComponents(b));
+
+    const intersection = [...aComponents].filter(component =>
+      bComponents.has(component)
+    ).length;
+
+    const union = new Set([...aComponents, ...bComponents]).size;
+    const overlap = union === 0 ? 0 : intersection / union;
+
+    return overlap >= 0.6;
+  };
+
   const currentMealOptions = mealPlan[mealKey] || [];
   const currentOption = currentMealOptions[index];
 
   if (!currentOption) return;
 
   const targetCal = getTargetCalForMeal();
-  const currentSignature = getPlanOptionSignature(currentOption);
 
-  const usedByOtherCards = new Set(
-    currentMealOptions
-      .filter((_, optionIndex) => optionIndex !== index)
-      .map(option => getPlanOptionSignature(option))
-  );
+  const otherOptions = currentMealOptions.filter((_, optionIndex) => optionIndex !== index);
 
   const candidates: any[] = [];
 
-  for (let attempt = 0; attempt < 80; attempt++) {
-    candidates.push(...getMealOptions(targetCal, userProfile, mealKey));
+  for (let attempt = 0; attempt < 160; attempt++) {
+    const generated = getMealOptions(targetCal, userProfile, mealKey);
+
+    generated.forEach(option => {
+      if (option) candidates.push(option);
+    });
   }
 
-  const cleanedCandidates = validatePlan({
-    [mealKey]: candidates,
-  })[mealKey] || [];
+  const validCandidates = candidates.filter(candidate => {
+    if (!candidate) return false;
 
-  const nextOption = cleanedCandidates.find(candidate => {
-    const candidateSignature = getPlanOptionSignature(candidate);
+    const sameAsCurrent = areTooSimilar(candidate, currentOption);
+    const sameAsOtherCard = otherOptions.some(other => areTooSimilar(candidate, other));
 
-    return (
-      candidateSignature !== currentSignature &&
-      !usedByOtherCards.has(candidateSignature)
-    );
+    return !sameAsCurrent && !sameAsOtherCard;
   });
 
-  if (!nextOption) return;
+  const uniqueCandidates: any[] = [];
 
-  const newMealOptions = [...currentMealOptions];
-  newMealOptions[index] = nextOption;
+  validCandidates.forEach(candidate => {
+    const signature = getSwapSignature(candidate);
+
+    const alreadyExists = uniqueCandidates.some(existing =>
+      getSwapSignature(existing) === signature
+    );
+
+    if (!alreadyExists) {
+      uniqueCandidates.push(candidate);
+    }
+  });
+
+  const nextOption = uniqueCandidates[0];
+
+  if (!nextOption) {
+    console.warn('Nenhuma opção diferente encontrada para troca:', mealKey);
+    return;
+  }
+
+  const newMealOptions = currentMealOptions.map((option, optionIndex) =>
+    optionIndex === index ? nextOption : option
+  );
 
   const newPlan = validatePlan({
     ...mealPlan,
@@ -3128,7 +3179,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
   const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="w-full bg-gray-50 min-h-screen pb-20">
+    <div className="w-full bg-gray-50 min-h-screen pb-16">
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
 
       {/* Header */}
@@ -3416,7 +3467,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
       </div>
 
       {/* Workout */}
-      <div className="px-5 mt-8">
+      <div className="px-5 mt-8 mb-6">
         <div className="bg-[#FFFBEB] rounded-[30px] p-5 border border-orange-100 shadow-sm">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-3">
@@ -3489,34 +3540,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           )}
         </div>
       </div>
-
-      {/* Support Summary */}
-      <div className="px-5 mt-7 mb-2">
-        <button
-          onClick={() => onNavigate('circulo')}
-          className="w-full bg-indigo-600 rounded-[30px] p-5 text-white shadow-xl shadow-indigo-100 relative overflow-hidden text-left group"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
-
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/10">
-                <Heart size={18} className="fill-white" />
-              </div>
-              <h3 className="font-bold">Círculo de Apoio</h3>
-            </div>
-
-            <span className="text-[10px] font-black uppercase bg-white/20 px-3 py-1 rounded-full border border-white/10">
-              Abrir
-            </span>
-          </div>
-
-          <p className="text-lg font-black leading-tight">
-            Interaja com seu grupo 🚀
-          </p>
-        </button>
-      </div>
-
+    
       {/* Workout Modal */}
       <AnimatePresence>
         {showWorkoutModal && (
@@ -3794,7 +3818,7 @@ const handleAddBlock = () => {
           </button>
        </div>
 
-    <div className="px-6 py-8 space-y-12">
+  <div className="px-6 py-8 space-y-12">
   {configs.map((cfg) => (
     <div key={cfg.key} className="space-y-6">
       <div className="flex items-center gap-3">
@@ -3864,10 +3888,11 @@ const handleAddBlock = () => {
                   {opt.name}
                 </h4>
 
-                <div className="flex flex-col gap-1.5 mb-3">
+                <div className="flex flex-col gap-1.5 mb-4">
                   {cleanedQty.split(' + ').map((q: string, idx: number) => (
                     <div key={idx} className="flex items-center gap-1.5 opacity-60">
                       <div className="w-1 h-1 bg-green-500 rounded-full" />
+
                       <span className="text-[10px] font-bold text-gray-500">
                         {q}
                       </span>
@@ -3876,39 +3901,47 @@ const handleAddBlock = () => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-4">
-  <div className="bg-blue-50 text-blue-700 rounded-2xl px-3 py-2 border border-blue-100">
-    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
-      Prot.
-    </p>
-    <p className="text-sm font-black leading-none mt-1">
-      {optionMacros.p}g
-    </p>
-  </div>
+                  <div className="bg-blue-50 text-blue-700 rounded-2xl px-3 py-2 border border-blue-100">
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+                      Prot.
+                    </p>
 
-  <div className="bg-green-50 text-green-700 rounded-2xl px-3 py-2 border border-green-100">
-    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
-      Carbo
-    </p>
-    <p className="text-sm font-black leading-none mt-1">
-      {optionMacros.c}g
-    </p>
-  </div>
+                    <p className="text-sm font-black leading-none mt-1">
+                      {optionMacros.p}g
+                    </p>
+                  </div>
 
-  <div className="bg-orange-50 text-orange-700 rounded-2xl px-3 py-2 border border-orange-100">
-    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
-      Gord.
-    </p>
-    <p className="text-sm font-black leading-none mt-1">
-      {optionMacros.f}g
-    </p>
-  </div>
-</div>
+                  <div className="bg-green-50 text-green-700 rounded-2xl px-3 py-2 border border-green-100">
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+                      Carbo
+                    </p>
+
+                    <p className="text-sm font-black leading-none mt-1">
+                      {optionMacros.c}g
+                    </p>
+                  </div>
+
+                  <div className="bg-orange-50 text-orange-700 rounded-2xl px-3 py-2 border border-orange-100">
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+                      Gord.
+                    </p>
+
+                    <p className="text-sm font-black leading-none mt-1">
+                      {optionMacros.f}g
+                    </p>
+                  </div>
+                </div>
 
                 <button
-                  onClick={() => swapMealItem(cfg.key, i)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded-xl text-[8px] font-black uppercase transition-all active:scale-95"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    swapMealItem(cfg.key, i);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-green-50 text-gray-500 hover:text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"
                 >
-                  <Shuffle size={12} />
+                  <Shuffle size={13} />
                   Trocar opção
                 </button>
               </div>
@@ -3928,7 +3961,6 @@ const handleAddBlock = () => {
       </div>
     </div>
   ))}
-
           {/* Tips Section */}
           <div className="bg-green-600 rounded-[38px] p-8 text-white shadow-2xl relative overflow-hidden">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
