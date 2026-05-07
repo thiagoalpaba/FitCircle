@@ -1,15 +1,19 @@
 import { test, expect, Page } from '@playwright/test';
 
 async function expectHealthyScreen(page: Page) {
-await expect(page.locator('body')).not.toContainText(/\bNaN\b/);
-  await expect(page.locator('body')).not.toContainText('undefined');
-  await expect(page.locator('body')).not.toContainText('null');
+  await expect(page.locator('body')).not.toContainText(/\bNaN\b/);
+  await expect(page.locator('body')).not.toContainText(/\bundefined\b/i);
+  await expect(page.locator('body')).not.toContainText(/\bnull\b/i);
 }
 
 test.describe('FitCircle - qualidade textual', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?e2eDemo=1');
-    await expect(page.getByText(/olá|refeições|restante|calorias/i).first()).toBeVisible();
+
+    await expect(
+      page.getByText(/olá|refeições|restante|calorias/i).first()
+    ).toBeVisible();
+
     await expectHealthyScreen(page);
   });
 
@@ -65,20 +69,36 @@ test.describe('FitCircle - qualidade textual', () => {
     expect(bodyText).toMatch(/Pilates/i);
     expect(bodyText).toMatch(/Yoga/i);
     expect(bodyText).toMatch(/Outro treino/i);
+
     expect(bodyText).not.toMatch(/musculacao/i);
     expect(bodyText).not.toMatch(/hidroginastica/i);
   });
+
   test('home mostra resumo simples sem saldo líquido ou bruto', async ({ page }) => {
-  await page.getByTestId('nav-hoje').click();
+    await page.getByTestId('nav-hoje').click();
 
-  const bodyText = await page.locator('body').innerText();
+    const bodyText = await page.locator('body').innerText();
 
-  expect(bodyText).toMatch(/\bMETA\b/i);
-  expect(bodyText).toMatch(/\bCONSUMIDO\b/i);
-  expect(bodyText).toMatch(/\bTREINO\b/i);
+    expect(bodyText).toMatch(/\bMETA\b/i);
+    expect(bodyText).toMatch(/\bCONSUMIDO\b/i);
+    expect(bodyText).toMatch(/\bTREINO\b/i);
 
-  expect(bodyText).not.toMatch(/\bBRUTO\b/i);
-  expect(bodyText).not.toMatch(/\bSALDO\b/i);
-  expect(bodyText).not.toMatch(/SALDO LÍQUIDO/i);
-});
+    expect(bodyText).not.toMatch(/\bBRUTO\b/i);
+    expect(bodyText).not.toMatch(/\bSALDO\b/i);
+    expect(bodyText).not.toMatch(/SALDO LÍQUIDO/i);
+  });
+
+  test('home não trata treino como crédito calórico', async ({ page }) => {
+    await page.getByTestId('nav-hoje').click();
+
+    const bodyText = await page.locator('body').innerText();
+
+    expect(bodyText).not.toMatch(/treino compensou/i);
+    expect(bodyText).not.toMatch(/compensou/i);
+    expect(bodyText).not.toMatch(/saldo líquido/i);
+    expect(bodyText).not.toMatch(/crédito/i);
+
+    expect(bodyText).toMatch(/consumido/i);
+    expect(bodyText).toMatch(/meta/i);
+  });
 });
