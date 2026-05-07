@@ -4260,7 +4260,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                     setPendingMealType(cfg.key);
                     onNavigate('registrar');
                   }}
-                  className="px-4 py-2.5 rounded-2xl bg-white text-green-600 border border-green-100 text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
+                 className="inline-flex items-center justify-center rounded-full border border-green-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 active:scale-95 transition-all"
                 >
                   Registrar
                 </button>
@@ -5603,7 +5603,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
                   </div>
                 ))
               ) : (
-                <div className="text-center py-6 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                <div className="text-center py-6 bg-gray-50 rounded-3xl border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                     Nenhuma refeição registrada hoje.
                   </p>
@@ -5655,7 +5655,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
                   </div>
                 ))
               ) : (
-                <div className="text-center py-6 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                <div className="text-center py-6 bg-gray-50 rounded-3xl border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                     Nenhum treino registrado hoje.
                   </p>
