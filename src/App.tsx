@@ -3608,45 +3608,40 @@ function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void;
 function PlanoScreen() {
   const { userProfile, mealPlan, generateNewPlan, swapMealItem, updateProfile, handleProfileUpdate } = useApp();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [newPref, setNewPref] = useState('');
-  const [suggestion, setSuggestion] = useState<string | null>(null);
 
-  const handleAddBlock = (val: string) => {
-  if (!val.trim()) return;
+const [blockInput, setBlockInput] = useState('');
+const [blockError, setBlockError] = useState('');
 
-  const resolvedName = resolveFoodName(val, FOODS);
+const [favoriteInput, setFavoriteInput] = useState('');
+const [favoriteError, setFavoriteError] = useState('');
+
+const handleAddBlock = () => {
+  const raw = blockInput.trim();
+
+  if (!raw) return;
+
+  const resolvedName = resolveFoodName(raw, FOODS) || findFuzzyMatch(raw);
 
   if (!resolvedName) {
-    setSuggestion(`Alimento não encontrado: ${val.trim()}`);
-    return;
-  }
-
-  if (resolvedName.toLowerCase() !== val.trim().toLowerCase()) {
-    setSuggestion(resolvedName);
+    setBlockError(`Não encontrei "${raw}" no banco de alimentos.`);
     return;
   }
 
   const current = userProfile.blockedFoods || [];
 
-  if (!current.includes(resolvedName)) {
-    handleProfileUpdate({ blockedFoods: [...current, resolvedName] });
+  if (current.includes(resolvedName)) {
+    setBlockError(`${resolvedName} já está bloqueado.`);
+    return;
   }
 
-  setNewPref('');
-  setSuggestion(null);
-};
+  handleProfileUpdate({
+    blockedFoods: [...current, resolvedName],
+  });
 
-  const confirmBlock = (name: string) => {
-  const resolvedName = resolveFoodName(name, FOODS) || name;
-  const current = userProfile.blockedFoods || [];
-
-  if (!current.includes(resolvedName)) {
-    handleProfileUpdate({ blockedFoods: [...current, resolvedName] });
-  }
-
-  setNewPref('');
-  setSuggestion(null);
-};
+  setBlockInput('');
+  setBlockError('');
+};  
+ 
   const [activeCategory, setActiveCategory] = useState<'breakfast' | 'main' | 'snacks'>('breakfast');
 
   if (!userProfile) return null;
@@ -3654,13 +3649,15 @@ function PlanoScreen() {
   const count = userProfile.mealCount;
   const configs = MEAL_CONFIGS[count];
 
-  const handleAddPref = () => {
-  if (!newPref.trim()) return;
+ const handleAddPref = () => {
+  const raw = favoriteInput.trim();
 
-  const resolvedName = resolveFoodName(newPref, FOODS);
+  if (!raw) return;
+
+  const resolvedName = resolveFoodName(raw, FOODS) || findFuzzyMatch(raw);
 
   if (!resolvedName) {
-    setSuggestion(`Alimento não encontrado: ${newPref.trim()}`);
+    setFavoriteError(`Não encontrei "${raw}" no banco de alimentos.`);
     return;
   }
 
@@ -3669,13 +3666,15 @@ function PlanoScreen() {
   if (!current.includes(resolvedName)) {
     const updatedPrefs = { ...userProfile.preferredIngredients };
     updatedPrefs[activeCategory] = [...current, resolvedName];
-    handleProfileUpdate({ preferredIngredients: updatedPrefs });
+
+    handleProfileUpdate({
+      preferredIngredients: updatedPrefs,
+    });
   }
 
-  setNewPref('');
-  setSuggestion(null);
+  setFavoriteInput('');
+  setFavoriteError('');
 };
-
   const handleRemovePref = (item: string) => {
     const updatedPrefs = { ...userProfile.preferredIngredients };
     updatedPrefs[activeCategory] = (userProfile.preferredIngredients[activeCategory] || []).filter(i => i !== item);
@@ -3880,203 +3879,280 @@ function PlanoScreen() {
           </div>
        </div>
 
-       <AnimatePresence>
-         {showAdjustModal && (
-           <motion.div 
-             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-             className="fixed inset-0 bg-black/60 shadow-inner backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4"
-           >
-             <motion.div 
-               initial={{ y: 200, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 200, opacity: 0 }}
-               className="bg-white w-full max-w-lg rounded-[40px] p-8 max-h-[90vh] overflow-y-auto shadow-2xl no-scrollbar"
-             >
-                <div className="flex justify-between items-center mb-8">
-                   <h2 className="text-2xl font-black text-gray-900 border-l-4 border-green-500 pl-4 uppercase tracking-tighter">Ajustar Plano</h2>
-                   <button onClick={() => setShowAdjustModal(false)} className="p-3 bg-gray-100 rounded-2xl active:scale-90 transition-all text-gray-400">
-                      <X size={20}/>
-                   </button>
-                </div>
+      <AnimatePresence>
+  {showAdjustModal && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 shadow-inner backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ y: 200, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 200, opacity: 0 }}
+        className="bg-white w-full max-w-lg rounded-[40px] p-8 max-h-[90vh] overflow-y-auto shadow-2xl no-scrollbar"
+      >
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-black text-gray-900 border-l-4 border-green-500 pl-4 uppercase tracking-tighter">
+            Ajustar Plano
+          </h2>
 
-                <div className="space-y-8 text-left">
-                   {/* Perfil Alimentar */}
-                   <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">Perfil Alimentar</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {([
-                          { id: 'sem_restricao', label: 'Sem Restrição' },
-                          { id: 'vegetariano', label: 'Vegetariano' },
-                          { id: 'vegano', label: 'Vegano' },
-                          { id: 'pescetariano', label: 'Pescetariano' }
-                        ] as const).map(p => (
-                          <button 
-                            key={p.id}
-                            onClick={() => handleProfileUpdate({ dietaryProfile: p.id })}
-                            className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${userProfile.dietaryProfile === p.id || (!userProfile.dietaryProfile && p.id === 'sem_restricao') ? 'bg-green-50 border-green-500 text-green-600 shadow-sm' : 'bg-white border-transparent text-gray-400'}`}
-                          >
-                            {p.label}
-                          </button>
-                        ))}
-                      </div>
-                   </div>
+          <button
+            onClick={() => setShowAdjustModal(false)}
+            className="p-3 bg-gray-100 rounded-2xl active:scale-90 transition-all text-gray-400"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-                   <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100">
-                      <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">Restrições (Alergias)</p>
-                      <div className="flex flex-wrap gap-2">
-                         {['Lactose', 'Glúten', 'Ovo', 'Peixes', 'Amendoim'].map(r => (
-                           <button 
-                             key={r}
-                             onClick={() => handleRestrictionToggle(r)}
-                             className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${userProfile.restrictions.includes(r.toLowerCase()) ? 'bg-red-50 border-red-500 text-red-600 shadow-sm' : 'bg-white border-transparent text-gray-400'}`}
-                           >
-                             Sem {r}
-                           </button>
-                         ))}
-                      </div>
-                   </div>
+        <div className="space-y-8 text-left">
+          {/* Perfil Alimentar */}
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
+              Perfil Alimentar
+            </p>
 
-                   <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">Estilo das Refeições</p>
-                      <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 space-y-4">
-                         {configs.map(m => (
-                           <div key={m.key} className="flex flex-col gap-2">
-                              <p className="text-[10px] font-black text-gray-500 uppercase">{m.label}</p>
-                              <div className="flex bg-white p-1 rounded-xl shadow-sm">
-                                 {([
-                                   { id: 'balanced', label: 'Completa' },
-                                   { id: 'simple', label: 'Simples' }
-                                 ] as const).map(style => (
-                                   <button
-                                     key={style.id}
-                                     onClick={() => {
-                                       const styles = { ...(userProfile.mealStyles || {}) };
-                                       styles[m.key] = style.id;
-                                       handleProfileUpdate({ mealStyles: styles });
-                                     }}
-                                     className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap flex-1 ${userProfile.mealStyles?.[m.key] === style.id || (!userProfile.mealStyles?.[m.key] && style.id === 'balanced') ? 'bg-green-500 text-white shadow-md' : 'text-gray-300'}`}
-                                   >
-                                     {style.label}
-                                   </button>
-                                 ))}
-                              </div>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
-
-                   <div>
-                      <div className="flex justify-between items-center mb-4 px-1">
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Não quero no plano</p>
-                        <span className="text-[8px] font-bold text-gray-300 uppercase">Bloqueados</span>
-                      </div>
-                      <div className="relative">
-                          <div className="flex gap-3 mb-2 bg-gray-50 rounded-2xl p-2 border border-gray-100">
-                             <input 
-                               value={newPref}
-                               onChange={e => { setNewPref(e.target.value); setSuggestion(null); }}
-                               onKeyDown={e => e.key === 'Enter' && handleAddBlock(newPref)}
-                               placeholder="Ex: Coentro, Berinjela..."
-                               className="flex-1 bg-transparent border-none px-4 py-2 text-sm font-bold focus:ring-0 placeholder:text-gray-300"
-                             />
-                             <button onClick={() => handleAddBlock(newPref)} className="p-3 bg-red-500 text-white rounded-xl active:scale-95 transition-all">
-                                <Plus size={20}/>
-                             </button>
-                          </div>
-                          
-                          <AnimatePresence>
-                             {suggestion && (
-                               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute z-50 w-full bg-white border border-gray-100 rounded-3xl p-6 shadow-2xl mt-1">
-                                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Você quis dizer <span className="text-gray-900 border-b-2 border-red-200">{suggestion}</span>?</p>
-                                  <div className="flex gap-2">
-                                     <button onClick={() => confirmBlock(suggestion)} className="flex-1 bg-green-500 text-white py-3 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-green-100 transition-all active:scale-95">Sim, bloquear</button>
-                                     <button onClick={() => confirmBlock(newPref)} className="flex-1 bg-gray-100 text-gray-400 py-3 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95">Não, {newPref}</button>
-                                  </div>
-                                  <button onClick={() => setSuggestion(null)} className="w-full mt-3 text-[8px] font-bold text-gray-300 uppercase">Cancelar</button>
-                               </motion.div>
-                             )}
-                             {!suggestion && newPref.length > 2 && !findFuzzyMatch(newPref) && (
-                               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute z-50 w-full bg-white border border-gray-100 rounded-3xl p-6 shadow-2xl mt-1">
-                                  <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2">Alimento não encontrado</p>
-                                  <p className="text-[9px] text-gray-400 font-bold mb-4">Deseja bloquear "{newPref}" mesmo assim?</p>
-                                  <div className="flex gap-2">
-                                     <button onClick={() => confirmBlock(newPref)} className="flex-1 bg-gray-100 text-gray-500 py-3 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all">Confirmar</button>
-                                     <button onClick={() => setNewPref('')} className="flex-1 bg-white text-gray-300 py-3 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all border border-gray-100">Limpar</button>
-                                  </div>
-                               </motion.div>
-                             )}
-                          </AnimatePresence>
-                       </div>
-                      <div className="flex flex-wrap gap-2 min-h-[40px]">
-                         {(userProfile.blockedFoods || []).map(item => (
-                           <motion.div 
-                             initial={{ scale: 0.8, opacity: 0 }} 
-                             animate={{ scale: 1, opacity: 1 }}
-                             key={item} 
-                             className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100"
-                           >
-                              <span>{item}</span>
-                              <button onClick={() => handleProfileUpdate({ blockedFoods: (userProfile.blockedFoods || []).filter(i => i !== item) })} className="p-1">
-                                 <X size={12} />
-                              </button>
-                           </motion.div>
-                         ))}
-                      </div>
-                   </div>
-
-                   <div>
-                      <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">Seus Favoritos ({activeCategory === 'breakfast' ? 'Café' : activeCategory === 'main' ? 'Pratos' : 'Lanches'})</p>
-                      <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-5">
-                         {(['breakfast', 'main', 'snacks'] as const).map(cat => (
-                           <button
-                             key={cat}
-                             onClick={() => setActiveCategory(cat)}
-                             className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all ${activeCategory === cat ? 'bg-white shadow-sm text-green-600' : 'text-gray-400'}`}
-                           >
-                             {cat === 'breakfast' ? 'Café' : cat === 'main' ? 'Pratos' : 'Lanches'}
-                           </button>
-                         ))}
-                      </div>
-
-                      <div className="flex gap-3 mb-4 bg-gray-50 rounded-2xl p-2 border border-gray-100">
-                         <input 
-                           value={newPref}
-                           onChange={e => setNewPref(e.target.value)}
-                           onKeyDown={e => e.key === 'Enter' && handleAddPref()}
-                           placeholder="Buscar favorito..."
-                           className="flex-1 bg-transparent border-none px-4 py-2 text-sm font-bold focus:ring-0 placeholder:text-gray-300"
-                         />
-                         <button onClick={handleAddPref} className="p-3 bg-green-500 text-white rounded-xl active:scale-95 transition-all">
-                            <Plus size={20}/>
-                         </button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 min-h-[60px]">
-                         {(userProfile.preferredIngredients[activeCategory] || []).map(item => (
-                           <motion.div 
-                             initial={{ scale: 0.8, opacity: 0 }} 
-                             animate={{ scale: 1, opacity: 1 }}
-                             key={item} 
-                             className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-green-100"
-                           >
-                              <span>{item}</span>
-                              <button onClick={() => handleRemovePref(item)} className="p-1">
-                                 <X size={12} />
-                              </button>
-                           </motion.div>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-
-                <button 
-                  onClick={() => { generateNewPlan(); setShowAdjustModal(false); triggerToast(); }}
-                  className="w-full py-5 bg-green-500 text-white font-black rounded-[32px] mt-10 text-xs uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { id: 'sem_restricao', label: 'Sem Restrição' },
+                { id: 'vegetariano', label: 'Vegetariano' },
+                { id: 'vegano', label: 'Vegano' },
+                { id: 'pescetariano', label: 'Pescetariano' },
+              ] as const).map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => handleProfileUpdate({ dietaryProfile: p.id })}
+                  className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${
+                    userProfile.dietaryProfile === p.id ||
+                    (!userProfile.dietaryProfile && p.id === 'sem_restricao')
+                      ? 'bg-green-50 border-green-500 text-green-600 shadow-sm'
+                      : 'bg-white border-transparent text-gray-400'
+                  }`}
                 >
-                  Salvar Alterações
+                  {p.label}
                 </button>
-             </motion.div>
-           </motion.div>
-         )}
-       </AnimatePresence>
+              ))}
+            </div>
+          </div>
+
+          {/* Restrições */}
+          <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100">
+            <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
+              Restrições / alergias
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {['Lactose', 'Glúten', 'Ovo', 'Peixes', 'Amendoim'].map(r => (
+                <button
+                  key={r}
+                  onClick={() => handleRestrictionToggle(r)}
+                  className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${
+                    userProfile.restrictions.includes(r.toLowerCase())
+                      ? 'bg-red-50 border-red-500 text-red-600 shadow-sm'
+                      : 'bg-white border-transparent text-gray-400'
+                  }`}
+                >
+                  Sem {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Estilo das refeições */}
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
+              Estilo das refeições
+            </p>
+
+            <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 space-y-4">
+              {configs.map(m => (
+                <div key={m.key} className="flex flex-col gap-2">
+                  <p className="text-[10px] font-black text-gray-500 uppercase">
+                    {m.label}
+                  </p>
+
+                  <div className="flex bg-white p-1 rounded-xl shadow-sm">
+                    {([
+                      { id: 'balanced', label: 'Completa' },
+                      { id: 'simple', label: 'Simples' },
+                    ] as const).map(style => (
+                      <button
+                        key={style.id}
+                        onClick={() => {
+                          const styles = { ...(userProfile.mealStyles || {}) };
+                          styles[m.key] = style.id;
+                          handleProfileUpdate({ mealStyles: styles });
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap flex-1 ${
+                          userProfile.mealStyles?.[m.key] === style.id ||
+                          (!userProfile.mealStyles?.[m.key] && style.id === 'balanced')
+                            ? 'bg-green-500 text-white shadow-md'
+                            : 'text-gray-300'
+                        }`}
+                      >
+                        {style.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Não quero no plano */}
+          <div>
+            <div className="flex justify-between items-center mb-4 px-1">
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                Não quero no plano
+              </p>
+
+              <span className="text-[8px] font-bold text-gray-300 uppercase">
+                Bloqueados
+              </span>
+            </div>
+
+            <div className="bg-gray-50 rounded-[28px] p-4 border border-gray-100 mb-4">
+              <div className="flex gap-3">
+                <input
+                  value={blockInput}
+                  onChange={e => {
+                    setBlockInput(e.target.value);
+                    setBlockError('');
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && handleAddBlock()}
+                  placeholder="Ex: coentro, manteiga, cuscuz..."
+                  className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-red-400 outline-none placeholder:text-gray-300"
+                />
+
+                <button
+                  onClick={handleAddBlock}
+                  className="px-4 bg-red-500 text-white rounded-2xl active:scale-95 transition-all"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+
+              {blockError && (
+                <p className="mt-3 text-[11px] font-bold text-red-500 leading-relaxed">
+                  {blockError}
+                </p>
+              )}
+
+              <p className="mt-3 text-[10px] font-semibold text-gray-400 leading-relaxed">
+                Digite o nome de um alimento existente no banco. Se ele não existir, adicione o alimento antes de bloquear.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 min-h-[40px]">
+              {(userProfile.blockedFoods || []).map(item => (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  key={item}
+                  className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-red-100"
+                >
+                  <span>{item}</span>
+
+                  <button
+                    onClick={() =>
+                      handleProfileUpdate({
+                        blockedFoods: (userProfile.blockedFoods || []).filter(i => i !== item),
+                      })
+                    }
+                    className="p-1"
+                  >
+                    <X size={12} />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Favoritos */}
+          <div>
+            <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
+              Seus favoritos ({activeCategory === 'breakfast' ? 'Café' : activeCategory === 'main' ? 'Pratos' : 'Lanches'})
+            </p>
+
+            <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-5">
+              {(['breakfast', 'main', 'snacks'] as const).map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all ${
+                    activeCategory === cat
+                      ? 'bg-white shadow-sm text-green-600'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  {cat === 'breakfast' ? 'Café' : cat === 'main' ? 'Pratos' : 'Lanches'}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3 mb-2 bg-gray-50 rounded-2xl p-2 border border-gray-100">
+              <input
+                value={favoriteInput}
+                onChange={e => {
+                  setFavoriteInput(e.target.value);
+                  setFavoriteError('');
+                }}
+                onKeyDown={e => e.key === 'Enter' && handleAddPref()}
+                placeholder="Buscar favorito..."
+                className="flex-1 bg-transparent border-none px-4 py-2 text-sm font-bold focus:ring-0 placeholder:text-gray-300"
+              />
+
+              <button
+                onClick={handleAddPref}
+                className="p-3 bg-green-500 text-white rounded-xl active:scale-95 transition-all"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+
+            {favoriteError && (
+              <p className="mb-4 text-[11px] font-bold text-red-500 px-1">
+                {favoriteError}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2 min-h-[60px]">
+              {(userProfile.preferredIngredients[activeCategory] || []).map(item => (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  key={item}
+                  className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-green-100"
+                >
+                  <span>{item}</span>
+
+                  <button
+                    onClick={() => handleRemovePref(item)}
+                    className="p-1"
+                  >
+                    <X size={12} />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            generateNewPlan();
+            setShowAdjustModal(false);
+            triggerToast();
+          }}
+          className="w-full py-5 bg-green-500 text-white font-black rounded-[32px] mt-10 text-xs uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
+        >
+          Salvar Alterações
+        </button>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
     </div>
   );
 }
