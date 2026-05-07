@@ -4519,289 +4519,300 @@ function RecipeLibrary() {
   };
 
   const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed);
-
   const configs = userProfile ? MEAL_CONFIGS[userProfile.mealCount] : MEAL_CONFIGS[4];
 
   return (
     <>
       <div className="px-6 mt-4">
-  <button
-    type="button"
-    onClick={() => setIsOpen(true)}
-    className="relative w-full overflow-hidden rounded-[34px] p-5 text-left shadow-xl shadow-green-900/10 active:scale-[0.99] transition-all"
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-green-700 via-emerald-600 to-lime-500" />
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="relative w-full overflow-hidden rounded-[34px] p-5 text-left shadow-xl shadow-green-900/10 active:scale-[0.99] transition-all"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-green-700 via-emerald-600 to-lime-500" />
+          <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15" />
+          <div className="absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-black/10" />
 
-    <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15" />
-    <div className="absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-black/10" />
-
-    <div className="relative z-10 flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/75">
-          Receitas Fitness
-        </p>
-
-        <h3 className="text-2xl font-black leading-tight text-white">
-          Ver receitas prontas
-        </h3>
-
-        <p className="mt-2 max-w-[230px] text-xs font-bold leading-relaxed text-white/80">
-          {visibleRecipes.length} receitas práticas com preparo, ingredientes e macros.
-        </p>
-
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 shadow-sm">
-          Abrir biblioteca
-          <ChevronRight size={14} />
-        </div>
-      </div>
-
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[26px] bg-white/20 text-white backdrop-blur-sm border border-white/20">
-        <Utensils size={28} />
-      </div>
-    </div>
-  </button>
-</div>
-              <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
+          <div className="relative z-10 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/75">
                 Receitas Fitness
               </p>
-              
+
+              <h3 className="text-2xl font-black leading-tight text-white">
+                Ver receitas prontas
+              </h3>
+
+              <p className="mt-2 max-w-[230px] text-xs font-bold leading-relaxed text-white/80">
+                {visibleRecipes.length} receitas práticas com preparo, ingredientes e macros.
+              </p>
+
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 shadow-sm">
+                Abrir biblioteca
+                <ChevronRight size={14} />
+              </div>
+            </div>
+
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[26px] bg-white/20 text-white backdrop-blur-sm border border-white/20">
+              <Utensils size={28} />
+            </div>
+          </div>
+        </button>
+      </div>
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
-              className="relative z-10 bg-white w-full max-w-md rounded-[34px] max-h-[88vh] overflow-hidden shadow-2xl"
-            >
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/40 px-4 py-6 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="mx-auto max-w-md rounded-[36px] bg-white p-5 shadow-2xl">
+              <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-1">
-                    Receitas Fitness
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-green-600">
+                    Biblioteca
                   </p>
-                  <h3 className="text-lg font-black text-gray-900">
-                    Escolha uma receita
-                  </h3>
+
+                  <h2 className="mt-1 text-2xl font-black text-gray-900">
+                    Receitas Fitness
+                  </h2>
+
+                  <p className="mt-1 text-xs font-bold text-gray-400">
+                    Escolha uma receita para ver detalhes ou adicionar ao plano.
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-gray-500"
                 >
-                  <X size={18} className="text-gray-500" />
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-4 overflow-y-auto max-h-[calc(88vh-88px)] space-y-4">
+              <div className="space-y-4">
                 {visibleRecipes.map((recipe) => (
                   <div
                     key={recipe.id}
-                    className="bg-gray-50 rounded-[28px] border border-gray-100 overflow-hidden"
+                    className="overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
                   >
-                    <div className="p-4 flex gap-4">
-                      <div className="w-24 h-24 rounded-[22px] overflow-hidden bg-white border border-gray-100 shadow-sm shrink-0">
-                        {recipe.image ? (
-                          <img
-                            src={recipe.image}
-                            alt={recipe.friendlyTitle}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">
-                            {recipe.emoji || '🍽️'}
-                          </div>
-                        )}
+                    <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white shadow-sm">
+                          <Utensils size={24} className="text-green-600" />
+                        </div>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-black text-gray-900 leading-tight">
+                      {recipe.image ? (
+                        <img
+                          src={recipe.image}
+                          alt={recipe.friendlyTitle}
+                          className="relative z-10 h-full w-full object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+
+                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+
+                      <div className="absolute bottom-4 left-4 right-4 z-30">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
+                          {recipe.cal} kcal
+                        </p>
+
+                        <h4 className="mt-1 text-xl font-black leading-tight text-white">
                           {recipe.friendlyTitle}
-                        </p>
-
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-tight mt-1">
-                          {recipe.title}
-                        </p>
-
-                        <p className="text-xs font-bold text-gray-500 mt-2 leading-relaxed">
-                          {recipe.description}
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-2 mt-3">
-                          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-2 py-2">
-                            <p className="text-[9px] font-black text-blue-500 uppercase">Prot.</p>
-                            <p className="text-sm font-black text-blue-700 mt-1">{recipe.p}g</p>
-                          </div>
-                          <div className="bg-green-50 border border-green-100 rounded-2xl px-2 py-2">
-                            <p className="text-[9px] font-black text-green-500 uppercase">Carbo</p>
-                            <p className="text-sm font-black text-green-700 mt-1">{recipe.c}g</p>
-                          </div>
-                          <div className="bg-orange-50 border border-orange-100 rounded-2xl px-2 py-2">
-                            <p className="text-[9px] font-black text-orange-500 uppercase">Gord.</p>
-                            <p className="text-sm font-black text-orange-700 mt-1">{recipe.f}g</p>
-                          </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <p className="text-[11px] font-bold text-green-700">
-                            {recipe.cal} kcal
-                          </p>
-                        </div>
+                        </h4>
                       </div>
                     </div>
 
-                    <div className="px-4 pb-4">
-                      <div className="bg-white rounded-[22px] border border-gray-100 p-4 mb-3">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.18em] mb-2">
-                          Ingredientes
-                        </p>
-                        <div className="space-y-2">
-                          {recipe.ingredients.map((ingredient) => (
-                            <div key={ingredient} className="flex gap-2 items-start">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
-                              <p className="text-xs font-bold text-gray-600 leading-relaxed">
-                                {ingredient}
-                              </p>
-                            </div>
-                          ))}
+                    <div className="p-4">
+                      <p className="text-xs font-bold leading-relaxed text-gray-500">
+                        {recipe.description}
+                      </p>
+
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <div className="rounded-2xl bg-blue-50 px-3 py-2">
+                          <p className="text-[9px] font-black uppercase text-blue-500">Prot.</p>
+                          <p className="mt-1 text-sm font-black text-blue-700">{recipe.p}g</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-green-50 px-3 py-2">
+                          <p className="text-[9px] font-black uppercase text-green-500">Carbo</p>
+                          <p className="mt-1 text-sm font-black text-green-700">{recipe.c}g</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-orange-50 px-3 py-2">
+                          <p className="text-[9px] font-black uppercase text-orange-500">Gord.</p>
+                          <p className="mt-1 text-sm font-black text-orange-700">{recipe.f}g</p>
                         </div>
                       </div>
 
-                      <div className="bg-white rounded-[22px] border border-gray-100 p-4 mb-3">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.18em] mb-2">
-                          Como fazer
-                        </p>
-                        <div className="space-y-2">
-                          {recipe.steps.map((step, index) => (
-                            <div key={step} className="flex gap-3">
-                              <div className="w-6 h-6 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-[10px] font-black shrink-0">
-                                {index + 1}
-                              </div>
-                              <p className="text-xs font-bold text-gray-600 leading-relaxed">
-                                {step}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRecipe(recipe)}
+                          className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-gray-600"
+                        >
+                          Ver receita
+                        </button>
 
-                      <div className="bg-green-50 rounded-[22px] border border-green-100 p-4 mb-4">
-                        <p className="text-[9px] font-black text-green-700 uppercase tracking-[0.18em] mb-2">
-                          Por que é nutritiva?
-                        </p>
-                        <p className="text-xs font-bold text-green-700/80 leading-relaxed">
-                          {recipe.whyNutritious}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => addRecipeToPlan(recipe, configs[0].key)}
+                          className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                        >
+                          Adicionar
+                        </button>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRecipe(recipe)}
-                        className="w-full py-3 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all"
-                      >
-                        Adicionar ao plano
-                      </button>
                     </div>
                   </div>
                 ))}
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {selectedRecipe && (
-          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedRecipe(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
+          <motion.div
+            className="fixed inset-0 z-[60] bg-black/40 px-4 py-6 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="mx-auto max-w-md overflow-hidden rounded-[36px] bg-white shadow-2xl">
+              <div className="relative h-56 bg-gradient-to-br from-green-50 to-emerald-100">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Utensils size={34} className="text-green-600" />
+                </div>
 
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
-              className="relative z-10 bg-white w-full max-w-sm rounded-[34px] p-6 shadow-2xl"
-            >
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-14 h-14 rounded-[22px] overflow-hidden bg-gray-100 border border-gray-100 shrink-0">
-                  {selectedRecipe.image ? (
-                    <img
-                      src={selectedRecipe.image}
-                      alt={selectedRecipe.friendlyTitle}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl">
-                      {selectedRecipe.emoji || '🍽️'}
-                    </div>
-                  )}
+                {selectedRecipe.image ? (
+                  <img
+                    src={selectedRecipe.image}
+                    alt={selectedRecipe.friendlyTitle}
+                    className="relative z-10 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : null}
+
+                <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedRecipe(null)}
+                  className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 text-gray-700"
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="absolute bottom-5 left-5 right-5 z-30">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
+                    {selectedRecipe.cal} kcal
+                  </p>
+
+                  <h2 className="mt-1 text-2xl font-black leading-tight text-white">
+                    {selectedRecipe.friendlyTitle}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-5">
+                <p className="text-sm font-bold leading-relaxed text-gray-500">
+                  {selectedRecipe.description}
+                </p>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl bg-blue-50 p-3 text-center">
+                    <p className="text-[9px] font-black uppercase text-blue-500">Proteína</p>
+                    <p className="mt-1 text-lg font-black text-blue-700">{selectedRecipe.p}g</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-green-50 p-3 text-center">
+                    <p className="text-[9px] font-black uppercase text-green-500">Carbos</p>
+                    <p className="mt-1 text-lg font-black text-green-700">{selectedRecipe.c}g</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-orange-50 p-3 text-center">
+                    <p className="text-[9px] font-black uppercase text-orange-500">Gorduras</p>
+                    <p className="mt-1 text-lg font-black text-orange-700">{selectedRecipe.f}g</p>
+                  </div>
                 </div>
 
                 <div>
-                  <p className="text-lg font-black text-gray-900 leading-tight">
-                    {selectedRecipe.friendlyTitle}
+                  <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Ingredientes
                   </p>
-                  <p className="text-xs font-bold text-gray-400 mt-1">
-                    Escolha em qual refeição deseja adicionar
+
+                  <div className="space-y-2">
+                    {selectedRecipe.ingredients.map((ingredient) => (
+                      <div key={ingredient} className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
+                        <p className="text-xs font-bold leading-relaxed text-gray-600">
+                          {ingredient}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Como fazer
+                  </p>
+
+                  <div className="space-y-2">
+                    {selectedRecipe.steps.map((step, index) => (
+                      <div key={`${selectedRecipe.id}-step-${index}`} className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-[10px] font-black text-green-700">
+                          {index + 1}
+                        </span>
+
+                        <p className="text-xs font-bold leading-relaxed text-gray-600">
+                          {step}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl bg-green-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
+                    Por que é nutritiva?
+                  </p>
+
+                  <p className="mt-2 text-xs font-bold leading-relaxed text-green-800">
+                    {selectedRecipe.whyNutritious}
                   </p>
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {configs.map((config) => (
+                    <button
+                      key={`${selectedRecipe.id}-${config.key}`}
+                      type="button"
+                      onClick={() => addRecipeToPlan(selectedRecipe, config.key)}
+                      className="rounded-2xl border border-green-100 bg-green-50 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-green-700"
+                    >
+                      Adicionar em {config.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              <div className="space-y-2">
-                {configs.map((cfg) => (
-                  <button
-                    key={cfg.key}
-                    type="button"
-                    onClick={() => {
-                      addRecipeToPlan(selectedRecipe, cfg.key);
-                      setSelectedRecipe(null);
-                      setIsOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between bg-gray-50 hover:bg-green-50 border border-gray-100 rounded-2xl p-4 transition-all active:scale-95"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center">
-                        <cfg.icon size={17} className="text-green-600" />
-                      </div>
-                      <span className="text-sm font-black text-gray-800">
-                        {cfg.label}
-                      </span>
-                    </div>
-
-                    <ChevronRight size={18} className="text-gray-300" />
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedRecipe(null)}
-                className="w-full mt-4 py-4 rounded-2xl bg-gray-100 text-gray-400 text-xs font-black uppercase tracking-widest"
-              >
-                Cancelar
-              </button>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
   );
 }
-
 function PlanoScreen() {
   const { userProfile, mealPlan, generateNewPlan, swapMealItem, updateProfile, handleProfileUpdate } = useApp();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
