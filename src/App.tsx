@@ -2937,7 +2937,7 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
     {selectedFood.recipe?.length && (
       <div className="mb-4">
         <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">
-          Ingredientes
+          Você vai usar
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -4892,7 +4892,7 @@ function RecipeLibrary() {
                         />
                       ) : null}
 
-                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+                      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
 
                       <div className="absolute bottom-4 left-4 right-4 z-30">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
@@ -4941,7 +4941,7 @@ function RecipeLibrary() {
                           onClick={() => addRecipeToPlan(recipe, configs[0].key)}
                           className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
                         >
-                          Adicionar ao plano
+                          Adicionar agora
                         </button>
                       </div>
                     </div>
@@ -4978,7 +4978,7 @@ function RecipeLibrary() {
                   />
                 ) : null}
 
-                <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
                 <button
                   type="button"
@@ -5023,7 +5023,7 @@ function RecipeLibrary() {
 
                 <div>
                   <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    Ingredientes
+                    Você vai usar
                   </p>
 
                   <div className="space-y-2">
@@ -5040,7 +5040,7 @@ function RecipeLibrary() {
 
                 <div>
                   <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    Como fazer
+                    Modo de preparo
                   </p>
 
                   <div className="space-y-2">
@@ -5060,7 +5060,7 @@ function RecipeLibrary() {
 
                 <div className="rounded-3xl bg-green-50 p-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
-                    Por que é nutritiva?
+                    Por que funciona no plano?
                   </p>
 
                   <p className="mt-2 text-xs font-bold leading-relaxed text-green-800">
@@ -5076,7 +5076,7 @@ function RecipeLibrary() {
                       onClick={() => addRecipeToPlan(selectedRecipe, config.key)}
                       className="rounded-2xl border border-green-100 bg-green-50 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-green-700"
                     >
-                      Adicionar em {config.label}
+                      Adicionar no {config.label}
                     </button>
                   ))}
                 </div>
