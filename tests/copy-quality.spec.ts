@@ -68,4 +68,17 @@ test.describe('FitCircle - qualidade textual', () => {
     expect(bodyText).not.toMatch(/musculacao/i);
     expect(bodyText).not.toMatch(/hidroginastica/i);
   });
+  test('home mostra resumo simples sem saldo líquido ou bruto', async ({ page }) => {
+  await page.getByTestId('nav-hoje').click();
+
+  const bodyText = await page.locator('body').innerText();
+
+  expect(bodyText).toMatch(/\bMETA\b/i);
+  expect(bodyText).toMatch(/\bCONSUMIDO\b/i);
+  expect(bodyText).toMatch(/\bTREINO\b/i);
+
+  expect(bodyText).not.toMatch(/\bBRUTO\b/i);
+  expect(bodyText).not.toMatch(/\bSALDO\b/i);
+  expect(bodyText).not.toMatch(/SALDO LÍQUIDO/i);
+});
 });
