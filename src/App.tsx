@@ -637,197 +637,764 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const getMealOptions = (targetCal: number, profile: UserProfile, mealKey: string) => {
-    const isMainMeal = mealKey === 'almoco' || mealKey === 'jantar';
-    const isSnack = mealKey.includes('lanche') || mealKey === 'ceia';
-    const isBreakfast = mealKey === 'cafe';
-    
-    const templateKey = isBreakfast ? 'cafe' : isMainMeal ? (mealKey === 'jantar' ? 'jantar' : 'main') : 'snacks';
-    let prefKey: 'breakfast' | 'main' | 'snacks' = 'snacks';
-    if (isBreakfast) prefKey = 'breakfast';
-    else if (isMainMeal) prefKey = 'main';
+  const isMainMeal = mealKey === 'almoco' || mealKey === 'jantar';
+  const isSnack = mealKey.includes('lanche') || mealKey === 'ceia';
+  const isBreakfast = mealKey === 'cafe';
 
-    const userPrefs = profile.preferredIngredients?.[prefKey] || [];
-    let availableFoods = FOOD_DATABASE.filter(f => !isFoodRestricted(f.name, profile));
-    if (availableFoods.length === 0) availableFoods = FOOD_DATABASE;
+  const templateKey = isBreakfast
+    ? 'cafe'
+    : isMainMeal
+    ? mealKey === 'jantar'
+      ? 'jantar'
+      : 'main'
+    : 'snacks';
 
-    const isDuplicateMealOption = (newOpt: any, existingOptions: any[]) => {
-      const normTitle = newOpt.name.toLowerCase().trim();
-      const normItems = newOpt.qty.toLowerCase();
-      return existingOptions.some(old => {
-        const oldTitle = old.name.toLowerCase().trim();
-        const oldItems = old.qty.toLowerCase();
-        if (normTitle === oldTitle) return true;
-        const newComponents = normItems.split(' + ').map(s => s.replace(/\d+g|\d+ unidade[s]?|\d+ fatia[s]?/g, '').trim());
-        const oldComponents = oldItems.split(' + ').map(s => s.replace(/\d+g|\d+ unidade[s]?|\d+ fatia[s]?/g, '').trim());
-        const overlapCount = newComponents.filter(c => oldComponents.includes(c)).length;
-        if (overlapCount >= 2 && newComponents.length === oldComponents.length) return true;
-        return false;
-      });
-    };
+  let prefKey: 'breakfast' | 'main' | 'snacks' = 'snacks';
 
-    const generateOneOption = (index: number, existingResults: any[]) => {
-      const recipes = RECIPE_LIBRARY[templateKey as keyof typeof RECIPE_LIBRARY] || [];
-      const mealStyle = (profile.mealStyles?.[mealKey] || 'balanced') as 'balanced' | 'simple';
-      
-      let validRecipes = recipes.filter(r => {
-        return r.items.every(itemName => {
-          if (isFoodRestricted(itemName, profile)) return false;
-          const matchingFoods = FOOD_DATABASE.filter(found => found.name === itemName || found.category === itemName || (itemName === 'Frutas' && found.category === 'Frutas'));
-          if (matchingFoods.length > 0 && matchingFoods.every(f => isFoodRestricted(f.name, profile))) return false;
-          return true;
-        });
-      });
+  if (isBreakfast) prefKey = 'breakfast';
+  else if (isMainMeal) prefKey = 'main';
 
-      if (mealStyle === 'simple') {
-        validRecipes = validRecipes.filter(r => r.items.length <= 2 || !r.items.some(it => it.toLowerCase().includes('carne')));
-      }
+  const mealStyle = (profile.mealStyles?.[mealKey] || 'balanced') as 'balanced' | 'simple';
+  const userPrefs = profile.preferredIngredients?.[prefKey] || [];
 
-      const pool = validRecipes.length > 0 ? validRecipes : recipes;
-      let selectedRecipe = pool[Math.floor(Math.random() * pool.length)];
-      
-      const components: { name: string; display: string; cal: number; type?: string; order?: number; food?: any }[] = [];
-      let totalCal = 0;
-      let hasProtein = false;
+  const normalizeLocal = (value: string = '') =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-      selectedRecipe.items.forEach((itemName) => {
-        let options = availableFoods.filter(f => f.name === itemName || f.category === itemName || (itemName === 'Frutas' && f.category === 'Frutas'));
-        if (options.length === 0) options = availableFoods.filter(f => f.tags?.includes(itemName.toLowerCase()) || f.category.toLowerCase().includes(itemName.toLowerCase()));
+  const cleanComponentName = (value: string = '') =>
+    normalizeLocal(value)
+      .replace(/\d+(?:[.,]\d+)?\s*(g|gramas|unidade|unidades|un|fatia|fatias|pote|potes|colher de sopa|colheres de sopa|colher|colheres)/gi, '')
+      .replace(/\ba vontade\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-        let selected = options[0];
-        if (options.length > 1) {
-          const favs = options.filter(o => userPrefs.some(p => o.name.toLowerCase().includes(p.toLowerCase())));
-          selected = favs.length > 0 ? favs[Math.floor(Math.random() * favs.length)] : options[Math.floor(Math.random() * options.length)];
-        }
+  const foodName = (food: any) => normalizeLocal(food?.name || '');
 
-        if (!selected) return;
-        const nameL = selected.name.toLowerCase();
+  const forbiddenBreakfastTerms = [
+    'peito de frango',
+    'frango',
+    'patinho',
+    'carne',
+    'tilapia',
+    'atum',
+    'sardinha',
+    'salmao',
+    'sobrecoxa',
+    'proteina de soja',
+  ];
 
-        // Salada à vontade
-        if (nameL.includes('salada verde')) {
-          components.push({ name: selected.name, display: `${selected.name} à vontade`, cal: 10, type: 'vegetais', order: 10, food: selected });
-          return;
-        }
+  const forbiddenMainProteinTerms = [
+    'whey',
+    'achocolatado',
+    'clara de ovo',
+    'iogurte',
+    'leite',
+    'queijo minas',
+    'queijo cottage',
+    'cottage',
+    'requeijao',
+  ];
 
-        let targetCompCal = targetCal / (selectedRecipe.items.filter(it => !it.toLowerCase().includes('salada verde')).length || 1);
-        
-        if (selected.category === 'Proteína Principal' || selected.category === 'Proteína Leve') {
-          targetCompCal = targetCal * 0.45;
-          hasProtein = true;
-        } else if (selected.category === 'Carboidratos principais' || selected.name.includes('Pão') || selected.category === 'Carboidratos do café') {
-          targetCompCal = targetCal * 0.35;
-        }
+  const mainProteinTerms = [
+    'frango',
+    'patinho',
+    'carne magra',
+    'tilapia',
+    'atum',
+    'sardinha',
+    'salmao',
+    'tofu',
+    'lentilha',
+    'grao-de-bico',
+    'proteina de soja',
+    'ovo de galinha',
+  ];
 
-        let qtyRaw = (targetCompCal / selected.cal) * 100;
-        let qtyFinal = 0;
-        const limits = MEAL_STRICT_LIMITS[selected.name];
+  const carbTerms = [
+    'arroz',
+    'batata',
+    'batata-doce',
+    'macarrao',
+    'mandioca',
+    'inhame',
+    'cuscuz',
+    'pao',
+    'tapioca',
+    'aveia',
+  ];
 
-        if (selected.un) {
-          qtyFinal = Math.max(1, Math.round(qtyRaw / (selected.amountPerUn || 100)));
-          if (limits && (limits.unit === 'unidade' || limits.unit === 'fatia')) qtyFinal = Math.min(qtyFinal, limits.max);
-          const display = getDisplayUnit(qtyFinal, selected.un);
-          const itemCal = (selected.cal * (qtyFinal * (selected.amountPerUn || 100) / 100));
-          components.push({ name: selected.name, display: `${selected.name} ${display}`, cal: itemCal, food: selected });
-          totalCal += itemCal;
-        } else {
-          qtyFinal = Math.max(10, Math.round(qtyRaw / 10) * 10);
-          if (nameL.includes('legumes')) qtyFinal = Math.max(100, Math.min(250, Math.round(qtyRaw / 50) * 50));
-          if (limits && (limits.unit === 'g' || limits.unit === 'gramas')) qtyFinal = Math.min(qtyFinal, limits.max);
-          const display = formatQuantity(qtyFinal, 'g');
-          const itemCal = (selected.cal * qtyFinal / 100);
-          components.push({ name: selected.name, display: `${selected.name} ${display}`, cal: itemCal, food: selected, order: nameL.includes('legumes') ? 9 : undefined });
-          totalCal += itemCal;
-        }
-      });
+  const isWeirdBreakfastFood = (name: string) => {
+    const normalized = normalizeLocal(name);
 
-      // MANDATORY PROTEIN FOR MAIN MEALS
-      if (isMainMeal && !hasProtein) {
-        const protPool = availableFoods.filter(f => f.category === 'Proteína Principal' || f.category === 'Proteína Leve');
-        const prot = protPool[Math.floor(Math.random() * protPool.length)];
-        if (prot) {
-          const qty = Math.max(100, Math.min(220, Math.round(((targetCal * 0.4) / prot.cal) * 100 / 10) * 10));
-          components.push({ name: prot.name, display: `${prot.name} ${formatQuantity(qty, 'g')}`, cal: (prot.cal * qty / 100), food: prot, type: 'proteina', order: 3 });
-          totalCal += (prot.cal * qty / 100);
-        }
-      }
-
-      const sortedComponents = [...components].sort((a, b) => {
-        if (a.order !== undefined || b.order !== undefined) return (a.order || 0) - (b.order || 0);
-        const getOrder = (item: any) => {
-          const n = item.name.toLowerCase();
-          const cat = item.food?.category || '';
-          if (isBreakfast || isSnack) {
-            if (n.includes('pão') || n.includes('tapioca') || n.includes('iogurte')) return 1;
-            if (cat === 'Proteína Leve' || n.includes('ovo')) return 2;
-            if (cat === 'Gorduras') return 3;
-            if (cat === 'Frutas') return 4;
-            if (n.includes('café') || n.includes('leite')) return 5;
-            return 6;
-          } else if (isMainMeal) {
-            if (cat === 'Carboidratos principais') return 1;
-            if (cat === 'Leguminosa') return 2;
-            if (cat === 'Proteína Principal' || cat === 'Proteína Leve') return 3;
-            if (n.includes('legumes')) return 9;
-            if (n.includes('salada')) return 10;
-            return 11;
-          }
-          return 20;
-        };
-        return getOrder(a) - getOrder(b);
-      });
-
-      if (sortedComponents.length === 0 || totalCal < 50) return null;
-
-      // BADGE LOGIC
-      let badge = 'Completa';
-      const proteinItem = sortedComponents.find(c => c.food?.category === 'Proteína Principal' || c.food?.category === 'Proteína Leve' || c.food?.name.toLowerCase().includes('ovo'));
-      const proteinCal = proteinItem ? proteinItem.cal : 0;
-      const proteinRatio = proteinCal / totalCal;
-
-      if (mealStyle === 'simple') badge = 'Simples';
-      else if (proteinRatio > 0.35) badge = 'Mais proteína';
-      else if (proteinRatio < 0.15 && isMainMeal) badge = 'Menos proteína';
-      else if (totalCal < targetCal * 0.85) badge = 'Leve';
-
-      const opt = {
-        name: selectedRecipe.title,
-        qty: sortedComponents.map(c => c.display).join(' + '),
-        cal: Math.round(totalCal),
-        badge: badge,
-        badgeDesc: '',
-        proteinRatio
-      };
-
-      if (isDuplicateMealOption(opt, existingResults)) return null;
-      return opt;
-    };
-
-    const results: any[] = [];
-    for (let i = 0; i < 60; i++) { 
-      const opt = generateOneOption(results.length, results);
-      if (opt) {
-        const calDiff = Math.abs(opt.cal - targetCal);
-        // Scoring: Low cal diff + good protein ratio + completeness
-        let score = 1000 - calDiff;
-        if (opt.proteinRatio >= 0.25 && opt.proteinRatio <= 0.45) score += 100;
-        if (isMainMeal && opt.qty.split(' + ').length >= 3) score += 50;
-        if (opt.badge === 'Simples' && !isSnack) score -= 100;
-        
-        results.push({ ...opt, score });
-      }
-      if (results.length >= 3) break;
-    }
-    
-    if (results.length === 0) results.push({ name: 'Refeição Básica', qty: 'Pão integral 2 fatias + Queijo minas 30g', cal: 250, badge: 'Simples', score: 0 });
-
-    if (isBreakfast && userPrefs.some(p => p.toLowerCase().includes('café'))) {
-      results.forEach((r, idx) => { if (!r.qty.toLowerCase().includes('café') && idx === 0) r.qty += ' + Café sem açúcar 1 xícara'; });
-    }
-
-    while (results.length < 3) results.push({ ...results[0], name: results[0].name + (results.length === 1 ? ' ' : '  '), score: -1000 });
-
-    const sortedByScore = [...results].sort((a, b) => (b.score || 0) - (a.score || 0));
-    return results.map(r => r === sortedByScore[0] ? { ...r, badge: 'Recomendada' } : r);
+    return forbiddenBreakfastTerms.some(term => normalized.includes(term));
   };
+
+  const isBadMainProtein = (name: string) => {
+    const normalized = normalizeLocal(name);
+
+    return forbiddenMainProteinTerms.some(term => normalized.includes(term));
+  };
+
+  const countsAsRealMainProtein = (food: any) => {
+    const name = foodName(food);
+
+    if (!name) return false;
+    if (isBadMainProtein(name)) return false;
+
+    return (
+      food?.category === 'Proteína Principal' ||
+      mainProteinTerms.some(term => name.includes(term))
+    );
+  };
+
+  const getFoodOptionsForRecipeItem = (itemName: string) => {
+    const normalizedItem = normalizeLocal(itemName);
+
+    let options = FOOD_DATABASE.filter(f => {
+      const sameName = normalizeLocal(f.name) === normalizedItem;
+      const sameCategory = normalizeLocal(f.category) === normalizedItem;
+      const fruitCategory = normalizedItem === 'frutas' && normalizeLocal(f.category) === 'frutas';
+
+      return sameName || sameCategory || fruitCategory;
+    });
+
+    if (options.length === 0) {
+      options = FOOD_DATABASE.filter(f => {
+        const tags = f.tags || [];
+        const category = normalizeLocal(f.category || '');
+
+        return (
+          tags.some((tag: string) => normalizeLocal(tag).includes(normalizedItem)) ||
+          category.includes(normalizedItem)
+        );
+      });
+    }
+
+    options = options.filter(f => !isFoodRestricted(f.name, profile));
+
+    if (isBreakfast) {
+      options = options.filter(f => !isWeirdBreakfastFood(f.name));
+    }
+
+    if (isMainMeal) {
+      options = options.filter(f => !normalizeLocal(f.name).includes('whey'));
+      options = options.filter(f => !normalizeLocal(f.name).includes('achocolatado'));
+    }
+
+    return options;
+  };
+
+  let availableFoods = FOOD_DATABASE.filter(f => !isFoodRestricted(f.name, profile));
+
+  if (isBreakfast) {
+    availableFoods = availableFoods.filter(f => !isWeirdBreakfastFood(f.name));
+  }
+
+  if (isMainMeal) {
+    availableFoods = availableFoods.filter(f => !normalizeLocal(f.name).includes('whey'));
+    availableFoods = availableFoods.filter(f => !normalizeLocal(f.name).includes('achocolatado'));
+  }
+
+  if (availableFoods.length === 0) {
+    availableFoods = FOOD_DATABASE;
+  }
+
+  const extraMainRecipes = [
+    {
+      title: 'Arroz, feijão e tofu grelhado',
+      items: ['Arroz integral cozido', 'Feijão preto cozido', 'Tofu grelhado', 'Salada verde'],
+    },
+    {
+      title: 'Batata com lentilha e salada',
+      items: ['Batata inglesa cozida', 'Lentilha cozida', 'Salada verde'],
+    },
+    {
+      title: 'Cuscuz com grão-de-bico e legumes',
+      items: ['Cuscuz de milho cozido', 'Grão-de-bico cozido', 'Legumes variados'],
+    },
+  ];
+
+  const baseRecipes = RECIPE_LIBRARY[templateKey as keyof typeof RECIPE_LIBRARY] || [];
+  const recipes = isMainMeal ? [...baseRecipes, ...extraMainRecipes] : baseRecipes;
+
+  const validRecipes = recipes.filter(recipe => {
+    if (mealStyle === 'simple' && recipe.items.length > 3) {
+      return false;
+    }
+
+    if (isBreakfast && recipe.items.some(item => isWeirdBreakfastFood(item))) {
+      return false;
+    }
+
+    return recipe.items.every(itemName => {
+      if (isFoodRestricted(itemName, profile)) return false;
+
+      const options = getFoodOptionsForRecipeItem(itemName);
+
+      return options.length > 0 || normalizeLocal(itemName).includes('salada verde');
+    });
+  });
+
+  const pool = validRecipes.length > 0 ? validRecipes : recipes;
+
+  const getOptionComponents = (option: any) =>
+    sanitizeOptionQtyText(option?.qty || '')
+      .split(' + ')
+      .map(part => cleanComponentName(part))
+      .filter(Boolean);
+
+  const getOptionSignature = (option: any) =>
+    getOptionComponents(option).sort().join('|');
+
+  const getMainProteinFromOption = (option: any) => {
+    const text = normalizeLocal(`${option?.name || ''} ${option?.qty || ''}`);
+
+    const found = mainProteinTerms.find(term => text.includes(term));
+
+    return found || '';
+  };
+
+  const getMainCarbFromOption = (option: any) => {
+    const text = normalizeLocal(`${option?.name || ''} ${option?.qty || ''}`);
+
+    const found = carbTerms.find(term => text.includes(term));
+
+    return found || '';
+  };
+
+  const optionsAreTooSimilar = (a: any, b: any) => {
+    const aComponents = new Set(getOptionComponents(a));
+    const bComponents = new Set(getOptionComponents(b));
+
+    const intersection = [...aComponents].filter(component => bComponents.has(component)).length;
+    const union = new Set([...aComponents, ...bComponents]).size;
+    const overlap = union === 0 ? 0 : intersection / union;
+
+    const sameTitle = normalizeLocal(a?.name || '') === normalizeLocal(b?.name || '');
+    const sameSignature = getOptionSignature(a) === getOptionSignature(b);
+
+    const sameProteinAndCarb =
+      getMainProteinFromOption(a) !== '' &&
+      getMainCarbFromOption(a) !== '' &&
+      getMainProteinFromOption(a) === getMainProteinFromOption(b) &&
+      getMainCarbFromOption(a) === getMainCarbFromOption(b);
+
+    return sameTitle || sameSignature || overlap >= 0.55 || sameProteinAndCarb;
+  };
+
+  const canAddOption = (option: any, existingOptions: any[]) => {
+    if (!option) return false;
+
+    if (isBreakfast && isWeirdBreakfastFood(`${option.name} ${option.qty}`)) {
+      return false;
+    }
+
+    if (isMainMeal) {
+      const text = normalizeLocal(`${option.name} ${option.qty}`);
+
+      if (text.includes('whey') || text.includes('achocolatado')) {
+        return false;
+      }
+
+      const hasRealProtein = mainProteinTerms.some(term => text.includes(term));
+
+      if (!hasRealProtein) {
+        return false;
+      }
+    }
+
+    return !existingOptions.some(existing => optionsAreTooSimilar(option, existing));
+  };
+
+  const applyPortionLimit = (food: any, qty: number, unitType: 'g' | 'un') => {
+    const name = food?.name || '';
+    const normalized = normalizeLocal(name);
+    const strict = MEAL_STRICT_LIMITS[name];
+
+    let finalQty = qty;
+
+    if (unitType === 'un') {
+      if (normalized.includes('ovo de galinha')) finalQty = Math.min(finalQty, isBreakfast ? 2 : 3);
+      if (normalized.includes('clara de ovo')) finalQty = Math.min(finalQty, 4);
+
+      if (strict && (strict.unit === 'unidade' || strict.unit === 'fatia')) {
+        finalQty = Math.min(finalQty, strict.max);
+      }
+
+      return Math.max(1, Math.round(finalQty));
+    }
+
+    if (normalized.includes('clara de ovo')) finalQty = Math.min(finalQty, 120);
+    if (normalized.includes('manteiga')) finalQty = Math.min(finalQty, 10);
+    if (normalized.includes('requeijao')) finalQty = Math.min(finalQty, 30);
+    if (normalized.includes('whey')) finalQty = Math.min(finalQty, 35);
+    if (normalized.includes('lentilha')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('grao-de-bico')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('tofu')) finalQty = Math.min(finalQty, 200);
+    if (normalized.includes('legumes')) finalQty = Math.max(100, Math.min(finalQty, 250));
+    if (normalized.includes('salada')) finalQty = Math.min(finalQty, 150);
+    if (normalized.includes('batata')) finalQty = Math.min(finalQty, 250);
+    if (normalized.includes('arroz')) finalQty = Math.min(finalQty, 150);
+    if (normalized.includes('feijao')) finalQty = Math.min(finalQty, 120);
+    if (normalized.includes('macarrao')) finalQty = Math.min(finalQty, 180);
+
+    if (strict && (strict.unit === 'g' || strict.unit === 'gramas')) {
+      finalQty = Math.min(finalQty, strict.max);
+    }
+
+    return Math.max(10, Math.round(finalQty / 10) * 10);
+  };
+
+  const chooseFood = (options: FoodItem[]) => {
+    if (options.length === 0) return null;
+
+    const preferred = options.filter(option =>
+      userPrefs.some(pref => normalizeLocal(option.name).includes(normalizeLocal(pref)))
+    );
+
+    const poolToUse = preferred.length > 0 ? preferred : options;
+
+    return poolToUse[Math.floor(Math.random() * poolToUse.length)];
+  };
+
+  const getTargetForFood = (food: any, recipe: any) => {
+    const normalized = foodName(food);
+    const category = food?.category || '';
+    const nonFreeItems = recipe.items.filter((item: string) => !normalizeLocal(item).includes('salada verde'));
+    const base = targetCal / Math.max(nonFreeItems.length, 1);
+
+    if (normalizeLocal(category) === normalizeLocal('Proteína Principal')) return targetCal * 0.34;
+    if (countsAsRealMainProtein(food) && isMainMeal) return targetCal * 0.30;
+
+    if (normalizeLocal(category) === normalizeLocal('Leguminosa')) return targetCal * 0.16;
+    if (normalizeLocal(category) === normalizeLocal('Carboidratos principais')) return targetCal * 0.30;
+
+    if (isBreakfast) {
+      if (normalized.includes('pao') || normalized.includes('tapioca') || normalized.includes('cuscuz')) return targetCal * 0.32;
+      if (normalized.includes('ovo') || normalizeLocal(category) === normalizeLocal('Proteína Leve')) return targetCal * 0.28;
+      if (normalizeLocal(category) === normalizeLocal('Gorduras')) return targetCal * 0.08;
+      if (normalizeLocal(category) === normalizeLocal('Frutas')) return targetCal * 0.18;
+    }
+
+    if (isSnack) {
+      if (normalizeLocal(category) === normalizeLocal('Proteína Leve')) return targetCal * 0.45;
+      if (normalizeLocal(category) === normalizeLocal('Frutas')) return targetCal * 0.30;
+      if (normalized.includes('pao') || normalized.includes('batata') || normalized.includes('aveia')) return targetCal * 0.35;
+    }
+
+    if (normalizeLocal(category) === normalizeLocal('Vegetais')) return targetCal * 0.08;
+    if (normalizeLocal(category) === normalizeLocal('Gorduras')) return targetCal * 0.08;
+
+    return base;
+  };
+
+  const getOrder = (component: any) => {
+    const n = normalizeLocal(component.name);
+    const cat = component.food?.category || '';
+
+    if (isBreakfast || isSnack) {
+      if (n.includes('pao') || n.includes('tapioca') || n.includes('cuscuz') || n.includes('iogurte')) return 1;
+      if (cat === 'Proteína Leve' || n.includes('ovo')) return 2;
+      if (cat === 'Gorduras') return 3;
+      if (cat === 'Frutas') return 4;
+      if (n.includes('cafe') || n.includes('leite')) return 5;
+      return 6;
+    }
+
+    if (isMainMeal) {
+      if (cat === 'Carboidratos principais') return 1;
+      if (cat === 'Leguminosa') return 2;
+      if (countsAsRealMainProtein(component.food)) return 3;
+      if (n.includes('legumes')) return 9;
+      if (n.includes('salada')) return 10;
+      return 11;
+    }
+
+    return 20;
+  };
+
+  const buildOptionFromRecipe = (selectedRecipe: any) => {
+    const components: {
+      name: string;
+      display: string;
+      cal: number;
+      type?: string;
+      order?: number;
+      food?: any;
+    }[] = [];
+
+    let totalCal = 0;
+    let hasProtein = false;
+
+    selectedRecipe.items.forEach((itemName: string) => {
+      let options = getFoodOptionsForRecipeItem(itemName);
+
+      if (options.length === 0 && normalizeLocal(itemName).includes('salada verde')) {
+        const salad = FOOD_DATABASE.find(f => normalizeLocal(f.name).includes('salada verde'));
+
+        if (salad && !isFoodRestricted(salad.name, profile)) {
+          options = [salad];
+        }
+      }
+
+      const selected = chooseFood(options);
+
+      if (!selected) return;
+
+      const nameL = normalizeLocal(selected.name);
+
+      if (nameL.includes('salada verde')) {
+        components.push({
+          name: selected.name,
+          display: `${selected.name} à vontade`,
+          cal: 10,
+          type: 'vegetais',
+          order: 10,
+          food: selected,
+        });
+        totalCal += 10;
+        return;
+      }
+
+      if (isMainMeal && countsAsRealMainProtein(selected)) {
+        hasProtein = true;
+      }
+
+      if (!isMainMeal && (selected.category === 'Proteína Leve' || nameL.includes('ovo'))) {
+        hasProtein = true;
+      }
+
+      const targetCompCal = getTargetForFood(selected, selectedRecipe);
+      const selectedCal = Math.max(1, safeNumber(selected.cal, 1));
+      const qtyRaw = (targetCompCal / selectedCal) * 100;
+
+      if (selected.un) {
+        let qtyFinal = Math.max(1, Math.round(qtyRaw / (selected.amountPerUn || 100)));
+        qtyFinal = applyPortionLimit(selected, qtyFinal, 'un');
+
+        const grams = qtyFinal * (selected.amountPerUn || 100);
+        const itemCal = selected.cal * (grams / 100);
+        const display = getDisplayUnit(qtyFinal, selected.un);
+
+        components.push({
+          name: selected.name,
+          display: `${selected.name} ${display}`,
+          cal: itemCal,
+          food: selected,
+        });
+
+        totalCal += itemCal;
+      } else {
+        let qtyFinal = Math.max(10, Math.round(qtyRaw / 10) * 10);
+
+        if (nameL.includes('legumes')) {
+          qtyFinal = Math.max(100, Math.min(250, Math.round(qtyRaw / 50) * 50));
+        }
+
+        qtyFinal = applyPortionLimit(selected, qtyFinal, 'g');
+
+        const itemCal = selected.cal * (qtyFinal / 100);
+        const display = formatQuantity(qtyFinal, 'g');
+
+        components.push({
+          name: selected.name,
+          display: `${selected.name} ${display}`,
+          cal: itemCal,
+          food: selected,
+          order: nameL.includes('legumes') ? 9 : undefined,
+        });
+
+        totalCal += itemCal;
+      }
+    });
+
+    if (isMainMeal && !hasProtein) {
+      const proteinPool = availableFoods.filter(food => {
+        if (!countsAsRealMainProtein(food)) return false;
+        if (isBadMainProtein(food.name)) return false;
+
+        return true;
+      });
+
+      const protein = chooseFood(proteinPool);
+
+      if (protein) {
+        const proteinCal = Math.max(1, safeNumber(protein.cal, 1));
+        let qty = Math.round(((targetCal * 0.30) / proteinCal) * 100 / 10) * 10;
+        qty = applyPortionLimit(protein, Math.max(90, qty), 'g');
+
+        components.push({
+          name: protein.name,
+          display: `${protein.name} ${formatQuantity(qty, 'g')}`,
+          cal: protein.cal * (qty / 100),
+          food: protein,
+          type: 'proteina',
+          order: 3,
+        });
+
+        totalCal += protein.cal * (qty / 100);
+      }
+    }
+
+    const sortedComponents = [...components].sort((a, b) => {
+      if (a.order !== undefined || b.order !== undefined) {
+        return (a.order || getOrder(a)) - (b.order || getOrder(b));
+      }
+
+      return getOrder(a) - getOrder(b);
+    });
+
+    if (sortedComponents.length === 0 || totalCal < 50) {
+      return null;
+    }
+
+    const proteinComponents = sortedComponents.filter(component => {
+      if (!component.food) return false;
+
+      if (isMainMeal) {
+        return countsAsRealMainProtein(component.food);
+      }
+
+      return (
+        component.food.category === 'Proteína Principal' ||
+        component.food.category === 'Proteína Leve' ||
+        normalizeLocal(component.food.name).includes('ovo')
+      );
+    });
+
+    const proteinCal = proteinComponents.reduce((acc, item) => acc + item.cal, 0);
+    const proteinRatio = totalCal > 0 ? proteinCal / totalCal : 0;
+
+    let badge = 'Completa';
+
+    if (mealStyle === 'simple') badge = 'Simples';
+    else if (totalCal < targetCal * 0.82) badge = 'Leve';
+
+    const opt = {
+      name: selectedRecipe.title,
+      qty: sortedComponents.map(component => component.display).join(' + '),
+      cal: Math.round(totalCal),
+      badge,
+      badgeDesc: '',
+      proteinRatio,
+    };
+
+    return opt;
+  };
+
+  const getFallbackOptions = () => {
+    if (isBreakfast) {
+      return [
+        {
+          name: 'Pão integral com ovos',
+          qty: 'Pão integral 2 fatias + Ovo de galinha 2 unidades',
+          cal: 330,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.28,
+          score: 760,
+        },
+        {
+          name: 'Iogurte com aveia e morango',
+          qty: 'Iogurte natural 1 pote + Aveia em flocos 30g + Morango 120g',
+          cal: 310,
+          badge: 'Leve',
+          badgeDesc: '',
+          proteinRatio: 0.22,
+          score: 730,
+        },
+        {
+          name: 'Tapioca com queijo e fruta',
+          qty: 'Tapioca (goma) 50g + Queijo minas frescal 50g + Banana prata 1 unidade',
+          cal: 390,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.20,
+          score: 700,
+        },
+      ];
+    }
+
+    if (mealKey === 'almoco') {
+      return [
+        {
+          name: 'Arroz, feijão preto e frango',
+          qty: 'Arroz branco cozido 140g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+          cal: 555,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.34,
+          score: 800,
+        },
+        {
+          name: 'Macarrão com carne moída e legumes',
+          qty: 'Macarrão integral 160g + Patinho moído 140g + Legumes variados 180g',
+          cal: 610,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.32,
+          score: 760,
+        },
+        {
+          name: 'Peixe com batata e legumes',
+          qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
+          cal: 450,
+          badge: 'Leve',
+          badgeDesc: '',
+          proteinRatio: 0.36,
+          score: 730,
+        },
+      ];
+    }
+
+    if (mealKey === 'jantar') {
+      return [
+        {
+          name: 'Frango com mandioca e salada',
+          qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+          cal: 485,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.34,
+          score: 790,
+        },
+        {
+          name: 'Inhame, carne magra e legumes',
+          qty: 'Inhame cozido 180g + Carne magra grelhada 140g + Legumes variados 180g',
+          cal: 520,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.32,
+          score: 750,
+        },
+        {
+          name: 'Arroz, feijão e tofu grelhado',
+          qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+          cal: 500,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.25,
+          score: 720,
+        },
+      ];
+    }
+
+    return [
+      {
+        name: 'Iogurte com fruta e aveia',
+        qty: 'Iogurte natural 1 pote + Banana prata 1 unidade + Aveia em flocos 20g',
+        cal: 280,
+        badge: 'Completa',
+        badgeDesc: '',
+        proteinRatio: 0.22,
+        score: 760,
+      },
+      {
+        name: 'Sanduíche de atum',
+        qty: 'Pão integral 2 fatias + Atum em lata (água) 1 lata + Requeijão light 20g',
+        cal: 360,
+        badge: 'Completa',
+        badgeDesc: '',
+        proteinRatio: 0.35,
+        score: 730,
+      },
+      {
+        name: 'Queijo minas com fruta',
+        qty: 'Queijo minas frescal 50g + Banana prata 1 unidade',
+        cal: 250,
+        badge: 'Leve',
+        badgeDesc: '',
+        proteinRatio: 0.22,
+        score: 700,
+      },
+    ];
+  };
+
+  const results: any[] = [];
+  const candidatePool: any[] = [];
+
+  for (let i = 0; i < 120; i++) {
+    if (pool.length === 0) break;
+
+    const selectedRecipe = pool[Math.floor(Math.random() * pool.length)];
+    const opt = buildOptionFromRecipe(selectedRecipe);
+
+    if (!opt) continue;
+
+    const calDiff = Math.abs(opt.cal - targetCal);
+    let score = 1000 - calDiff;
+
+    if (opt.proteinRatio >= 0.22 && opt.proteinRatio <= 0.45) score += 110;
+    if (isMainMeal && opt.qty.split(' + ').length >= 3) score += 60;
+    if (isBreakfast && !isWeirdBreakfastFood(`${opt.name} ${opt.qty}`)) score += 50;
+    if (opt.badge === 'Simples' && !isSnack) score -= 80;
+
+    candidatePool.push({ ...opt, score });
+  }
+
+  const sortedCandidates = [...candidatePool].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  for (const candidate of sortedCandidates) {
+    if (results.length >= 3) break;
+
+    if (canAddOption(candidate, results)) {
+      results.push(candidate);
+    }
+  }
+
+  for (const fallback of getFallbackOptions()) {
+    if (results.length >= 3) break;
+
+    if (canAddOption(fallback, results)) {
+      results.push(fallback);
+    }
+  }
+
+  if (results.length === 0) {
+    const basic = isMainMeal
+      ? {
+          name: 'Arroz, feijão e frango',
+          qty: 'Arroz branco cozido 130g + Feijão preto cozido 100g + Peito de Frango grelhado 140g + Salada verde à vontade',
+          cal: 520,
+          badge: 'Completa',
+          badgeDesc: '',
+          proteinRatio: 0.34,
+          score: 600,
+        }
+      : {
+          name: 'Pão integral com queijo minas',
+          qty: 'Pão integral 2 fatias + Queijo minas frescal 50g',
+          cal: 300,
+          badge: 'Simples',
+          badgeDesc: '',
+          proteinRatio: 0.22,
+          score: 500,
+        };
+
+    results.push(basic);
+  }
+
+  if (isBreakfast && userPrefs.some(pref => normalizeLocal(pref).includes('cafe'))) {
+    const first = results[0];
+
+    if (first && !normalizeLocal(first.qty).includes('cafe')) {
+      first.qty += ' + Café sem açúcar 1 xícara';
+    }
+  }
+
+  const finalOptions = [...results]
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 3);
+
+  return finalOptions.map((option, index) => ({
+    ...option,
+    badge: index === 0 ? 'Recomendada' : option.badge === 'Recomendada' ? 'Completa' : option.badge || 'Completa',
+  }));
+};
 
   const generateNewPlan = (mealKey?: string) => {
     if (!userProfile) return;
