@@ -209,7 +209,13 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
           if (upper !== line) return false;
           if (/^\d+$/.test(line)) return false;
 
-          return !ignoredUppercaseLines.some((ignored) => upper.includes(ignored));
+// Ignora chips de macros do plano: P 32G, C 48G, G 12G
+if (/^[PCG]\s*\d+G$/i.test(upper)) return false;
+
+// Ignora caso os 3 chips venham na mesma linha: P 32G C 48G G 12G
+if (/^P\s*\d+G\s+C\s*\d+G\s+G\s*\d+G$/i.test(upper)) return false;
+
+return !ignoredUppercaseLines.some((ignored) => upper.includes(ignored));
         });
 
       const normalized = optionTitles.map((title) =>

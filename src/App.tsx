@@ -102,7 +102,82 @@ const getDisplayUnit = (qty: number, unit: string) => {
 const formatQuantity = (qty: number, unit: string) => {
   return getDisplayUnit(qty, unit);
 };
+const normalizePlanText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
+const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
+  const match = line.match(
+    /(\d+(?:[.,]\d+)?)\s*(g|gramas|unidade|unidades|un|fatia|fatias|pote|potes|colher de sopa|colheres de sopa|colher|colheres)/i
+  );
+
+  if (!match) return 0;
+
+  const amount = Number(match[1].replace(',', '.'));
+  const unit = match[2].toLowerCase();
+
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+
+  if (unit === 'g' || unit === 'gramas') return amount;
+
+  if (unit.includes('colher')) return amount * 15;
+  if (unit.includes('pote')) return amount * 170;
+  if (unit.includes('fatia')) return amount * (food.amountPerUn || 30);
+  if (unit.includes('un')) return amount * (food.amountPerUn || 100);
+
+  return 0;
+};
+
+const getPlanOptionMacros = (qtyText: string) => {
+  const parts = (qtyText || '')
+    .split(' + ')
+    .map(part => part.trim())
+    .filter(Boolean);
+
+  const totals = parts.reduce(
+    (acc, part) => {
+      const normalizedPart = normalizePlanText(part);
+
+      const food = [...FOOD_DATABASE]
+        .sort((a, b) => b.name.length - a.name.length)
+        .find(item => normalizedPart.includes(normalizePlanText(item.name)));
+
+      if (!food) return acc;
+
+      const grams = getApproxGramsFromPlanLine(part, food);
+      if (grams <= 0) return acc;
+
+      const factor = grams / 100;
+
+      return {
+        p: acc.p + safeNumber(food.p) * factor,
+        c: acc.c + safeNumber(food.c) * factor,
+        f: acc.f + safeNumber(food.f) * factor,
+      };
+    },
+    { p: 0, c: 0, f: 0 }
+  );
+
+  return {
+    p: Math.round(totals.p),
+    c: Math.round(totals.c),
+    f: Math.round(totals.f),
+  };
+};
+
+const getPlanOptionSignature = (option: any) => {
+  const title = normalizePlanText(option?.name || '');
+  const qty = normalizePlanText(
+    sanitizeOptionQtyText(option?.qty || '')
+      .replace(/\d+(?:[.,]\d+)?\s*(g|unidade|unidades|un|fatia|fatias|pote|potes|colher de sopa|colheres de sopa|colher|colheres)/gi, '')
+  );
+
+  return `${title}|${qty}`;
+};
 const RECIPE_LIBRARY = {
   cafe: [
     { title: 'Pão francês com manteiga', items: ['Pão francês', 'Manteiga'] },
@@ -1002,46 +1077,93 @@ validatedPlan[mealKey] = applySmartBadges(mealKey, uniqueOptions).slice(0, 3);
   return validatedPlan;
 };
 
-  const swapMealItem = (mealKey: string, index: number) => {
-    if (!userProfile) return;
-    const count = userProfile.mealCount;
-    const configs = MEAL_CONFIGS[count];
-    const cfg = configs.find(c => c.key === mealKey);
-    if (!cfg) return;
+const swapMealItem = (mealKey: string, index: number) => {
+  if (!userProfile) return;
 
-    let targetCal = 0;
+  const count = userProfile.mealCount;
+  const configs = MEAL_CONFIGS[count];
+  const cfg = configs.find(c => c.key === mealKey);
+  if (!cfg) return;
+
+  const getTargetCalForMeal = () => {
     if (count === 3) {
-      if (cfg.key === 'cafe') targetCal = calorieGoal * 0.25;
-      else if (cfg.key === 'almoco') targetCal = calorieGoal * 0.40;
-      else if (cfg.key === 'jantar') targetCal = calorieGoal * 0.35;
-    } else if (count === 4) {
-      if (cfg.key === 'cafe') targetCal = calorieGoal * 0.25;
-      else if (cfg.key === 'almoco') targetCal = calorieGoal * 0.35;
-      else if (cfg.key === 'lanche') targetCal = calorieGoal * 0.15;
-      else if (cfg.key === 'jantar') targetCal = calorieGoal * 0.25;
-    } else if (count === 5) {
-      if (cfg.key === 'cafe') targetCal = calorieGoal * 0.20;
-      else if (cfg.key === 'lancheManha') targetCal = calorieGoal * 0.10;
-      else if (cfg.key === 'almoco') targetCal = calorieGoal * 0.35;
-      else if (cfg.key === 'lanche') targetCal = calorieGoal * 0.15;
-      else if (cfg.key === 'jantar') targetCal = calorieGoal * 0.20;
-    } else if (count === 6) {
-      if (cfg.key === 'cafe') targetCal = calorieGoal * 0.18;
-      else if (cfg.key === 'lancheManha') targetCal = calorieGoal * 0.10;
-      else if (cfg.key === 'almoco') targetCal = calorieGoal * 0.30;
-      else if (cfg.key === 'lanche') targetCal = calorieGoal * 0.12;
-      else if (cfg.key === 'jantar') targetCal = calorieGoal * 0.22;
-      else if (cfg.key === 'ceia') targetCal = calorieGoal * 0.08;
+      if (cfg.key === 'cafe') return calorieGoal * 0.25;
+      if (cfg.key === 'almoco') return calorieGoal * 0.40;
+      if (cfg.key === 'jantar') return calorieGoal * 0.35;
     }
 
-    const options = getMealOptions(targetCal, userProfile, mealKey);
-    const newPlan = { ...mealPlan };
-    // Rotate options
-    const currentName = newPlan[mealKey][index].name;
-    const nextOption = options.find(o => o.name !== currentName) || options[0];
-    newPlan[mealKey][index] = nextOption; 
-    setMealPlan(newPlan);
+    if (count === 4) {
+      if (cfg.key === 'cafe') return calorieGoal * 0.25;
+      if (cfg.key === 'almoco') return calorieGoal * 0.35;
+      if (cfg.key === 'lanche') return calorieGoal * 0.15;
+      if (cfg.key === 'jantar') return calorieGoal * 0.25;
+    }
+
+    if (count === 5) {
+      if (cfg.key === 'cafe') return calorieGoal * 0.20;
+      if (cfg.key === 'lancheManha') return calorieGoal * 0.10;
+      if (cfg.key === 'almoco') return calorieGoal * 0.35;
+      if (cfg.key === 'lanche') return calorieGoal * 0.15;
+      if (cfg.key === 'jantar') return calorieGoal * 0.20;
+    }
+
+    if (count === 6) {
+      if (cfg.key === 'cafe') return calorieGoal * 0.18;
+      if (cfg.key === 'lancheManha') return calorieGoal * 0.10;
+      if (cfg.key === 'almoco') return calorieGoal * 0.30;
+      if (cfg.key === 'lanche') return calorieGoal * 0.12;
+      if (cfg.key === 'jantar') return calorieGoal * 0.22;
+      if (cfg.key === 'ceia') return calorieGoal * 0.08;
+    }
+
+    return calorieGoal / Math.max(configs.length, 1);
   };
+
+  const currentMealOptions = mealPlan[mealKey] || [];
+  const currentOption = currentMealOptions[index];
+
+  if (!currentOption) return;
+
+  const targetCal = getTargetCalForMeal();
+  const currentSignature = getPlanOptionSignature(currentOption);
+
+  const usedByOtherCards = new Set(
+    currentMealOptions
+      .filter((_, optionIndex) => optionIndex !== index)
+      .map(option => getPlanOptionSignature(option))
+  );
+
+  const candidates: any[] = [];
+
+  for (let attempt = 0; attempt < 80; attempt++) {
+    candidates.push(...getMealOptions(targetCal, userProfile, mealKey));
+  }
+
+  const cleanedCandidates = validatePlan({
+    [mealKey]: candidates,
+  })[mealKey] || [];
+
+  const nextOption = cleanedCandidates.find(candidate => {
+    const candidateSignature = getPlanOptionSignature(candidate);
+
+    return (
+      candidateSignature !== currentSignature &&
+      !usedByOtherCards.has(candidateSignature)
+    );
+  });
+
+  if (!nextOption) return;
+
+  const newMealOptions = [...currentMealOptions];
+  newMealOptions[index] = nextOption;
+
+  const newPlan = validatePlan({
+    ...mealPlan,
+    [mealKey]: newMealOptions,
+  });
+
+  setMealPlan(newPlan);
+};
 
   const completeScreening = (profile: UserProfile) => {
     setUserProfile(profile);
@@ -2389,43 +2511,46 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
   const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="w-full bg-gray-50 min-h-screen pb-32">
+    <div className="w-full bg-gray-50 min-h-screen pb-24">
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
       
-      {/* Header */}
-      <div className="bg-[#16A34A] pt-12 px-6 pb-16 rounded-b-[50px] text-white shadow-xl relative z-10">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em]">{weekday}, {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</p>
-            <h1 className="text-2xl font-black mt-1">
-              {isToday ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Visitante'} 👋` : `Visualizando ${dateDisplay}`}
-            </h1>
-          </div>
-          <button onClick={() => setShowHistory(true)} className="p-3 bg-white/20 rounded-2xl backdrop-blur-md border border-white/10 active:scale-95 transition-all">
-            <Calendar size={18} />
-          </button>
-        </div>
+    {/* Header */}
+<div className="bg-[#16A34A] pt-12 px-6 pb-10 rounded-b-[44px] text-white shadow-xl relative z-10">
+  <div className="flex justify-between items-start mb-5">
+    <div>
+      <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em]">
+        {weekday}, {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+      </p>
 
-        <div className="flex justify-center mb-8">
-           <CalorieRing consumed={totals.cal} goal={calorieGoal} />
-        </div>
+      <h1 className="text-2xl font-black mt-1">
+        {isToday
+          ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Visitante'} 👋`
+          : `Visualizando ${dateDisplay}`}
+      </h1>
+    </div>
 
-        <div className="flex flex-col items-center">
-          <div className="bg-white/95 text-[#16A34A] px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3">
-            <Zap size={18} className="fill-current"/>
-            <span className="text-sm font-black uppercase tracking-tight">Restante: {formatKcal(remaining)}</span>
-          </div>
-          
-          {/* Daily Tip */}
-          <div className="mt-8 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-3xl flex items-start gap-3 w-full max-w-[320px]">
-             <Sparkles size={16} className="mt-0.5 text-green-200" />
-             <p className="text-xs text-white/90 font-medium leading-tight">
-               <span className="font-black uppercase text-[8px] opacity-60 block tracking-widest mb-1">Dica do dia</span>
-               {getDailyTip()}
-             </p>
-          </div>
-        </div>
-      </div>
+    <button
+      onClick={() => setShowHistory(true)}
+      className="p-3 bg-white/20 rounded-2xl backdrop-blur-md border border-white/10 active:scale-95 transition-all"
+    >
+      <Calendar size={18} />
+    </button>
+  </div>
+
+  <div className="flex justify-center mb-4">
+    <CalorieRing consumed={totals.cal} goal={calorieGoal} size={176} />
+  </div>
+
+  <div className="flex justify-center">
+    <div className="bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-2 max-w-[320px]">
+      <Sparkles size={14} className="text-green-200 shrink-0" />
+
+      <p className="text-[10px] text-white/85 font-bold leading-tight">
+        {getDailyTip()}
+      </p>
+    </div>
+  </div>
+</div>
 
       {/* Stats Breakdown */}
       <div className="px-6 grid grid-cols-3 gap-3 -mt-4 relative z-20 font-sans">
@@ -2545,7 +2670,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                </div>
                
                <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100">
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-5">
                     <p className="text-xs font-black text-gray-800 flex-1 pr-4">{mealPlan[cfg.key]?.[0]?.name || '---'}</p>
                     <span className="text-[10px] font-black text-green-600 whitespace-nowrap">{mealPlan[cfg.key]?.[0]?.cal || 0} calorias</span>
                   </div>
@@ -2897,68 +3022,125 @@ function PlanoScreen() {
           </button>
        </div>
 
-       <div className="px-6 py-8 space-y-12">
-          {configs.map(cfg => (
-            <div key={cfg.key} className="space-y-6">
-               <div className="flex items-center gap-3">
-                  <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-50">
-                    <cfg.icon size={20} className="text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-gray-900 leading-none">{cfg.label}</h3>
-                    <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">{mealPlan[cfg.key]?.length || 0} opções geradas</p>
-                  </div>
-               </div>
+    <div className="px-6 py-8 space-y-12">
+  {configs.map((cfg) => (
+    <div key={cfg.key} className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-50">
+          <cfg.icon size={20} className="text-green-600" />
+        </div>
 
-               <div className="space-y-4">
-                  {(mealPlan[cfg.key] || []).map((opt: any, i: number) => (
-                    <div 
-                      key={i} 
-                      className="bg-white rounded-[28px] p-5 shadow-md shadow-gray-100/60 border border-gray-100 flex justify-between items-start gap-4 group relative overflow-hidden transition-all hover:shadow-green-100/60"
-                    >
-                       <div className="flex-1 pr-4">
-                          <div className="flex items-center gap-2 mb-2">
-                             {/* Single Badge Strategy */}
-                             {opt.badge === 'Recomendada' && <span className="bg-green-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-md">Recomendada</span>}
-                             {opt.badge === 'Simples' && <span className="bg-amber-100 text-amber-700 text-[7px] font-black uppercase px-2 py-0.5 rounded-md">Simples</span>}
-                             {opt.badge === 'Leve' && <span className="bg-cyan-50 text-cyan-500 text-[7px] font-black uppercase px-2 py-0.5 rounded-md">Leve</span>}
-                             {opt.badge === 'Menos proteína' && <span className="bg-[#FEF3C7] text-[#92400E] text-[7px] font-black uppercase px-2 py-0.5 rounded-md">Menos proteína</span>}
-                             {/* Fallback */}
-                             {!opt.badge && i === 0 && <span className="bg-green-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-md">Recomendada</span>}
-                          </div>
-                          
-                          <h4 className="text-sm font-black text-gray-900 mb-2 leading-tight uppercase tracking-tight">{opt.name}</h4>
-                          
-                          <div className="flex flex-col gap-1.5 mb-4">
-                                                        {orderMealQtyText(
-                              sanitizeOptionQtyText(opt.qty || ''),
-                              cfg.key
-                            ).split(' + ').map((q: string, idx: number) => (
-                               <div key={idx} className="flex items-center gap-1.5 opacity-60">
-                                 <div className="w-1 h-1 bg-green-500 rounded-full" />
-                                 <span className="text-[10px] font-bold text-gray-500">{q}</span>
-                               </div>
-                             ))}
-                          </div>
+        <div>
+          <h3 className="font-black text-gray-900 leading-none">
+            {cfg.label}
+          </h3>
 
-                          <button 
-                            onClick={() => swapMealItem(cfg.key, i)}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded-xl text-[8px] font-black uppercase transition-all active:scale-95"
-                          >
-                             <Shuffle size={12} />
-                             Trocar opção
-                          </button>
-                       </div>
-                       
-                       <div className="text-right flex flex-col items-end pl-4 border-l border-gray-50">
-                        <p className="text-xl font-black text-gray-900 leading-none">{Math.round(safeNumber(opt.cal))}</p>
-                          <p className="text-[9px] font-black text-gray-300 uppercase tracking-tighter mt-1">calorias</p>
-                       </div>
+          <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">
+            {mealPlan[cfg.key]?.length || 0} opções geradas
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {(mealPlan[cfg.key] || []).map((opt: any, i: number) => {
+          const cleanedQty = orderMealQtyText(
+            sanitizeOptionQtyText(opt.qty || ''),
+            cfg.key
+          );
+
+          const optionMacros = getPlanOptionMacros(cleanedQty);
+
+          return (
+            <div
+              key={`${cfg.key}-${i}-${getPlanOptionSignature(opt)}`}
+              className="bg-white rounded-[28px] p-5 shadow-md shadow-gray-100/60 border border-gray-100 flex justify-between items-start gap-4 group relative overflow-hidden transition-all hover:shadow-green-100/60"
+            >
+              <div className="flex-1 pr-3">
+                <div className="flex items-center gap-2 mb-2">
+                  {opt.badge === 'Recomendada' && (
+                    <span className="bg-green-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-md">
+                      Recomendada
+                    </span>
+                  )}
+
+                  {opt.badge === 'Simples' && (
+                    <span className="bg-amber-100 text-amber-700 text-[7px] font-black uppercase px-2 py-0.5 rounded-md">
+                      Simples
+                    </span>
+                  )}
+
+                  {opt.badge === 'Leve' && (
+                    <span className="bg-cyan-50 text-cyan-500 text-[7px] font-black uppercase px-2 py-0.5 rounded-md">
+                      Leve
+                    </span>
+                  )}
+
+                  {opt.badge === 'Menos proteína' && (
+                    <span className="bg-[#FEF3C7] text-[#92400E] text-[7px] font-black uppercase px-2 py-0.5 rounded-md">
+                      Menos proteína
+                    </span>
+                  )}
+
+                  {!opt.badge && i === 0 && (
+                    <span className="bg-green-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-md">
+                      Recomendada
+                    </span>
+                  )}
+                </div>
+
+                <h4 className="text-sm font-black text-gray-900 mb-2 leading-tight uppercase tracking-tight">
+                  {opt.name}
+                </h4>
+
+                <div className="flex flex-col gap-1.5 mb-3">
+                  {cleanedQty.split(' + ').map((q: string, idx: number) => (
+                    <div key={idx} className="flex items-center gap-1.5 opacity-60">
+                      <div className="w-1 h-1 bg-green-500 rounded-full" />
+                      <span className="text-[10px] font-bold text-gray-500">
+                        {q}
+                      </span>
                     </div>
                   ))}
-               </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[8px] font-black uppercase">
+                    P {optionMacros.p}g
+                  </span>
+
+                  <span className="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[8px] font-black uppercase">
+                    C {optionMacros.c}g
+                  </span>
+
+                  <span className="px-2 py-1 bg-orange-50 text-orange-600 rounded-lg text-[8px] font-black uppercase">
+                    G {optionMacros.f}g
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => swapMealItem(cfg.key, i)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded-xl text-[8px] font-black uppercase transition-all active:scale-95"
+                >
+                  <Shuffle size={12} />
+                  Trocar opção
+                </button>
+              </div>
+
+              <div className="text-right flex flex-col items-end pl-3 border-l border-gray-50 min-w-[58px]">
+                <p className="text-xl font-black text-gray-900 leading-none">
+                  {Math.round(safeNumber(opt.cal))}
+                </p>
+
+                <p className="text-[8px] font-black text-gray-300 uppercase tracking-tighter mt-1">
+                  calorias
+                </p>
+              </div>
             </div>
-          ))}
+          );
+        })}
+      </div>
+    </div>
+  ))}
 
           {/* Tips Section */}
           <div className="bg-green-600 rounded-[38px] p-8 text-white shadow-2xl relative overflow-hidden">
@@ -3208,31 +3390,31 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
           <button onClick={onClose} className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"><X size={18}/></button>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="grid grid-cols-3 gap-2">
-  <div className="bg-gray-50 p-4 rounded-[24px] border border-gray-100 text-center">
+  <div className="bg-gray-50 p-3 rounded-[22px] border border-gray-100 text-center">
     <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
       Meta
     </p>
-    <p className="text-lg font-black text-gray-900">
+    <p className="text-base font-black text-gray-900">
       {Math.round(goal)}
     </p>
   </div>
 
-  <div className="bg-indigo-50/50 p-4 rounded-[24px] border border-indigo-50 text-center">
+  <div className="bg-indigo-50/50 p-3 rounded-[22px] border border-indigo-50 text-center">
     <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
       Consumido
     </p>
-    <p className="text-lg font-black text-indigo-600">
+    <p className="text-base font-black text-indigo-600">
       {Math.round(totals.cal)}
     </p>
   </div>
 
-  <div className="bg-orange-50 p-4 rounded-[24px] border border-orange-100 text-center">
+  <div className="bg-orange-50 p-3 rounded-[22px] border border-orange-100 text-center">
     <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
       Treino
     </p>
-    <p className="text-lg font-black text-orange-600">
+    <p className="text-base font-black text-orange-600">
       +{Math.round(burned)}
     </p>
   </div>
@@ -3432,38 +3614,86 @@ function CirculoScreen() {
     }];
   }, [activeCircle, userProfile, totals, calorieGoal, burned, myCheckin]);
 
-  const feedItems = useMemo(() => {
-    const myShared = meals.filter(m => m.shared).map(m => ({
-      id: m.id,
-      userName: userProfile?.name || 'Você',
-      type: m.type,
-      desc: m.items.map(it => it.food.name).join(', '),
-      cal: m.cal,
-      time: m.time,
-      photo: m.photo,
-      isMessage: false
-    }));
+ const feedItems = useMemo(() => {
+  const getSortValue = (item: any) => {
+    if (/^\d+$/.test(String(item.id))) {
+      return Number(item.id);
+    }
 
-    const mockShared = activeCircle === 'Thiago & Partners' ? [
-      { id: 'm1', userName: 'Partner ❤️', type: 'almoco', desc: 'Arroz, feijão preto e frango', cal: 559, time: '12:30', photo: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200', isMessage: false },
-      { id: 'm2', userName: 'Lucas Silva', type: 'lanche', desc: 'Whey Protein com aveia', cal: 320, time: '16:45', photo: null, isMessage: false },
-    ] : activeCircle === 'Família' ? [
-      { id: 'm3', userName: 'Mãe', type: 'cafe', desc: 'Frutas com iogurte', cal: 210, time: '07:45', photo: null, isMessage: false },
-    ] : [];
+    const time = String(item.time || '00:00');
+    const [hour, minute] = time.split(':').map(Number);
 
-    const messages = supportFeed.map(s => ({
-      id: s.id,
-      userName: s.user,
-      type: 'message',
-      desc: s.msg,
-      cal: 0,
-      time: s.time,
-      photo: null,
-      isMessage: true
-    }));
+    if (Number.isFinite(hour) && Number.isFinite(minute)) {
+      return hour * 60 + minute;
+    }
 
-    return [...messages, ...myShared, ...mockShared].sort((a, b) => b.id.localeCompare(a.id));
-  }, [meals, userProfile, supportFeed, activeCircle]);
+    return 0;
+  };
+
+  const myShared = meals.filter(m => m.shared).map(m => ({
+    id: m.id,
+    userName: userProfile?.name || 'Você',
+    type: m.type,
+    desc: m.items.map(it => it.food.name).join(', '),
+    cal: m.cal,
+    time: m.time,
+    photo: m.photo,
+    isMessage: false,
+  }));
+
+  const mockShared = activeCircle === 'Thiago & Partners'
+    ? [
+        {
+          id: 'mock-1230',
+          userName: 'Partner ❤️',
+          type: 'almoco',
+          desc: 'Arroz, feijão preto e frango',
+          cal: 559,
+          time: '12:30',
+          photo: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200',
+          isMessage: false,
+        },
+        {
+          id: 'mock-1645',
+          userName: 'Lucas Silva',
+          type: 'lanche',
+          desc: 'Whey Protein com aveia',
+          cal: 320,
+          time: '16:45',
+          photo: null,
+          isMessage: false,
+        },
+      ]
+    : activeCircle === 'Família'
+    ? [
+        {
+          id: 'mock-0745',
+          userName: 'Mãe',
+          type: 'cafe',
+          desc: 'Frutas com iogurte',
+          cal: 210,
+          time: '07:45',
+          photo: null,
+          isMessage: false,
+        },
+      ]
+    : [];
+
+  const messages = supportFeed.map(s => ({
+    id: s.id,
+    userName: s.user,
+    type: 'message',
+    desc: s.msg,
+    cal: 0,
+    time: s.time,
+    photo: null,
+    isMessage: true,
+  }));
+
+  return [...messages, ...myShared, ...mockShared].sort(
+    (a, b) => getSortValue(b) - getSortValue(a)
+  );
+}, [meals, userProfile, supportFeed, activeCircle]);
 
   const handleReaction = (mealId: string, emoji: string) => {
     setMyReactions(prev => {
@@ -4880,7 +5110,7 @@ function Navigation() {
 
   return (
         <div className="relative flex flex-col h-full min-h-0 overflow-hidden bg-gray-50">
-        <main className="flex-1 min-h-0 overflow-y-auto w-full no-scrollbar scroll-smooth pb-28">
+        <main className="flex-1 min-h-0 overflow-y-auto w-full no-scrollbar scroll-smooth pb-20">
         {screen === 'hoje' && <HojeScreen onGoToList={() => setScreen('lista')} onNavigate={setScreen} />}
         {screen === 'lista' && (
           <RefeicoesListScreen 
@@ -4904,29 +5134,63 @@ function Navigation() {
       <RegisterWorkoutModal isOpen={showWorkoutModal} onClose={() => setShowWorkoutModal(false)} />
 
       <AnimatePresence>
-        {showQuickAdd && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center p-6 pb-32">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQuickAdd(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-             <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative z-10 space-y-6 text-gray-900">
-                <h3 className="text-xl font-black text-center">O que fazer agora?</h3>
-                <div className="grid grid-cols-2 gap-4">
-                   <button onClick={() => handleQuickAdd('meal')} data-testid="quick-add-meal" className="bg-green-50 p-6 rounded-3xl flex flex-col items-center gap-3 border border-green-100 active:scale-95 transition-all">
-                      <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-100">
-                        <Utensils size={24} />
-                      </div>
-                      <span className="text-xs font-black uppercase tracking-tighter text-green-700 text-center">Registrar Refeição</span>
-                   </button>
-                   <button onClick={() => handleQuickAdd('workout')} data-testid="quick-add-workout" className="bg-orange-50 p-6 rounded-3xl flex flex-col items-center gap-3 border border-orange-100 active:scale-95 transition-all">
-                      <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-100">
-                        <Dumbbell size={24} />
-                      </div>
-                      <span className="text-xs font-black uppercase tracking-tighter text-orange-700 text-center">Registrar Treino</span>
-                   </button>
-                </div>
-                <button onClick={() => setShowQuickAdd(false)} className="w-full py-4 bg-gray-100 text-gray-400 font-black rounded-2xl text-[10px] uppercase tracking-widest">Fechar</button>
-             </motion.div>
+       {showQuickAdd && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setShowQuickAdd(false)}
+      className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+    />
+
+    <motion.div
+      initial={{ scale: 0.94, y: 16, opacity: 0 }}
+      animate={{ scale: 1, y: 0, opacity: 1 }}
+      exit={{ scale: 0.94, y: 16, opacity: 0 }}
+      className="bg-white w-full max-w-[340px] rounded-[32px] p-5 shadow-2xl relative z-10 text-gray-900"
+    >
+      <h3 className="text-lg font-black text-center mb-5">
+        O que fazer agora?
+      </h3>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => handleQuickAdd('meal')}
+          data-testid="quick-add-meal"
+          className="bg-green-50 p-4 rounded-[24px] flex flex-col items-center gap-2.5 border border-green-100 active:scale-95 transition-all"
+        >
+          <div className="w-11 h-11 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-100">
+            <Utensils size={22} />
           </div>
-        )}
+          <span className="text-[10px] font-black uppercase tracking-tight text-green-700 text-center leading-tight">
+            Registrar refeição
+          </span>
+        </button>
+
+        <button
+          onClick={() => handleQuickAdd('workout')}
+          data-testid="quick-add-workout"
+          className="bg-orange-50 p-4 rounded-[24px] flex flex-col items-center gap-2.5 border border-orange-100 active:scale-95 transition-all"
+        >
+          <div className="w-11 h-11 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-100">
+            <Dumbbell size={22} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-tight text-orange-700 text-center leading-tight">
+            Registrar treino
+          </span>
+        </button>
+      </div>
+
+      <button
+        onClick={() => setShowQuickAdd(false)}
+        className="w-full py-3 bg-gray-100 text-gray-400 font-black rounded-2xl text-[10px] uppercase tracking-widest mt-4"
+      >
+        Fechar
+      </button>
+    </motion.div>
+  </div>
+)}
       </AnimatePresence>
 
       {/* Bottom Nav */}
