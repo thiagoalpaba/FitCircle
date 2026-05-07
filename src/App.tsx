@@ -3179,7 +3179,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
   const goal = isMe ? myGoal : 1800 + (member.consumed % 500); 
   const workouts = isMe ? myWorkouts : (member.workouts || []);
   const burned = isMe ? workouts.reduce((acc, w) => acc + safeNumber(w.burned), 0) : workouts.reduce((acc: number, w: any) => acc + safeNumber(w.burned), 0) || (member.trained ? 350 : 0);
-  const progress = Math.min((totals.cal / (goal + burned)) * 100, 100);
+  const progress = Math.min((totals.cal / goal) * 100, 100);
 
   const meals = isMe ? myMeals : [
     { type: 'Café da Manhã', desc: 'Pão integral com ovos', cal: 320, time: '08:15' },
@@ -3217,8 +3217,8 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
             </div>
             <div className="bg-indigo-50/50 p-5 rounded-[28px] border border-indigo-50">
                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Restante</p>
-               <p className="text-2xl font-black text-indigo-600">{Math.round(Math.max(0, goal + burned - totals.cal))}</p>
-               <p className="text-[8px] font-bold text-indigo-400">para a meta</p>
+               <p className="text-2xl font-black text-indigo-600">{Math.round(Math.max(0, goal - totals.cal))}</p>
+               <p className="text-[8px] font-bold text-indigo-400">sem contar treino</p>
             </div>
           </div>
 
@@ -3369,7 +3369,7 @@ function CirculoScreen() {
         id: 'me', 
         name: userProfile?.name || 'Você', 
         consumed: totals.cal, 
-        remaining: Math.round(Math.max(0, calorieGoal + burned - totals.cal)), 
+        remaining: Math.round(Math.max(0, calorieGoal - totals.cal)),
         img: '👤', 
         imgUrl: userProfile?.profilePicture,
         status: 'Online', 
