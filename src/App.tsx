@@ -3248,19 +3248,34 @@ function PlanoScreen() {
                   ))}
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[8px] font-black uppercase">
-                    P {optionMacros.p}g
-                  </span>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+  <div className="bg-blue-50 text-blue-700 rounded-2xl px-3 py-2 border border-blue-100">
+    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+      Prot.
+    </p>
+    <p className="text-sm font-black leading-none mt-1">
+      {optionMacros.p}g
+    </p>
+  </div>
 
-                  <span className="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[8px] font-black uppercase">
-                    C {optionMacros.c}g
-                  </span>
+  <div className="bg-green-50 text-green-700 rounded-2xl px-3 py-2 border border-green-100">
+    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+      Carbo
+    </p>
+    <p className="text-sm font-black leading-none mt-1">
+      {optionMacros.c}g
+    </p>
+  </div>
 
-                  <span className="px-2 py-1 bg-orange-50 text-orange-600 rounded-lg text-[8px] font-black uppercase">
-                    G {optionMacros.f}g
-                  </span>
-                </div>
+  <div className="bg-orange-50 text-orange-700 rounded-2xl px-3 py-2 border border-orange-100">
+    <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+      Gord.
+    </p>
+    <p className="text-sm font-black leading-none mt-1">
+      {optionMacros.f}g
+    </p>
+  </div>
+</div>
 
                 <button
                   onClick={() => swapMealItem(cfg.key, i)}
