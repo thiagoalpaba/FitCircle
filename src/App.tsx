@@ -3299,7 +3299,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
                   type="email" 
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${errorFields.includes('email') ? 'border-red-100 bg-red-50/30' : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'}`} 
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
                   placeholder="seu@email.com" 
                 />
              </div>
@@ -3309,7 +3309,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
                   type="password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${errorFields.includes('password') ? 'border-red-100 bg-red-50/30' : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'}`} 
+                 className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
                   placeholder="••••••••" 
                 />
              </div>
@@ -6783,13 +6783,10 @@ function PerfilScreen() {
 
               <span className="w-1 h-1 rounded-full bg-gray-300" />
 
-              <button
+     <button
   type="button"
-  onClick={() => {
-    localStorage.clear();
-    window.location.reload();
-  }}
-  className="mx-auto block text-center text-xs font-bold text-red-400 underline-offset-4 hover:text-red-500 hover:underline"
+  onClick={() => setShowResetConfirm(true)}
+  className="mx-auto mt-3 block text-center text-[11px] font-bold text-red-400 underline-offset-4 hover:text-red-500 hover:underline"
 >
   Resetar aplicativo
 </button>
@@ -7005,7 +7002,7 @@ function PerfilScreen() {
                 <button
                   type="button"
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-500 text-xs font-black uppercase"
+                 className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xs font-black uppercase"
                 >
                   Cancelar
                 </button>
@@ -7052,7 +7049,7 @@ function PerfilScreen() {
                 <button
                   type="button"
                   onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-500 text-xs font-black uppercase"
+                 className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xs font-black uppercase"
                 >
                   Cancelar
                 </button>
