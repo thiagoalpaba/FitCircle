@@ -339,6 +339,7 @@ const ALIASES: Record<string, string> = {
   'ovos': 'Ovo de galinha',
   'tapioca': 'Tapioca (goma)',
 };
+const ALIASES_FUZZY = ALIASES;
 
 const findFuzzyMatch = (input: string) => {
   const normalized = input.toLowerCase().trim()
@@ -3045,6 +3046,7 @@ function CalorieRing({
   consumed,
   goal,
   size = 200,
+  burned = 0,
 }: {
   consumed: number;
   goal: number;
@@ -3057,57 +3059,94 @@ function CalorieRing({
 
   const safeConsumed = Math.max(0, Math.round(safeNumber(consumed)));
   const safeGoal = Math.max(1, Math.round(safeNumber(goal, 1)));
+  const safeBurned = Math.max(0, Math.round(safeNumber(burned)));
+  const remaining = Math.max(safeGoal - safeConsumed, 0);
+
   const progress = Math.min(safeConsumed / safeGoal, 1);
   const isOver = safeConsumed > safeGoal;
 
   const strokeDashoffset = circumference - progress * circumference;
-  const ringColor = isOver ? '#F59E0B' : '#FFFFFF';
+
+  const ringColor = isOver ? '#F59E0B' : '#22C55E';
+
+  const statusTitle = isOver
+    ? 'Passou da meta hoje'
+    : remaining === 0
+    ? 'Meta atingida'
+    : 'Restante hoje';
+
+  const statusValue = isOver
+    ? 'Ajuste com calma na próxima refeição.'
+    : remaining === 0
+    ? 'Bom trabalho por hoje.'
+    : `${remaining} calorias disponíveis`;
 
   return (
-    <div className="relative flex items-center justify-center">
-      <svg width={size} height={size} className="rotate-[-90deg]">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="rgba(255,255,255,0.16)"
-          strokeWidth={stroke}
-          fill="transparent"
-        />
+    <div className="relative flex flex-col items-center justify-center">
+      <div className="relative flex items-center justify-center">
+        <svg width={size} height={size} className="rotate-[-90deg]">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth={stroke}
+            fill="transparent"
+          />
 
-        <motion.circle
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={ringColor}
-          strokeWidth={stroke}
-          fill="transparent"
-          strokeDasharray={circumference}
-          strokeLinecap="round"
-        />
-      </svg>
+          <motion.circle
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: 1, ease: 'easeOut' }}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={ringColor}
+            strokeWidth={stroke}
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeLinecap="round"
+          />
+        </svg>
 
-      <div className="absolute flex flex-col items-center justify-center text-center">
-        <span className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">
-          Consumido
-        </span>
-
-        <div className="flex items-baseline gap-1">
-          <span className="text-5xl font-black leading-none text-white">
-            {safeConsumed}
+        <div className="absolute flex flex-col items-center max-w-[160px] text-center">
+          <span className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">
+            Consumido
           </span>
 
-          <span className="text-sm font-black text-white/70 uppercase">
-            cal
+          <div className="flex items-baseline gap-1">
+            <span className="text-5xl font-black text-white">
+              {safeConsumed}
+            </span>
+
+            <span className="text-sm font-bold text-white/60 uppercase">
+              cal
+            </span>
+          </div>
+
+          <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">
+            calorias consumidas
           </span>
+          <p className="mt-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">
+  Meta diária: {Math.round(goal)} calorias
+</p>
         </div>
+      </div>
 
-        <span className="mt-2 text-[9px] font-bold text-white/55 uppercase tracking-widest">
-          hoje
-        </span>
+      <div className="mt-5 bg-white/14 backdrop-blur-md px-5 py-3 rounded-3xl border border-white/10 text-center min-w-[210px]">
+        <p className="text-[9px] font-black text-white/65 uppercase tracking-[0.18em]">
+          {statusTitle}
+        </p>
+
+        <p className="text-sm font-black text-white mt-1 leading-tight">
+          {statusValue}
+        </p>
+
+        {safeBurned > 0 && (
+          <p className="text-[10px] font-bold text-white/70 mt-2">
+            🔥 {safeBurned} calorias de treino hoje
+          </p>
+        )}
       </div>
     </div>
   );
@@ -3996,7 +4035,11 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         </div>
 
         <div className="flex justify-center mb-4">
-          <CalorieRing consumed={totals.cal} goal={calorieGoal} size={166} />
+          <CalorieRing
+            consumed={totals.cal}
+            goal={calorieGoal}
+            burned={burned}
+          />
         </div>
 
         <div className="flex justify-center mb-3">
@@ -4018,39 +4061,9 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <Sparkles size={14} className="text-green-200 shrink-0" />
 
             <p className="text-[10px] text-white/85 font-bold leading-tight">
-              {getDailyTip()}
+              Dica: O equilíbrio é melhor que a restrição severa.
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Stats Breakdown */}
-      <div className="px-6 grid grid-cols-3 gap-3 -mt-5 relative z-20 font-sans">
-        <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-          <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">
-            Meta
-          </span>
-          <span className="text-sm font-black text-gray-900">
-            {calorieGoal}
-          </span>
-        </div>
-
-        <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-          <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">
-            Treino
-          </span>
-          <span className="text-sm font-black text-green-500">
-            +{burned}
-          </span>
-        </div>
-
-        <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-          <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">
-            Consumido
-          </span>
-          <span className="text-sm font-black text-gray-900">
-            {totals.cal}
-          </span>
         </div>
       </div>
 
@@ -4242,11 +4255,12 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setPendingMealType(cfg.key);
                     onNavigate('registrar');
                   }}
-                  className="w-full py-3 bg-[#16A34A] text-white rounded-2xl text-[9px] font-black uppercase shadow-lg shadow-green-100 active:scale-95 transition-all text-center"
+                  className="px-4 py-2.5 rounded-2xl bg-white text-green-600 border border-green-100 text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
                 >
                   Registrar
                 </button>
@@ -4284,14 +4298,14 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           {workouts.length > 0 ? (
             <div className="space-y-4">
               <div className="space-y-3">
-                {workouts.map(w => (
+                {workouts.map((w: any) => (
                   <div
                     key={w.id}
                     className="flex justify-between items-center bg-white p-4 rounded-2xl border border-orange-50"
                   >
                     <div>
                       <p className="text-sm font-black text-gray-800">
-                        {WORKOUT_TYPES.find(wt => wt.key === w.type)?.label}
+                        {WORKOUT_TYPES.find((wt: any) => wt.key === w.type)?.label}
                       </p>
                       <p className="text-[10px] text-gray-500 font-bold uppercase">
                         {w.duration > 0 ? `${w.duration} min` : 'Manual'} · {w.burned} calorias
@@ -4330,7 +4344,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           )}
         </div>
       </div>
-    
+
       {/* Workout Modal */}
       <AnimatePresence>
         {showWorkoutModal && (
@@ -7801,6 +7815,120 @@ function CirculoScreenFoodstagram() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+function AddMealScreen({
+  onBack,
+}: {
+  onBack: () => void;
+}) {
+  const { userProfile, meals } = useApp();
+
+  const mealCount = (userProfile?.mealCount || 4) as 3 | 4 | 5 | 6;
+  const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
+
+  return (
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+      <div className="bg-white pt-12 px-6 pb-6 border-b border-gray-100 flex items-center gap-4 sticky top-0 z-30">
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
+        >
+          <span className="text-xl font-black text-gray-500 leading-none">
+            ×
+          </span>
+        </button>
+
+        <div>
+          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+            Registrar
+          </p>
+
+          <h1 className="text-xl font-black text-gray-900">
+            Refeições do Dia
+          </h1>
+        </div>
+      </div>
+
+      <div className="px-5 mt-5 space-y-4">
+        {configs.map((cfg) => {
+          const registeredMeals = Array.isArray(meals)
+            ? meals.filter((meal: any) => meal.type === cfg.key)
+            : [];
+
+          const totalCalories = registeredMeals.reduce(
+            (sum: number, meal: any) =>
+              sum + safeNumber(meal.cal || meal.calories),
+            0
+          );
+
+          return (
+            <div
+              key={cfg.key}
+              className="bg-white rounded-[30px] p-5 border border-gray-100 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl shrink-0">
+                    {cfg.key === 'cafe'
+                      ? '☕'
+                      : cfg.key === 'almoco'
+                      ? '🍽️'
+                      : cfg.key === 'jantar'
+                      ? '🌙'
+                      : cfg.key === 'ceia'
+                      ? '🌜'
+                      : '🍎'}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-gray-900">
+                      {cfg.label}
+                    </p>
+
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
+                      {registeredMeals.length > 0
+                        ? `${registeredMeals.length} registro(s) · ${Math.round(totalCalories)} calorias`
+                        : 'Ainda não registrado'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="px-4 py-3 rounded-2xl bg-white text-green-600 border border-green-100 text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
+                >
+                  Voltar
+                </button>
+              </div>
+
+              {registeredMeals.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {registeredMeals.map((meal: any) => (
+                    <div
+                      key={meal.id}
+                      className="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center justify-between gap-3"
+                    >
+                      <div>
+                        <p className="text-xs font-black text-gray-800">
+                          {meal.items?.[0]?.food?.name || cfg.label}
+                        </p>
+
+                        <p className="text-[10px] font-bold text-gray-400 mt-1">
+                          {Math.round(safeNumber(meal.cal || meal.calories))} calorias
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
