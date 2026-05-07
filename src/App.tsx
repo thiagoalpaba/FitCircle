@@ -3332,7 +3332,12 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
                   <p className="text-xs font-bold text-red-500">{error}</p>
                </div>
              )}
-             
+             <button
+  type="button"
+  className="self-end text-xs font-bold text-green-700 hover:text-green-800"
+>
+  Esqueci minha senha
+</button>
              <button 
               onClick={handleAction}
               disabled={isLoading}
