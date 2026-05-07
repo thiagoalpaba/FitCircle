@@ -114,9 +114,8 @@ const RECIPE_LIBRARY = {
     { title: 'Iogurte com aveia e morango', items: ['Iogurte natural', 'Aveia em flocos', 'Morango'] },
     { title: 'Panqueca de banana com aveia', items: ['Banana prata', 'Aveia em flocos', 'Ovo de galinha'] },
     { title: 'Fruta com aveia e mel', items: ['Mamão papaia', 'Aveia em flocos', 'Mel'] },
-    { title: 'Cuscuz com frango desfiado', items: ['Cuscuz de milho', 'Peito de Frango grelhado'] },
-    { title: 'Tapioca com frango desfiado', items: ['Tapioca (goma)', 'Peito de Frango grelhado'] },
-    { title: 'Pão com frango desfiado', items: ['Pão integral', 'Peito de Frango grelhado'] },
+    { title: 'Tapioca com ovos', items: ['Tapioca (goma)', 'Ovo de galinha'] },
+    { title: 'Pão integral com ovos', items: ['Pão integral', 'Ovo de galinha'] },
   ],
   main: [
     { title: 'Arroz, feijão preto e frango', items: ['Arroz branco cozido', 'Feijão preto cozido', 'Peito de Frango grelhado', 'Salada verde'] },
@@ -2907,7 +2906,10 @@ function PlanoScreen() {
                           <h4 className="text-sm font-black text-gray-900 mb-2 leading-tight uppercase tracking-tight">{opt.name}</h4>
                           
                           <div className="flex flex-col gap-1.5 mb-4">
-                             {opt.qty.split(' + ').map((q: string, idx: number) => (
+                                                        {orderMealQtyText(
+                              sanitizeOptionQtyText(opt.qty || ''),
+                              cfg.key
+                            ).split(' + ').map((q: string, idx: number) => (
                                <div key={idx} className="flex items-center gap-1.5 opacity-60">
                                  <div className="w-1 h-1 bg-green-500 rounded-full" />
                                  <span className="text-[10px] font-bold text-gray-500">{q}</span>
@@ -4094,16 +4096,14 @@ function PerfilScreen() {
       <div className="px-5 mt-6 gap-6 flex flex-col mb-10">
         <div className="grid grid-cols-2 gap-3">
           <StatCard
-            label="Peso atual"
-            value={`${userProfile?.weight || 0} kg`}
-            sub="Registrado no perfil"
-          />
+  label="Peso atual"
+  value={`${userProfile?.weight || 0} kg`}
+/>
 
           <StatCard
-            label="Altura"
-            value={`${userProfile?.height || 0} cm`}
-            sub="Base do cálculo"
-          />
+  label="Altura"
+  value={`${userProfile?.height || 0} cm`}
+/>
 
           <StatCard
             label="IMC"
@@ -4132,11 +4132,10 @@ function PerfilScreen() {
           </StatCard>
 
           <StatCard
-            label="Meta calórica"
-            value={`${calorieGoal}`}
-            sub="kcal por dia"
-            highlight
-          />
+  label="Meta calórica"
+  value={`${calorieGoal}`}
+  highlight
+/>
         </div>
 
         <div className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50">
