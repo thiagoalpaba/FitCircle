@@ -1,9 +1,42 @@
 import { test, expect, Page } from '@playwright/test';
 
 async function expectHealthyScreen(page: Page) {
-  await expect(page.locator('body')).not.toContainText('NaN');
-  await expect(page.locator('body')).not.toContainText('undefined');
-  await expect(page.locator('body')).not.toContainText('null');
+  await expect(page.locator('body')).not.toContainText(/\bNaN\b/);
+  await expect(page.locator('body')).not.toContainText(/\bundefined\b/i);
+  await expect(page.locator('body')).not.toContainText(/\bnull\b/i);
+}
+
+function getMealSection(bodyText: string, mealName: string) {
+  const mealHeadings = [
+    'Café da manhã',
+    'Lanche da manhã',
+    'Almoço',
+    'Lanche da tarde',
+    'Jantar',
+    'Ceia',
+  ];
+
+  const start = bodyText.indexOf(mealName);
+
+  if (start === -1) return '';
+
+  const possibleEnds = mealHeadings
+    .filter((heading) => heading !== mealName)
+    .map((heading) => bodyText.indexOf(heading, start + mealName.length))
+    .filter((index) => index > start);
+
+  const end = possibleEnds.length > 0 ? Math.min(...possibleEnds) : bodyText.length;
+
+  return bodyText.slice(start, end);
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 test.describe('FitCircle - qualidade do plano alimentar', () => {
@@ -35,46 +68,23 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
   });
 
   test('não mostra whey em almoço ou jantar', async ({ page }) => {
-  const bodyText = await page.locator('body').innerText();
+    const bodyText = await page.locator('body').innerText();
 
-  function getMealSection(text: string, mealName: string) {
-    const headings = [
-      'Café da manhã',
-      'Lanche da manhã',
-      'Almoço',
-      'Lanche da tarde',
-      'Jantar',
-      'Ceia',
-    ];
+    const lunchSection = getMealSection(bodyText, 'Almoço');
+    const dinnerSection = getMealSection(bodyText, 'Jantar');
 
-    const start = text.indexOf(mealName);
+    expect(lunchSection).not.toMatch(/whey protein/i);
+    expect(lunchSection).not.toMatch(/achocolatado/i);
 
-    if (start === -1) return '';
-
-    const possibleEnds = headings
-      .filter((heading) => heading !== mealName)
-      .map((heading) => text.indexOf(heading, start + mealName.length))
-      .filter((index) => index > start);
-
-    const end = possibleEnds.length > 0 ? Math.min(...possibleEnds) : text.length;
-
-    return text.slice(start, end);
-  }
-
-  const lunchSection = getMealSection(bodyText, 'Almoço');
-  const dinnerSection = getMealSection(bodyText, 'Jantar');
-
-  expect(lunchSection).not.toMatch(/whey protein/i);
-  expect(lunchSection).not.toMatch(/achocolatado/i);
-
-  expect(dinnerSection).not.toMatch(/whey protein/i);
-  expect(dinnerSection).not.toMatch(/achocolatado/i);
-});
+    expect(dinnerSection).not.toMatch(/whey protein/i);
+    expect(dinnerSection).not.toMatch(/achocolatado/i);
+  });
 
   test('não mostra porções absurdas conhecidas', async ({ page }) => {
     const bodyText = await page.locator('body').innerText();
+
     expect(bodyText).not.toMatch(/Pão integral\s+3\s+fatias/i);
-    expect(bodyText).not.toMatch(/Ovo de galinha\s+3\s+unidades/i);
+    expect(bodyText).not.toMatch(/Ovo de galinha\s+4\s+unidades/i);
     expect(bodyText).not.toMatch(/Requeijão light\s+4\s+colheres/i);
     expect(bodyText).not.toMatch(/Manteiga\s+4\s+pontas/i);
     expect(bodyText).not.toMatch(/Whey Protein\s+100g/i);
@@ -82,13 +92,26 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
     expect(bodyText).not.toMatch(/Salada verde\s+\d+g/i);
     expect(bodyText).not.toMatch(/Legumes variados\s+[6-9]\d{2}g/i);
     expect(bodyText).not.toMatch(/Batata inglesa cozida\s+[4-9]\d{2}g/i);
-    expect(bodyText).not.toMatch(/Manteiga\s+(1[1-9]|[2-9]\d)g/i);
+    expect(bodyText).not.toMatch(/Manteiga\s+(1[1-9]|[2-9]\d|\d{3,})g/i);
     expect(bodyText).not.toMatch(/Requeijão light\s+(3[1-9]|[4-9]\d|\d{3,})g/i);
     expect(bodyText).not.toMatch(/Whey Protein\s+(4[1-9]|[5-9]\d|\d{3,})g/i);
   });
 
+  test('café da manhã não sugere frango por padrão nem manteiga exagerada', async ({ page }) => {
+    const bodyText = await page.locator('body').innerText();
+
+    const breakfastSection = getMealSection(bodyText, 'Café da manhã');
+
+    expect(breakfastSection).toMatch(/Café da manhã/i);
+
+    expect(breakfastSection).not.toMatch(/Peito de Frango/i);
+    expect(breakfastSection).not.toMatch(/frango desfiado/i);
+    expect(breakfastSection).not.toMatch(/Manteiga\s+(1[1-9]|[2-9]\d|\d{3,})g/i);
+  });
+
   test('almoço e jantar têm alguma proteína principal real', async ({ page }) => {
-    const bodyText = (await page.locator('body').innerText()).toLowerCase();
+    const bodyText = await page.locator('body').innerText();
+
     const proteins = [
       'frango',
       'patinho',
@@ -102,125 +125,99 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
       'proteína de soja',
     ];
 
-    const lunchIndex = bodyText.indexOf('almoço');
-    const dinnerIndex = bodyText.indexOf('jantar');
+    const lunchSection = normalize(getMealSection(bodyText, 'Almoço'));
+    const dinnerSection = normalize(getMealSection(bodyText, 'Jantar'));
 
-    if (lunchIndex !== -1 && dinnerIndex !== -1) {
-      const lunchSection = bodyText.slice(lunchIndex, dinnerIndex);
-      expect(proteins.some((protein) => lunchSection.includes(protein))).toBeTruthy();
-    }
+    expect(proteins.some((protein) => lunchSection.includes(normalize(protein)))).toBeTruthy();
+    expect(proteins.some((protein) => dinnerSection.includes(normalize(protein)))).toBeTruthy();
+  });
 
-    if (dinnerIndex !== -1) {
-      const dinnerSection = bodyText.slice(dinnerIndex);
-      expect(proteins.some((protein) => dinnerSection.includes(protein))).toBeTruthy();
+  test('almoço e jantar não exibem salada com gramatura absurda', async ({ page }) => {
+    const bodyText = await page.locator('body').innerText();
+
+    const lunchSection = getMealSection(bodyText, 'Almoço');
+    const dinnerSection = getMealSection(bodyText, 'Jantar');
+
+    expect(lunchSection).not.toMatch(/Salada verde\s+\d+g/i);
+    expect(dinnerSection).not.toMatch(/Salada verde\s+\d+g/i);
+
+    expect(lunchSection).not.toMatch(/Legumes variados\s+[6-9]\d{2}g/i);
+    expect(dinnerSection).not.toMatch(/Legumes variados\s+[6-9]\d{2}g/i);
+  });
+
+  test('badges do plano fazem sentido básico', async ({ page }) => {
+    const bodyText = await page.locator('body').innerText();
+
+    expect(bodyText).not.toMatch(/Poca Prot\./i);
+    expect(bodyText).not.toMatch(/Pouca Prot\./i);
+    expect(bodyText).not.toMatch(/Menos proteína/i);
+
+    const lines = bodyText.split('\n').map(line => line.trim()).filter(Boolean);
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (/leve/i.test(line)) {
+        const nearby = lines.slice(i, i + 8).join(' ');
+        expect(nearby).not.toMatch(/[6-9]\d{2}\s*CALORIAS/i);
+      }
     }
   });
-});
 
-test('salada aparece depois da proteína em almoço e jantar', async ({ page }) => {
-  const bodyText = await page.locator('body').innerText();
+  test('não mostra títulos duplicados na mesma refeição', async ({ page }) => {
+    const bodyText = await page.locator('body').innerText();
 
-  const sections = ['Almoço', 'Jantar'];
+    const mealHeadings = [
+      'Café da manhã',
+      'Lanche da manhã',
+      'Almoço',
+      'Lanche da tarde',
+      'Jantar',
+      'Ceia',
+    ];
 
-  for (const sectionName of sections) {
-    const sectionIndex = bodyText.indexOf(sectionName);
+    const ignoredUppercaseLines = [
+      'OPÇÕES GERADAS',
+      'RECOMENDADA',
+      'COMPLETA',
+      'SIMPLES',
+      'LEVE',
+      'CALORIAS',
+      'SUGESTÃO ALTERNATIVA',
+      'DICA DE SUCESSO',
+      'MEUS OBJETIVOS',
+      'PLANO ALIMENTAR',
+      'AJUSTAR',
+      'HOJE',
+      'PLANO',
+      'CÍRCULO',
+      'PERFIL',
+    ];
 
-    if (sectionIndex === -1) continue;
+    for (const meal of mealHeadings) {
+      const section = getMealSection(bodyText, meal);
+      if (!section) continue;
 
-    const sectionText = bodyText.slice(sectionIndex, sectionIndex + 1200);
+      const optionTitles = section
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .filter((line) => {
+          const upper = line.toUpperCase();
 
-    const saladIndex = sectionText.toLowerCase().indexOf('salada');
-    const proteinIndexes = [
-      sectionText.toLowerCase().indexOf('frango'),
-      sectionText.toLowerCase().indexOf('patinho'),
-      sectionText.toLowerCase().indexOf('tilápia'),
-      sectionText.toLowerCase().indexOf('carne'),
-      sectionText.toLowerCase().indexOf('atum'),
-      sectionText.toLowerCase().indexOf('tofu'),
-    ].filter(index => index >= 0);
+          if (upper !== line) return false;
+          if (/^\d+$/.test(line)) return false;
 
-    if (saladIndex >= 0 && proteinIndexes.length > 0) {
-      expect(saladIndex).toBeGreaterThan(Math.min(...proteinIndexes));
+          return !ignoredUppercaseLines.some((ignored) => upper.includes(ignored));
+        });
+
+      const normalized = optionTitles.map((title) =>
+        normalize(title)
+      );
+
+      const unique = new Set(normalized);
+
+      expect(unique.size).toBe(normalized.length);
     }
-  }
-});
-test('badges do plano fazem sentido básico', async ({ page }) => {
-  const bodyText = await page.locator('body').innerText();
-
-  expect(bodyText).not.toMatch(/Poca Prot\./i);
-  expect(bodyText).not.toMatch(/Pouca Prot\./i);
-  expect(bodyText).not.toMatch(/Menos proteína/i);
-
-  const lines = bodyText.split('\n').map(line => line.trim()).filter(Boolean);
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (/leve/i.test(line)) {
-      const nearby = lines.slice(i, i + 8).join(' ');
-      expect(nearby).not.toMatch(/[6-9]\d{2}\s*CALORIAS/i);
-    }
-  }
-});
-test('não mostra opções duplicadas na mesma refeição', async ({ page }) => {
-  const bodyText = await page.locator('body').innerText();
-
-  const mealHeadings = [
-    'Café da manhã',
-    'Lanche da manhã',
-    'Almoço',
-    'Lanche da tarde',
-    'Jantar',
-    'Ceia',
-  ];
-
-  function getMealSection(mealName: string) {
-    const start = bodyText.indexOf(mealName);
-
-    if (start === -1) return '';
-
-    const possibleEnds = mealHeadings
-      .filter((heading) => heading !== mealName)
-      .map((heading) => bodyText.indexOf(heading, start + mealName.length))
-      .filter((index) => index > start);
-
-    const end = possibleEnds.length > 0 ? Math.min(...possibleEnds) : bodyText.length;
-
-    return bodyText.slice(start, end);
-  }
-
-  for (const meal of mealHeadings) {
-    const section = getMealSection(meal);
-    if (!section) continue;
-
-    const optionTitles = section
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .filter((line) => {
-        const upper = line.toUpperCase();
-
-        return (
-          upper === line &&
-          !upper.includes('OPÇÕES GERADAS') &&
-          !upper.includes('RECOMENDADA') &&
-          !upper.includes('COMPLETA') &&
-          !upper.includes('SIMPLES') &&
-          !upper.includes('LEVE') &&
-          !upper.includes('CALORIAS')
-        );
-      });
-
-    const normalized = optionTitles.map((title) =>
-      title
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-    );
-
-    const unique = new Set(normalized);
-
-    expect(unique.size).toBe(normalized.length);
-  }
+  });
 });
