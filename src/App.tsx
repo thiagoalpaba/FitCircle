@@ -6784,12 +6784,15 @@ function PerfilScreen() {
               <span className="w-1 h-1 rounded-full bg-gray-300" />
 
               <button
-                type="button"
-                onClick={() => setShowResetConfirm(true)}
-                className="text-[10px] font-black text-red-500 uppercase tracking-widest underline underline-offset-4 active:scale-95 transition-all"
-              >
-                Resetar aplicativo
-              </button>
+  type="button"
+  onClick={() => {
+    localStorage.clear();
+    window.location.reload();
+  }}
+  className="mx-auto block text-center text-xs font-bold text-red-400 underline-offset-4 hover:text-red-500 hover:underline"
+>
+  Resetar aplicativo
+</button>
             </div>
           </div>
         </div>
