@@ -3125,7 +3125,7 @@ function CalorieRing({
           </div>
 
           <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">
-            calorias consumidas
+            Calorias registradas
           </span>
           <p className="mt-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">
   Meta diária: {Math.round(goal)} calorias
@@ -4383,7 +4383,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           <div>
             <h3 className="text-xl font-black text-gray-900">Refeições</h3>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-              Clique para registrar
+              Registrar refeição
             </p>
           </div>
 
@@ -4391,7 +4391,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             onClick={onGoToList}
             className="text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-xl transition-all active:scale-95"
           >
-            Ver tudo
+            Histórico
           </button>
         </div>
 
@@ -4555,9 +4555,9 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
               </div>
 
               <div>
-                <h3 className="font-bold text-gray-900">Treino de Hoje</h3>
+                <h3 className="font-bold text-gray-900">Atividades de hoje</h3>
                 <p className="text-[10px] text-gray-500 font-bold uppercase">
-                  Gasto estimado total
+                  Gasto estimado
                 </p>
               </div>
             </div>
@@ -4566,7 +4566,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
               onClick={() => setShowWorkoutModal(true)}
               className="bg-orange-500 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-100 active:scale-95 transition-all"
             >
-              Adicionar
+              Adicionar treino
             </button>
           </div>
 
@@ -4614,7 +4614,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             </div>
           ) : (
             <p className="text-xs text-orange-800/70 font-semibold leading-relaxed">
-              Registre suas atividades para ver o gasto calórico acumulado hoje.
+              Adicione uma caminhada, corrida ou treino para acompanhar seu gasto do dia.
             </p>
           )}
         </div>
@@ -5800,7 +5800,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-white/60">
-                    Consumido
+                    Hoje
                   </p>
 
                   <p className="text-4xl font-black leading-none mt-1">
@@ -7722,6 +7722,7 @@ function CirculoScreenFoodstagram() {
 
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
 
   const totals = getTotals();
   const consumed = Math.round(safeNumber(totals.cal));
@@ -7804,7 +7805,7 @@ function CirculoScreenFoodstagram() {
       subtitle: 'Começou o dia com consistência',
       calories: 320,
       time: '08:15',
-      image: '/recipes/panqueca-banana.jpg',
+      image: '/recipes/panqueca-banana-aveia.jpg',
       type: 'meal',
     },
     {
@@ -7815,7 +7816,7 @@ function CirculoScreenFoodstagram() {
       subtitle: 'Almoço registrado',
       calories: 559,
       time: '12:30',
-      image: '/recipes/arroz-feijao-frango.jpg',
+      image: '/recipes/bowl-frango-quinoa.jpg',
       type: 'meal',
     },
     {
@@ -7845,7 +7846,7 @@ function CirculoScreenFoodstagram() {
       <div className="bg-[#16A34A] pt-12 px-6 pb-8 rounded-b-[42px] text-white shadow-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">
+            <p className="text-xs font-bold text-white/75">
               Círculo
             </p>
 
@@ -7882,19 +7883,19 @@ function CirculoScreenFoodstagram() {
 
       <div className="px-5 -mt-4 relative z-10">
         <div className="bg-white rounded-[30px] border border-gray-100 shadow-xl shadow-gray-100/70 p-4">
-        <div className="flex items-center justify-between mb-3">
-  <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
-    Membros do círculo
-  </p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
+              Membros do círculo
+            </p>
 
-  <button
-    type="button"
-    onClick={() => setSelectedMember(members[1] || members[0])}
-    className="px-3 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
-  >
-    Ver dia
-  </button>
-</div>
+            <button
+              type="button"
+              onClick={() => setSelectedMember(members[1] || members[0])}
+              className="px-3 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+            >
+              Ver dia
+            </button>
+          </div>
 
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
             {members.map((member) => (
@@ -7929,6 +7930,7 @@ function CirculoScreenFoodstagram() {
 
           {posts.map((post) => {
             const liked = !!likedPosts[post.id];
+            const shouldShowImage = Boolean(post.image) && !hiddenImages[post.id];
 
             return (
               <div
@@ -7967,11 +7969,14 @@ function CirculoScreenFoodstagram() {
                 </div>
 
                 <div className="mx-4 h-52 rounded-[28px] overflow-hidden bg-green-50 border border-green-100 flex items-center justify-center">
-                  {post.image ? (
+                  {shouldShowImage ? (
                     <img
                       src={post.image}
                       alt={post.title}
                       className="w-full h-full object-cover"
+                      onError={() => {
+                        setHiddenImages((prev) => ({ ...prev, [post.id]: true }));
+                      }}
                     />
                   ) : (
                     <div className="text-center px-6">
@@ -7981,6 +7986,10 @@ function CirculoScreenFoodstagram() {
 
                       <p className="text-sm font-black text-green-700">
                         {post.type === 'workout' ? 'Treino registrado' : 'Registro do dia'}
+                      </p>
+
+                      <p className="mt-1 text-[11px] font-bold text-green-600">
+                        {post.type === 'workout' ? 'Atividade concluída' : 'Sem foto publicada'}
                       </p>
                     </div>
                   )}
