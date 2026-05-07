@@ -5525,39 +5525,9 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-gray-50 p-3 rounded-[22px] border border-gray-100 text-center">
-                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Meta
-                </p>
-
-                <p className="text-base font-black text-gray-900">
-                  {Math.round(goal)}
-                </p>
-              </div>
-
-              <div className="bg-indigo-50 p-3 rounded-[22px] border border-indigo-100 text-center">
-                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Consumido
-                </p>
-
-                <p className="text-base font-black text-indigo-600">
-                  {Math.round(totals.cal)}
-                </p>
-              </div>
-
-              <div className="bg-orange-50 p-3 rounded-[22px] border border-orange-100 text-center">
-                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Treino
-                </p>
-
-                <p className="text-base font-black text-orange-600">
-                  +{Math.round(burned)}
-                </p>
-              </div>
-            </div>
-          </div>
+<p className="text-center text-[10px] font-bold text-white/55">
+  Meta diária: {Math.round(goal)} calorias
+</p>
 
           {/* Refeições */}
           <div className="space-y-4">
@@ -5666,6 +5636,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
               )}
             </div>
           </div>
+                  </div>
         </div>
       </motion.div>
     </div>
