@@ -21,7 +21,7 @@ export interface Meal {
   c: number;
   f: number;
   time: string;
-shared?: boolean;
+shared?: boolean
 
 }
 
@@ -94,7 +94,23 @@ export interface AppCtx {
   resetApp: () => void;
   fillDemo: () => void;
 
-  mealPlan: Record<string, { name: string; qty: string; cal: number; category?: string }[]>;
-  generateNewPlan: (mealKey?: string) => void;
-  swapMealItem: (mealKey: string, index: number) => void;
+  mealPlan: Record<string, { 
+  name: string; 
+  qty: string; 
+  cal: number; 
+  p?: number;
+  c?: number;
+  f?: number;
+  category?: string; 
+  isLowProt?: boolean; 
+  isLighter?: boolean; 
+  badge?: string; 
+  badgeDesc?: string;
+  fromRecipe?: boolean;
+  recipeId?: string;
+  swappedAt?: number;
+}[]>;
+generateNewPlan: (mealKey?: string) => void;
+swapMealItem: (mealKey: string, index: number) => void;
+addRecipeToPlan: (recipe: any, mealKey: string) => void;
 }

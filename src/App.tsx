@@ -2486,7 +2486,53 @@ const swapMealItem = (mealKey: string, index: number) => {
     };
   });
 };
+const addRecipeToPlan = (recipe: any, mealKey: string) => {
+  if (!userProfile) return;
 
+  const recipeText = [
+    recipe.title,
+    recipe.friendlyTitle,
+    recipe.description,
+    ...(recipe.ingredients || []),
+    ...(recipe.tags || []),
+  ].join(' ');
+
+  if (isFoodRestricted(recipeText, userProfile)) {
+    alert('Essa receita não combina com suas restrições atuais.');
+    return;
+  }
+
+  const recipeOption: any = {
+    name: recipe.friendlyTitle || recipe.title,
+    qty: (recipe.ingredients || []).join(' + '),
+    cal: recipe.cal,
+    p: recipe.p,
+    c: recipe.c,
+    f: recipe.f,
+    badge: 'Receita',
+    badgeDesc: recipe.title,
+    fromRecipe: true,
+    recipeId: recipe.id,
+    swappedAt: Date.now(),
+  };
+
+  setMealPlan(prev => {
+    const currentOptions = prev[mealKey] || [];
+
+    const withoutSameRecipe = currentOptions.filter((option: any) => {
+      const sameRecipeId = option.recipeId && option.recipeId === recipe.id;
+      const sameName =
+        normalizePlanText(option.name || '') === normalizePlanText(recipeOption.name || '');
+
+      return !sameRecipeId && !sameName;
+    });
+
+    return {
+      ...prev,
+      [mealKey]: [recipeOption, ...withoutSameRecipe].slice(0, 3),
+    };
+  });
+};
   const completeScreening = (profile: UserProfile) => {
     setUserProfile(profile);
     const count = profile.mealCount;
@@ -2592,6 +2638,7 @@ useEffect(() => {
       mealPlan,
       generateNewPlan,
       swapMealItem,
+      addRecipeToPlan,
       selectedCircleId,
       setSelectedCircleId,
       selectedDate,
@@ -4433,165 +4480,295 @@ function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void;
   );
 }
 function RecipeLibrary() {
-  const [openRecipeId, setOpenRecipeId] = useState<string | null>(null);
+  const { userProfile, addRecipeToPlan } = useApp();
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<FitnessRecipe | null>(null);
 
-  const featuredRecipes = FITNESS_RECIPES.slice(0, 8);
+  const recipeIsAllowed = (recipe: FitnessRecipe) => {
+    if (!userProfile) return true;
+
+    const recipeText = [
+      recipe.title,
+      recipe.friendlyTitle,
+      recipe.description,
+      ...(recipe.ingredients || []),
+      ...(recipe.tags || []),
+      recipe.isEgg ? 'ovo' : '',
+      recipe.isLactose ? 'leite iogurte queijo requeijao' : '',
+      recipe.isGluten ? 'pao trigo macarrao gluten wrap' : '',
+      recipe.isFish ? 'peixe atum tilapia sardinha salmao' : '',
+      recipe.isPeanut ? 'amendoim' : '',
+      recipe.isSoy ? 'soja tofu' : '',
+    ].join(' ');
+
+    return !isFoodRestricted(recipeText, userProfile);
+  };
+
+  const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed);
+
+  const configs = userProfile ? MEAL_CONFIGS[userProfile.mealCount] : MEAL_CONFIGS[4];
 
   return (
-    <div className="px-6 mt-4 mb-10">
-      <div className="bg-white rounded-[34px] border border-gray-100 shadow-xl shadow-gray-100/70 overflow-hidden">
-        <div className="p-6 border-b border-gray-50">
-          <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
-            Receitas Fitness
-          </p>
+    <>
+      <div className="px-6 mt-4">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="w-full bg-white rounded-[30px] border border-gray-100 shadow-lg shadow-gray-100/70 p-5 text-left active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
+                Receitas Fitness
+              </p>
+              <h3 className="text-xl font-black text-gray-900 leading-tight">
+                Ver receitas prontas
+              </h3>
+              <p className="text-xs font-bold text-gray-400 mt-2 leading-relaxed">
+                {visibleRecipes.length} receitas com preparo, ingredientes e macros.
+              </p>
+            </div>
 
-          <h3 className="text-xl font-black text-gray-900 tracking-tight">
-            Ideias prontas para variar o plano
-          </h3>
+            <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
+              <Utensils size={22} className="text-green-600" />
+            </div>
+          </div>
+        </button>
+      </div>
 
-          <p className="text-xs font-bold text-gray-400 leading-relaxed mt-2">
-            Veja receitas com ingredientes, preparo e macros. Depois vamos liberar a opção de adicionar ao plano.
-          </p>
-        </div>
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
 
-        <div className="p-4 space-y-3">
-          {featuredRecipes.map((recipe: FitnessRecipe) => {
-            const isOpen = openRecipeId === recipe.id;
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              className="relative z-10 bg-white w-full max-w-md rounded-[34px] max-h-[88vh] overflow-hidden shadow-2xl"
+            >
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-1">
+                    Receitas Fitness
+                  </p>
+                  <h3 className="text-lg font-black text-gray-900">
+                    Escolha uma receita
+                  </h3>
+                </div>
 
-            return (
-              <div
-                key={recipe.id}
-                className="bg-gray-50 border border-gray-100 rounded-[28px] overflow-hidden"
-              >
                 <button
                   type="button"
-                  onClick={() => setOpenRecipeId(isOpen ? null : recipe.id)}
-                  className="w-full p-4 text-left flex gap-4 items-center"
+                  onClick={() => setIsOpen(false)}
+                  className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center"
                 >
-                  <div className="w-16 h-16 rounded-[24px] bg-white flex items-center justify-center text-3xl shadow-sm border border-gray-100 shrink-0">
-                    {recipe.emoji}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black text-gray-900 leading-tight">
-                      {recipe.friendlyTitle}
-                    </p>
-
-                    {recipe.title !== recipe.friendlyTitle && (
-                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mt-1">
-                        {recipe.title}
-                      </p>
-                    )}
-
-                    <p className="text-[11px] font-bold text-gray-500 leading-relaxed mt-2 line-clamp-2">
-                      {recipe.description}
-                    </p>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-black text-green-600">
-                      {recipe.cal}
-                    </p>
-
-                    <p className="text-[8px] font-black text-gray-300 uppercase">
-                      kcal
-                    </p>
-                  </div>
+                  <X size={18} className="text-gray-500" />
                 </button>
-
-                {isOpen && (
-                  <div className="px-4 pb-4">
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3">
-                        <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest">
-                          Prot.
-                        </p>
-                        <p className="text-sm font-black text-blue-700 mt-1">
-                          {recipe.p}g
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 border border-green-100 rounded-2xl p-3">
-                        <p className="text-[8px] font-black text-green-500 uppercase tracking-widest">
-                          Carbo
-                        </p>
-                        <p className="text-sm font-black text-green-700 mt-1">
-                          {recipe.c}g
-                        </p>
-                      </div>
-
-                      <div className="bg-orange-50 border border-orange-100 rounded-2xl p-3">
-                        <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest">
-                          Gord.
-                        </p>
-                        <p className="text-sm font-black text-orange-700 mt-1">
-                          {recipe.f}g
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-[24px] p-4 border border-gray-100 mb-3">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                        Por que é nutritiva?
-                      </p>
-
-                      <p className="text-xs font-bold text-gray-600 leading-relaxed">
-                        {recipe.whyNutritious}
-                      </p>
-                    </div>
-
-                    <div className="bg-white rounded-[24px] p-4 border border-gray-100 mb-3">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                        Ingredientes
-                      </p>
-
-                      <div className="space-y-2">
-                        {recipe.ingredients.map((ingredient) => (
-                          <div key={ingredient} className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
-                            <p className="text-xs font-bold text-gray-600 leading-relaxed">
-                              {ingredient}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-[24px] p-4 border border-gray-100">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                        Como fazer
-                      </p>
-
-                      <div className="space-y-3">
-                        {recipe.steps.map((step, index) => (
-                          <div key={step} className="flex gap-3">
-                            <div className="w-6 h-6 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-[10px] font-black shrink-0">
-                              {index + 1}
-                            </div>
-
-                            <p className="text-xs font-bold text-gray-600 leading-relaxed">
-                              {step}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full mt-4 py-3 rounded-2xl bg-gray-100 text-gray-300 text-[10px] font-black uppercase tracking-widest"
-                    >
-                      Adicionar ao plano em breve
-                    </button>
-                  </div>
-                )}
               </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+
+              <div className="p-4 overflow-y-auto max-h-[calc(88vh-88px)] space-y-4">
+                {visibleRecipes.map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    className="bg-gray-50 rounded-[28px] border border-gray-100 overflow-hidden"
+                  >
+                    <div className="p-4 flex gap-4">
+                      <div className="w-24 h-24 rounded-[22px] overflow-hidden bg-white border border-gray-100 shadow-sm shrink-0">
+                        {recipe.image ? (
+                          <img
+                            src={recipe.image}
+                            alt={recipe.friendlyTitle}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl">
+                            {recipe.emoji || '🍽️'}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-black text-gray-900 leading-tight">
+                          {recipe.friendlyTitle}
+                        </p>
+
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-tight mt-1">
+                          {recipe.title}
+                        </p>
+
+                        <p className="text-xs font-bold text-gray-500 mt-2 leading-relaxed">
+                          {recipe.description}
+                        </p>
+
+                        <div className="grid grid-cols-3 gap-2 mt-3">
+                          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-2 py-2">
+                            <p className="text-[9px] font-black text-blue-500 uppercase">Prot.</p>
+                            <p className="text-sm font-black text-blue-700 mt-1">{recipe.p}g</p>
+                          </div>
+                          <div className="bg-green-50 border border-green-100 rounded-2xl px-2 py-2">
+                            <p className="text-[9px] font-black text-green-500 uppercase">Carbo</p>
+                            <p className="text-sm font-black text-green-700 mt-1">{recipe.c}g</p>
+                          </div>
+                          <div className="bg-orange-50 border border-orange-100 rounded-2xl px-2 py-2">
+                            <p className="text-[9px] font-black text-orange-500 uppercase">Gord.</p>
+                            <p className="text-sm font-black text-orange-700 mt-1">{recipe.f}g</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3">
+                          <p className="text-[11px] font-bold text-green-700">
+                            {recipe.cal} kcal
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-4 pb-4">
+                      <div className="bg-white rounded-[22px] border border-gray-100 p-4 mb-3">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.18em] mb-2">
+                          Ingredientes
+                        </p>
+                        <div className="space-y-2">
+                          {recipe.ingredients.map((ingredient) => (
+                            <div key={ingredient} className="flex gap-2 items-start">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                              <p className="text-xs font-bold text-gray-600 leading-relaxed">
+                                {ingredient}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-[22px] border border-gray-100 p-4 mb-3">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.18em] mb-2">
+                          Como fazer
+                        </p>
+                        <div className="space-y-2">
+                          {recipe.steps.map((step, index) => (
+                            <div key={step} className="flex gap-3">
+                              <div className="w-6 h-6 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-[10px] font-black shrink-0">
+                                {index + 1}
+                              </div>
+                              <p className="text-xs font-bold text-gray-600 leading-relaxed">
+                                {step}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 rounded-[22px] border border-green-100 p-4 mb-4">
+                        <p className="text-[9px] font-black text-green-700 uppercase tracking-[0.18em] mb-2">
+                          Por que é nutritiva?
+                        </p>
+                        <p className="text-xs font-bold text-green-700/80 leading-relaxed">
+                          {recipe.whyNutritious}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRecipe(recipe)}
+                        className="w-full py-3 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all"
+                      >
+                        Adicionar ao plano
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedRecipe && (
+          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedRecipe(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              className="relative z-10 bg-white w-full max-w-sm rounded-[34px] p-6 shadow-2xl"
+            >
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-14 h-14 rounded-[22px] overflow-hidden bg-gray-100 border border-gray-100 shrink-0">
+                  {selectedRecipe.image ? (
+                    <img
+                      src={selectedRecipe.image}
+                      alt={selectedRecipe.friendlyTitle}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-2xl">
+                      {selectedRecipe.emoji || '🍽️'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-lg font-black text-gray-900 leading-tight">
+                    {selectedRecipe.friendlyTitle}
+                  </p>
+                  <p className="text-xs font-bold text-gray-400 mt-1">
+                    Escolha em qual refeição deseja adicionar
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {configs.map((cfg) => (
+                  <button
+                    key={cfg.key}
+                    type="button"
+                    onClick={() => {
+                      addRecipeToPlan(selectedRecipe, cfg.key);
+                      setSelectedRecipe(null);
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between bg-gray-50 hover:bg-green-50 border border-gray-100 rounded-2xl p-4 transition-all active:scale-95"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center">
+                        <cfg.icon size={17} className="text-green-600" />
+                      </div>
+                      <span className="text-sm font-black text-gray-800">
+                        {cfg.label}
+                      </span>
+                    </div>
+
+                    <ChevronRight size={18} className="text-gray-300" />
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedRecipe(null)}
+                className="w-full mt-4 py-4 rounded-2xl bg-gray-100 text-gray-400 text-xs font-black uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -4686,6 +4863,7 @@ const handleAddBlock = () => {
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-20">
+      <RecipeLibrary />
        {/* Toast notification */}
        <AnimatePresence>
          {showToast && (
@@ -4721,7 +4899,7 @@ const handleAddBlock = () => {
             <Sliders size={14} />
             Ajustar
           </button>
-       </div>
+       
 
   <div className="px-6 py-8 space-y-12">
   {configs.map((cfg) => (
@@ -4749,7 +4927,13 @@ const handleAddBlock = () => {
             cfg.key
           );
 
-          const optionMacros = getPlanOptionMacros(cleanedQty);
+          const optionMacros = opt.fromRecipe
+  ? {
+      p: Math.round(safeNumber(opt.p)),
+      c: Math.round(safeNumber(opt.c)),
+      f: Math.round(safeNumber(opt.f)),
+    }
+  : getPlanOptionMacros(cleanedQty);
 
           return (
             <div
@@ -4787,6 +4971,11 @@ const handleAddBlock = () => {
                       Recomendada
                     </span>
                   )}
+                  {opt.badge === 'Receita' && (
+  <span className="bg-purple-50 text-purple-600 text-[7px] font-black uppercase px-2 py-0.5 rounded-md border border-purple-100">
+    Receita
+  </span>
+)}
                 </div>
 
                 <h4 className="text-sm font-black text-gray-900 mb-2 leading-tight uppercase tracking-tight">
@@ -4866,17 +5055,8 @@ swapMealItem(cfg.key, i);
       </div>
     </div>
   ))}
-          {/* Tips Section */}
-          <div className="bg-green-600 rounded-[38px] p-8 text-white shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-             <Star className="text-green-300 mb-4" size={24} />
-             <h3 className="text-xl font-black mb-2 leading-tight">Dica de Sucesso</h3>
-             <p className="text-green-50 text-sm font-medium leading-relaxed opacity-90">
-                {userProfile.goal === 'perda' ? "Priorize as proteínas e os vegetais para manter a saciedade por mais tempo." : "Tente não pular refeições para garantir o aporte calórico necessário."}
-             </p>
-          </div>
        </div>
-  <RecipeLibrary />
+  
       <AnimatePresence>
   {showAdjustModal && (
     <motion.div
@@ -5152,8 +5332,9 @@ swapMealItem(cfg.key, i);
   )}
 </AnimatePresence>
     </div>
-  );
-}
+</div>
+);
+
 function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }) {
   const {
     meals: myMeals,
@@ -6987,8 +7168,8 @@ function RegisterWorkoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
               <div className="pt-4 space-y-4">
                 <button
   data-testid="save-workout"
-  onClick={handleSave}
-  className="w-full bg-orange-500 text-white font-black py-5 rounded-3xl shadow-xl shadow-orange-100 text-xs uppercase tracking-widest active:scale-95 transition-all"
+  onClick={handleConfirm}
+  className="flex-[2] py-5 font-black text-white bg-orange-500 rounded-3xl shadow-xl shadow-orange-100 text-xs uppercase tracking-widest"
 >
   Salvar Treino
 </button>
@@ -7002,7 +7183,7 @@ function RegisterWorkoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
     </AnimatePresence>
   );
 }
-
+}
 export default function App() {
   return (
     <AppProvider>
@@ -7010,6 +7191,1002 @@ export default function App() {
         <Navigation />
       </MobileFrame>
     </AppProvider>
+  );
+}
+function RegisterWorkoutModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const { addWorkout, estimateBurned } = useApp();
+
+  const [type, setType] = useState<WorkoutType>('musculacao');
+  const [duration, setDuration] = useState('45');
+  const [intensity, setIntensity] = useState<Intensity>('moderada');
+  const [manualCals, setManualCals] = useState('');
+
+  const handleSave = () => {
+    const dur = parseInt(duration, 10) || 0;
+
+    const burned = manualCals
+      ? parseInt(manualCals, 10) || 0
+      : estimateBurned(type, dur, intensity);
+
+    addWorkout({
+      id: Date.now().toString(),
+      type,
+      duration: dur,
+      intensity,
+      burned,
+      time: new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    });
+
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 text-gray-900">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.92, opacity: 0 }}
+            className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl z-10 space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">
+                  Treino
+                </p>
+
+                <h2 className="text-2xl font-black text-gray-900">
+                  Registrar Treino
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 bg-gray-100 rounded-xl active:scale-95 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                  Tipo de exercício
+                </label>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {WORKOUT_TYPES.map((w) => (
+                    <button
+                      key={w.key}
+                      type="button"
+                      onClick={() => setType(w.key)}
+                      className={`p-3 rounded-2xl flex flex-col items-center gap-2 border transition-all ${
+                        type === w.key
+                          ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-100'
+                          : 'bg-gray-50 text-gray-400 border-gray-100'
+                      }`}
+                    >
+                      <w.icon size={20} />
+
+                      <span className="text-[9px] font-black uppercase tracking-tighter">
+                        {w.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                    Duração
+                  </label>
+
+                  <input
+                    type="number"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none focus:ring-2 focus:ring-orange-500"
+                  />
+
+                  <p className="text-[9px] font-bold text-gray-300 uppercase ml-1">
+                    minutos
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                    Calorias
+                  </label>
+
+                  <input
+                    type="number"
+                    placeholder="Auto"
+                    value={manualCals}
+                    onChange={(e) => setManualCals(e.target.value)}
+                    className="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none focus:ring-2 focus:ring-orange-500"
+                  />
+
+                  <p className="text-[9px] font-bold text-gray-300 uppercase ml-1">
+                    opcional
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                  Intensidade
+                </label>
+
+                <div className="flex gap-2">
+                  {INTENSITIES.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setIntensity(item.key)}
+                      className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all ${
+                        intensity === item.key
+                          ? 'bg-orange-500 text-white shadow-lg shadow-orange-100'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+  type="button"
+  data-testid="save-workout"
+  onClick={handleSave}
+  className="w-full py-5 bg-orange-500 text-white font-black rounded-3xl uppercase text-xs tracking-widest shadow-xl shadow-orange-100 active:scale-95 transition-all"
+>
+  Salvar treino
+</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+function RefeicoesListScreen({
+  onBack,
+  onEdit,
+  onAdd,
+}: {
+  onBack: () => void;
+  onEdit: (id: string) => void;
+  onAdd: (type: string) => void;
+}) {
+  const { mealCount, meals } = useApp();
+  const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
+
+  return (
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+      <div className="bg-white pt-12 px-6 pb-6 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="p-2 bg-gray-100 rounded-xl"
+        >
+          <X size={20} className="text-gray-500" />
+        </button>
+
+        <div>
+          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+            Registrar
+          </p>
+          <h1 className="text-xl font-black text-gray-900">
+            Refeições do Dia
+          </h1>
+        </div>
+      </div>
+
+      <div className="px-5 mt-4 space-y-4">
+        {configs.map((cfg) => {
+          const registeredMeals = meals.filter((meal: any) => meal.type === cfg.key);
+
+          return (
+            <div key={cfg.key} className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: cfg.color }}
+                />
+
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                  {cfg.label}
+                </span>
+              </div>
+
+              {registeredMeals.length > 0 ? (
+                registeredMeals.map((meal: any) => (
+                  <div
+                    key={meal.id}
+                    className="bg-white rounded-[28px] p-4 border border-gray-100 shadow-sm"
+                  >
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <p className="text-sm font-black text-gray-800">
+                          {meal.items?.length > 1
+                            ? `${meal.items.length} itens`
+                            : meal.items?.[0]?.food?.name || cfg.label}
+                        </p>
+
+                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                          {meal.time} · {meal.cal} calorias
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onEdit(meal.id)}
+                        className="px-3 py-2 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onAdd(cfg.key)}
+                  className="w-full bg-white rounded-[28px] p-5 border border-dashed border-gray-200 text-left active:scale-[0.99] transition-all"
+                >
+                  <p className="text-sm font-black text-gray-800">
+                    Adicionar {cfg.label}
+                  </p>
+
+                  <p className="text-xs font-bold text-gray-400 mt-1">
+                    Registrar alimentos dessa refeição
+                  </p>
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PerfilScreen() {
+  const { userProfile, updateProfile } = useApp();
+  const [mealCountDraft, setMealCountDraft] = useState(userProfile?.mealCount || 4);
+
+  const saveProfile = () => {
+    updateProfile({
+      mealCount: mealCountDraft,
+    });
+  };
+
+  return (
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+      <div className="bg-white pt-12 px-6 pb-6">
+        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+          Perfil
+        </p>
+
+        <h1 className="text-2xl font-black text-gray-900 mt-1">
+          Editar perfil
+        </h1>
+
+        <p className="text-xs font-bold text-gray-400 mt-2">
+          Ajuste suas preferências principais.
+        </p>
+      </div>
+
+      <div className="px-6 mt-6 space-y-6">
+        <div className="bg-white rounded-[30px] p-5 border border-gray-100 shadow-sm">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
+            Quantas refeições por dia?
+          </p>
+
+          <div className="grid grid-cols-4 gap-3">
+            {[3, 4, 5, 6].map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => setMealCountDraft(count)}
+                className={`py-4 rounded-2xl text-sm font-black transition-all ${
+                  mealCountDraft === count
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-100'
+                    : 'bg-gray-100 text-gray-400'
+                }`}
+              >
+                {count}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={saveProfile}
+          className="w-full py-5 rounded-[28px] bg-green-500 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
+        >
+          Salvar alterações
+        </button>
+      </div>
+    </div>
+  );
+}
+function MiniCalorieRingV2({
+  consumed,
+  goal,
+  size = 74,
+}: {
+  consumed: number;
+  goal: number;
+  size?: number;
+}) {
+  const stroke = 8;
+  const radius = (size - stroke) / 2;
+  const circumference = radius * 2 * Math.PI;
+
+  const safeConsumed = Math.max(0, Math.round(safeNumber(consumed)));
+  const safeGoal = Math.max(1, Math.round(safeNumber(goal, 1)));
+  const progress = Math.min(safeConsumed / safeGoal, 1);
+  const strokeDashoffset = circumference - progress * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0">
+      <svg width={size} height={size} className="rotate-[-90deg]">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#DCFCE7"
+          strokeWidth={stroke}
+          fill="transparent"
+        />
+
+        <motion.circle
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#16A34A"
+          strokeWidth={stroke}
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeLinecap="round"
+        />
+      </svg>
+
+      <div className="absolute text-center">
+        <p className="text-sm font-black text-gray-900 leading-none">
+          {Math.round(progress * 100)}%
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuickReactionsV2({ itemId }: { itemId: string }) {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const reactions = [
+    { emoji: '🙌', label: 'Toca aqui' },
+    { emoji: '🔥', label: 'Fogo' },
+    { emoji: '🚀', label: 'Foguete' },
+  ];
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {reactions.map((reaction) => {
+        const active = selected === reaction.emoji;
+
+        return (
+          <button
+            key={`${itemId}-${reaction.emoji}`}
+            type="button"
+            aria-label={reaction.label}
+            onClick={() => setSelected(reaction.emoji)}
+            className={`w-9 h-9 rounded-2xl flex items-center justify-center text-base border transition-all active:scale-90 ${
+              active
+                ? 'bg-green-500 border-green-500 shadow-lg shadow-green-100 scale-105'
+                : 'bg-white border-gray-100 hover:bg-green-50'
+            }`}
+          >
+            <span className={active ? 'grayscale-0' : ''}>
+              {reaction.emoji}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PartnerCardV2({
+  partner,
+  onOpenDay,
+}: {
+  partner: {
+    id: string;
+    name: string;
+    avatar: string;
+    status: string;
+    consumed: number;
+    goal: number;
+    burned: number;
+  };
+  onOpenDay: () => void;
+}) {
+  const remaining = Math.max(partner.goal - partner.consumed, 0);
+
+  return (
+    <div className="bg-white rounded-[34px] p-5 border border-gray-100 shadow-xl shadow-gray-100/70">
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-13 h-13 rounded-[24px] bg-green-50 border border-green-100 flex items-center justify-center text-2xl shrink-0">
+            {partner.avatar}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-base font-black text-gray-900 leading-tight truncate">
+              {partner.name}
+            </p>
+
+            <p className="text-[10px] font-bold text-green-600 uppercase tracking-tight mt-1">
+              {partner.status}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpenDay}
+          className="px-3 py-2 rounded-2xl bg-green-50 text-green-600 text-[9px] font-black uppercase tracking-widest shrink-0 active:scale-95 transition-all"
+        >
+          Ver dia
+        </button>
+      </div>
+
+      <div className="flex items-center gap-5">
+        <MiniCalorieRingV2 consumed={partner.consumed} goal={partner.goal} />
+
+        <div className="flex-1 grid grid-cols-1 gap-2">
+          <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+              Consumido vs meta
+            </p>
+
+            <p className="text-sm font-black text-gray-900 mt-1">
+              {Math.round(partner.consumed)} / {Math.round(partner.goal)} calorias
+            </p>
+          </div>
+
+          <div className="bg-orange-50 rounded-2xl p-3 border border-orange-100">
+            <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest">
+              Treino gasto
+            </p>
+
+            <p className="text-sm font-black text-orange-600 mt-1">
+              {Math.round(partner.burned)} calorias
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 bg-green-50/70 border border-green-100 rounded-2xl px-4 py-3">
+        <p className="text-[10px] font-bold text-green-700 leading-relaxed">
+          {remaining > 0
+            ? `Ainda faltam ${Math.round(remaining)} calorias para fechar a meta.`
+            : 'Meta de calorias fechada hoje.'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CirculoScreenV2() {
+  const { userProfile, getTotals, calorieGoal, meals, workouts, macros } = useApp();
+
+  const totals = getTotals();
+  const consumed = safeNumber(totals.cal);
+  const goal = Math.max(1, safeNumber(calorieGoal, 1800));
+  const burned = workouts.reduce((sum, workout) => sum + safeNumber(workout.burned), 0);
+
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+
+  const getMealLabel = (mealType: string) => {
+    const allConfigs = [
+      ...MEAL_CONFIGS[3],
+      ...MEAL_CONFIGS[4],
+      ...MEAL_CONFIGS[5],
+      ...MEAL_CONFIGS[6],
+    ];
+
+    return allConfigs.find((cfg) => cfg.key === mealType)?.label || 'Refeição';
+  };
+
+  const getMealIcon = (mealType: string) => {
+    const label = getMealLabel(mealType).toLowerCase();
+
+    if (label.includes('café')) return Coffee;
+    if (label.includes('almoço')) return Sun;
+    if (label.includes('jantar')) return Moon;
+    if (label.includes('ceia')) return CloudMoon;
+
+    return Apple;
+  };
+
+  const partner = {
+    id: 'partner',
+    name: 'Partner ❤️',
+    avatar: '👩',
+    status: 'Ativo há 5 min',
+    consumed: 1240,
+    goal: 1800,
+    burned: 280,
+  };
+
+  const members = [
+    {
+      id: 'me',
+      name: userProfile?.name || 'Você',
+      avatar: '👤',
+      status: 'Online agora',
+      consumed,
+      goal,
+      burned,
+    },
+    partner,
+    {
+      id: 'ana',
+      name: 'Ana',
+      avatar: 'A',
+      status: 'Ativa há 1h',
+      consumed: 1580,
+      goal: 1850,
+      burned: 180,
+    },
+  ];
+
+  const myMealEvents = meals.map((meal: any) => {
+    const Icon = getMealIcon(meal.type);
+
+    return {
+      id: `meal-${meal.id}`,
+      kind: 'meal',
+      icon: Icon,
+      title: `${getMealLabel(meal.type)} registrado`,
+      subtitle: `${Math.round(safeNumber(meal.cal))} calorias`,
+      time: meal.time || 'Hoje',
+      color: 'green',
+    };
+  });
+
+  const myWorkoutEvents = workouts.map((workout: any) => {
+    const label =
+      WORKOUT_TYPES.find((item) => item.key === workout.type)?.label || 'Treino';
+
+    return {
+      id: `workout-${workout.id}`,
+      kind: 'workout',
+      icon: Dumbbell,
+      title: `${label} concluído`,
+      subtitle: `${Math.round(safeNumber(workout.duration)) || 45} min · ${Math.round(
+        safeNumber(workout.burned)
+      )} calorias`,
+      time: workout.time || 'Hoje',
+      color: 'orange',
+    };
+  });
+
+  const milestoneEvents = [
+    ...(safeNumber(totals.p) >= safeNumber(macros.p)
+      ? [
+          {
+            id: 'protein-goal',
+            kind: 'milestone',
+            icon: Trophy,
+            title: `${userProfile?.name || 'Você'} bateu a meta de proteína do dia!`,
+            subtitle: 'Excelente consistência nas refeições.',
+            time: 'Agora',
+            color: 'yellow',
+          },
+        ]
+      : []),
+
+    ...(meals.length >= (userProfile?.mealCount || 4)
+      ? [
+          {
+            id: 'all-meals',
+            kind: 'milestone',
+            icon: Star,
+            title: `${userProfile?.name || 'Você'} registrou todas as refeições de hoje!`,
+            subtitle: 'Dia completo no FitCircle.',
+            time: 'Hoje',
+            color: 'purple',
+          },
+        ]
+      : []),
+
+    ...(consumed > 0 && consumed <= goal
+      ? [
+          {
+            id: 'calorie-goal',
+            kind: 'milestone',
+            icon: Check,
+            title: `${userProfile?.name || 'Você'} está dentro da meta de calorias!`,
+            subtitle: 'Progresso controlado, sem pressão.',
+            time: 'Hoje',
+            color: 'green',
+          },
+        ]
+      : []),
+  ];
+
+  const partnerEvents = [
+    {
+      id: 'partner-breakfast',
+      kind: 'meal',
+      icon: Coffee,
+      title: 'Café da manhã registrado',
+      subtitle: '320 calorias',
+      time: '08:15',
+      color: 'green',
+    },
+    {
+      id: 'partner-workout',
+      kind: 'workout',
+      icon: Dumbbell,
+      title: 'Musculação concluída',
+      subtitle: '45 min · 280 calorias',
+      time: '10:40',
+      color: 'orange',
+    },
+    {
+      id: 'partner-milestone',
+      kind: 'milestone',
+      icon: Flame,
+      title: 'Partner ❤️ registrou todas as refeições de hoje!',
+      subtitle: 'Sequência forte no círculo.',
+      time: 'Agora',
+      color: 'yellow',
+    },
+  ];
+
+  const feed = [
+    ...milestoneEvents,
+    ...myWorkoutEvents,
+    ...myMealEvents,
+    ...partnerEvents,
+  ];
+
+  const configs = MEAL_CONFIGS[userProfile?.mealCount || 4];
+  const registeredMealTypes = new Set(meals.map((meal: any) => meal.type));
+  const pendingMeals = configs.filter((cfg) => !registeredMealTypes.has(cfg.key));
+
+  return (
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-28">
+      <div className="bg-[#16A34A] pt-12 px-6 pb-8 rounded-b-[42px] text-white shadow-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">
+              Círculo
+            </p>
+
+            <h1 className="text-2xl font-black mt-1">
+              Círculo de apoio
+            </h1>
+
+            <p className="text-xs font-bold text-white/75 mt-2 leading-relaxed max-w-[260px]">
+              Apoio leve, conquistas e incentivo sem fiscalização.
+            </p>
+          </div>
+
+          <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center">
+            <Users size={22} />
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white/14 border border-white/10 rounded-[28px] p-4 backdrop-blur-md flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-white text-orange-500 flex items-center justify-center shadow-lg">
+            <Flame size={22} className="fill-current" />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+              Ofensiva compartilhada
+            </p>
+
+            <p className="text-sm font-black leading-snug mt-1">
+              Vocês bateram a meta juntos por 3 dias seguidos!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 -mt-5 relative z-10 space-y-5">
+        <PartnerCardV2
+          partner={partner}
+          onOpenDay={() => setSelectedMember(partner)}
+        />
+
+        <div className="bg-white rounded-[34px] p-5 border border-gray-100 shadow-xl shadow-gray-100/70">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
+                Membros do círculo
+              </p>
+
+              <h2 className="text-lg font-black text-gray-900 mt-1">
+                Pessoas próximas
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              className="w-10 h-10 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center active:scale-95 transition-all"
+            >
+              <UserPlus size={18} />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {members.map((member) => (
+              <button
+                key={member.id}
+                type="button"
+                onClick={() => setSelectedMember(member)}
+                className="w-full bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center justify-between text-left active:scale-[0.99] transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm font-black text-green-700">
+                    {member.avatar}
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-black text-gray-900">
+                      {member.name}
+                    </p>
+
+                    <p className="text-[10px] font-bold text-gray-400">
+                      {member.status}
+                    </p>
+                  </div>
+                </div>
+
+                <ChevronRight size={18} className="text-gray-300" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[34px] p-5 border border-gray-100 shadow-xl shadow-gray-100/70">
+          <div className="mb-5">
+            <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
+              Atividade recente
+            </p>
+
+            <h2 className="text-lg font-black text-gray-900 mt-1">
+              Linha do tempo
+            </h2>
+
+            <p className="text-xs font-bold text-gray-400 mt-2 leading-relaxed">
+              Mostramos ações e conquistas, sem expor os ingredientes exatos.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {feed.length > 0 ? (
+              feed.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-gray-50 rounded-[26px] p-4 border border-gray-100"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                          item.color === 'orange'
+                            ? 'bg-orange-50 text-orange-500'
+                            : item.color === 'yellow'
+                            ? 'bg-amber-50 text-amber-500'
+                            : item.color === 'purple'
+                            ? 'bg-purple-50 text-purple-500'
+                            : 'bg-green-50 text-green-600'
+                        }`}
+                      >
+                        <Icon size={19} />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-gray-900 leading-tight">
+                          {item.title}
+                        </p>
+
+                        <p className="text-[11px] font-bold text-gray-400 mt-1">
+                          {item.subtitle}
+                        </p>
+
+                        <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-2">
+                          {item.time}
+                        </p>
+                      </div>
+
+                      <QuickReactionsV2 itemId={item.id} />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-gray-50 rounded-[26px] p-6 border border-gray-100 text-center">
+                <p className="text-xs font-bold text-gray-400 leading-relaxed">
+                  Nenhuma atividade registrada ainda. Quando alguém registrar algo, aparece aqui.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {pendingMeals.length > 0 && (
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-3">
+                Pendências discretas
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {pendingMeals.slice(0, 3).map((cfg) => (
+                  <span
+                    key={cfg.key}
+                    className="px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 text-[9px] font-black text-gray-300 uppercase"
+                  >
+                    {cfg.label} pendente
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {selectedMember && (
+          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedMember(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="relative z-10 bg-white w-full max-w-sm rounded-[34px] p-6 shadow-2xl max-h-[86vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-13 h-13 rounded-[24px] bg-green-50 border border-green-100 flex items-center justify-center text-2xl font-black text-green-700">
+                    {selectedMember.avatar}
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-black text-gray-900 leading-tight">
+                      {selectedMember.name}
+                    </p>
+
+                    <p className="text-xs font-bold text-gray-400 mt-1">
+                      Resumo do dia
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMember(null)}
+                  className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                    Meta
+                  </p>
+
+                  <p className="text-lg font-black text-gray-900 mt-1">
+                    {Math.round(safeNumber(selectedMember.goal))}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                    Consumido
+                  </p>
+
+                  <p className="text-lg font-black text-gray-900 mt-1">
+                    {Math.round(safeNumber(selectedMember.consumed))}
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                    Treino
+                  </p>
+
+                  <p className="text-lg font-black text-gray-900 mt-1">
+                    {Math.round(safeNumber(selectedMember.burned))}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-green-50 border border-green-100 rounded-[26px] p-4 mb-5">
+                <p className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-2">
+                  Feed resumido
+                </p>
+
+                <div className="space-y-3">
+                  {partnerEvents.slice(0, 3).map((event) => {
+                    const Icon = event.icon;
+
+                    return (
+                      <div key={`modal-${event.id}`} className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-2xl bg-white flex items-center justify-center text-green-600 border border-green-100">
+                          <Icon size={16} />
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-black text-gray-800">
+                            {event.title}
+                          </p>
+
+                          <p className="text-[10px] font-bold text-gray-400">
+                            {event.subtitle}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="w-full py-4 rounded-2xl bg-green-500 text-white text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Fechar
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -7076,7 +8253,7 @@ function Navigation() {
         )}
         {screen === 'plano' && <PlanoScreen />}
         {screen === 'registrar' && <AddMealScreen onBack={() => setScreen('hoje')} />}
-        {screen === 'circulo' && <CirculoScreen />}
+          {screen === 'circulo' && <CirculoScreenV2 />}
         {screen === 'perfil' && <PerfilScreen />}
       </main>
 
