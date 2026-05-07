@@ -3541,7 +3541,7 @@ function CirculoScreen() {
              <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest">Membros do Círculo</h3>
              <div className="flex flex-col gap-4">
                 {membersData.map((m: any) => (
-                   <div key={m.id} className="bg-gray-50/50 rounded-[32px] p-6 border border-gray-100 flex flex-col group active:bg-gray-100 transition-all">
+                   <div key={m.id} className="bg-gray-50/50 rounded-[28px] p-4 border border-gray-100 flex flex-col group active:bg-gray-100 transition-all">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                            <div className="relative">
@@ -3567,7 +3567,7 @@ function CirculoScreen() {
                         </div>
                       </div>
                       
-                      <div className="h-1.5 bg-gray-200/50 rounded-full overflow-hidden mb-4">
+                      <div className="h-2 bg-gray-200/50 rounded-full overflow-hidden mb-4">
                         <motion.div 
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.min(100, (m.consumed / (m.consumed + m.remaining)) * 100)}%` }}
@@ -3575,20 +3575,11 @@ function CirculoScreen() {
                         />
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                         <div className="bg-white/60 p-3 rounded-2xl border border-gray-50">
-                            <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter mb-1">Hoje</p>
-                            <p className="text-xs font-black text-indigo-600">{Math.round(m.consumed)} cal</p>
-                         </div>
-                         <div className="bg-white/60 p-3 rounded-2xl border border-gray-50">
-                            <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter mb-1">Restante</p>
-                            <p className="text-xs font-black text-orange-500">{Math.round(m.remaining)} cal</p>
-                         </div>
-                      </div>
+                      
 
                       <button 
                          onClick={() => setShowMemberModal(m)} 
-                         className="w-full py-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-100 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                         className="w-full py-3 bg-white text-indigo-600 rounded-2xl border border-indigo-100 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
                       >
                          Ver dia
                       </button>
