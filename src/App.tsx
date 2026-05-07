@@ -1638,149 +1638,261 @@ validatedPlan[mealKey] = applySmartBadges(mealKey, uniqueOptions).slice(0, 3);
 };
 
 const swapMealItem = (mealKey: string, index: number) => {
-  if (!userProfile) return;
-
-  const count = userProfile.mealCount;
-  const configs = MEAL_CONFIGS[count];
-  const cfg = configs.find(c => c.key === mealKey);
-
-  if (!cfg) return;
-
-  const getTargetCalForMeal = () => {
-    if (count === 3) {
-      if (cfg.key === 'cafe') return calorieGoal * 0.25;
-      if (cfg.key === 'almoco') return calorieGoal * 0.40;
-      if (cfg.key === 'jantar') return calorieGoal * 0.35;
-    }
-
-    if (count === 4) {
-      if (cfg.key === 'cafe') return calorieGoal * 0.25;
-      if (cfg.key === 'almoco') return calorieGoal * 0.35;
-      if (cfg.key === 'lanche') return calorieGoal * 0.15;
-      if (cfg.key === 'jantar') return calorieGoal * 0.25;
-    }
-
-    if (count === 5) {
-      if (cfg.key === 'cafe') return calorieGoal * 0.20;
-      if (cfg.key === 'lancheManha') return calorieGoal * 0.10;
-      if (cfg.key === 'almoco') return calorieGoal * 0.35;
-      if (cfg.key === 'lanche') return calorieGoal * 0.15;
-      if (cfg.key === 'jantar') return calorieGoal * 0.20;
-    }
-
-    if (count === 6) {
-      if (cfg.key === 'cafe') return calorieGoal * 0.18;
-      if (cfg.key === 'lancheManha') return calorieGoal * 0.10;
-      if (cfg.key === 'almoco') return calorieGoal * 0.30;
-      if (cfg.key === 'lanche') return calorieGoal * 0.12;
-      if (cfg.key === 'jantar') return calorieGoal * 0.22;
-      if (cfg.key === 'ceia') return calorieGoal * 0.08;
-    }
-
-    return calorieGoal / Math.max(configs.length, 1);
-  };
-
-  const normalizeSwapText = (value: string = '') =>
+  const normalizeSwap = (value: string = '') =>
     value
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\d+(?:[.,]\d+)?\s*(g|gramas|unidade|unidades|un|fatia|fatias|pote|potes|colher de sopa|colheres de sopa|colher|colheres|xícara|xícaras)/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
 
-  const getSwapSignature = (option: any) => {
-    const name = normalizeSwapText(option?.name || '');
-    const qty = normalizeSwapText(sanitizeOptionQtyText(option?.qty || ''));
+  const swapBank: Record<string, any[]> = {
+    cafe: [
+      {
+        name: 'Pão árabe com queijo minas e maçã',
+        qty: 'Pão árabe 1 unidade + Queijo minas frescal 1 fatia + Maçã 1 unidade',
+        cal: 365,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Overnight oats com banana',
+        qty: 'Aveia em flocos 30g + Iogurte natural 1 pote + Banana prata 1 unidade',
+        cal: 340,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Omelete com pão integral',
+        qty: 'Ovo de galinha 2 unidades + Pão integral 1 fatia',
+        cal: 290,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 860,
+      },
+      {
+        name: 'Vitamina de banana com aveia',
+        qty: 'Vitamina de banana com aveia 1 copo',
+        cal: 230,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 840,
+      },
+    ],
 
-    return `${name}|${qty}`;
+    almoco: [
+      {
+        name: 'Frango com mandioca e salada',
+        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+        cal: 485,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Peixe com batata e legumes',
+        qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
+        cal: 450,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Macarrão com carne moída e legumes',
+        qty: 'Macarrão integral 160g + Patinho moído 140g + Legumes variados 180g',
+        cal: 610,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 860,
+      },
+      {
+        name: 'Arroz, feijão e tofu grelhado',
+        qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+        cal: 500,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 840,
+      },
+    ],
+
+    jantar: [
+      {
+        name: 'Inhame, carne magra e legumes',
+        qty: 'Inhame cozido 180g + Carne magra grelhada 140g + Legumes variados 180g',
+        cal: 520,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Patinho com arroz e legumes',
+        qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 180g',
+        cal: 520,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Peixe com batata e legumes',
+        qty: 'Tilápia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 180g',
+        cal: 420,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 860,
+      },
+      {
+        name: 'Frango com mandioca e salada',
+        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+        cal: 485,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 840,
+      },
+    ],
+
+    lanche: [
+      {
+        name: 'Wrap de frango',
+        qty: 'Wrap integral 1 unidade + Frango desfiado 100g + Requeijão light 20g',
+        cal: 390,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Sanduíche natural de atum',
+        qty: 'Pão integral 2 fatias + Atum em lata (água) 1 lata + Requeijão light 20g',
+        cal: 360,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Iogurte com fruta e aveia',
+        qty: 'Iogurte natural 1 pote + Banana prata 1 unidade + Aveia em flocos 20g',
+        cal: 280,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 860,
+      },
+      {
+        name: 'Pipoca com queijo minas',
+        qty: 'Pipoca (milho p/ estourar) 30g + Queijo minas frescal 1 fatia',
+        cal: 260,
+        badge: 'Simples',
+        badgeDesc: '',
+        score: 840,
+      },
+    ],
+
+    lancheManha: [
+      {
+        name: 'Fruta com iogurte',
+        qty: 'Iogurte natural 1 pote + Maçã 1 unidade',
+        cal: 190,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Queijo minas com fruta',
+        qty: 'Queijo minas frescal 1 fatia + Banana prata 1 unidade',
+        cal: 210,
+        badge: 'Simples',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Vitamina de mamão com leite',
+        qty: 'Vitamina de mamão com leite 1 copo',
+        cal: 160,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 860,
+      },
+    ],
+
+    ceia: [
+      {
+        name: 'Iogurte natural com chia',
+        qty: 'Iogurte natural 1 pote + Chia 1 colher de sopa',
+        cal: 210,
+        badge: 'Simples',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Leite com canela',
+        qty: 'Leite desnatado 1 copo + Canela em pó 1 colher de chá',
+        cal: 75,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Cottage com morango',
+        qty: 'Queijo cottage 2 colheres de sopa + Morango 120g',
+        cal: 140,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 860,
+      },
+    ],
   };
 
-  const getComponents = (option: any) =>
-    normalizeSwapText(sanitizeOptionQtyText(option?.qty || ''))
-      .split('+')
-      .map(part => part.trim())
-      .filter(Boolean);
+  setMealPlan(prev => {
+    const currentOptions = prev[mealKey] || [];
 
-  const areTooSimilar = (a: any, b: any) => {
-    const aName = normalizeSwapText(a?.name || '');
-    const bName = normalizeSwapText(b?.name || '');
+    if (!currentOptions[index]) {
+      console.warn(`Não achei a opção ${index} em ${mealKey}`);
+      return prev;
+    }
 
-    if (aName === bName) return true;
-    if (getSwapSignature(a) === getSwapSignature(b)) return true;
-
-    const aComponents = new Set(getComponents(a));
-    const bComponents = new Set(getComponents(b));
-
-    const intersection = [...aComponents].filter(component =>
-      bComponents.has(component)
-    ).length;
-
-    const union = new Set([...aComponents, ...bComponents]).size;
-    const overlap = union === 0 ? 0 : intersection / union;
-
-    return overlap >= 0.6;
-  };
-
-  const currentMealOptions = mealPlan[mealKey] || [];
-  const currentOption = currentMealOptions[index];
-
-  if (!currentOption) return;
-
-  const targetCal = getTargetCalForMeal();
-
-  const otherOptions = currentMealOptions.filter((_, optionIndex) => optionIndex !== index);
-
-  const candidates: any[] = [];
-
-  for (let attempt = 0; attempt < 160; attempt++) {
-    const generated = getMealOptions(targetCal, userProfile, mealKey);
-
-    generated.forEach(option => {
-      if (option) candidates.push(option);
-    });
-  }
-
-  const validCandidates = candidates.filter(candidate => {
-    if (!candidate) return false;
-
-    const sameAsCurrent = areTooSimilar(candidate, currentOption);
-    const sameAsOtherCard = otherOptions.some(other => areTooSimilar(candidate, other));
-
-    return !sameAsCurrent && !sameAsOtherCard;
-  });
-
-  const uniqueCandidates: any[] = [];
-
-  validCandidates.forEach(candidate => {
-    const signature = getSwapSignature(candidate);
-
-    const alreadyExists = uniqueCandidates.some(existing =>
-      getSwapSignature(existing) === signature
+    const currentOption = currentOptions[index];
+    const currentName = normalizeSwap(currentOption.name);
+    const usedNames = new Set(
+      currentOptions
+        .filter((_, optionIndex) => optionIndex !== index)
+        .map(option => normalizeSwap(option.name))
     );
 
-    if (!alreadyExists) {
-      uniqueCandidates.push(candidate);
+    const bank = swapBank[mealKey] || swapBank.lanche;
+
+    const replacement =
+      bank.find(option => {
+        const optionName = normalizeSwap(option.name);
+
+        return optionName !== currentName && !usedNames.has(optionName);
+      }) ||
+      bank.find(option => normalizeSwap(option.name) !== currentName) ||
+      bank[0];
+
+    if (!replacement) {
+      console.warn(`Não encontrei substituição para ${mealKey}`);
+      return prev;
     }
+
+    const nextOptions = currentOptions.map((option, optionIndex) => {
+      if (optionIndex !== index) return option;
+
+      return {
+        ...replacement,
+        badge:
+          option.badge === 'Recomendada'
+            ? 'Recomendada'
+            : replacement.badge || 'Completa',
+        swappedAt: Date.now(),
+      };
+    });
+
+
+    return {
+      ...prev,
+      [mealKey]: nextOptions,
+    };
   });
-
-  const nextOption = uniqueCandidates[0];
-
-  if (!nextOption) {
-    console.warn('Nenhuma opção diferente encontrada para troca:', mealKey);
-    return;
-  }
-
-  const newMealOptions = currentMealOptions.map((option, optionIndex) =>
-    optionIndex === index ? nextOption : option
-  );
-
-  const newPlan = validatePlan({
-    ...mealPlan,
-    [mealKey]: newMealOptions,
-  });
-
-  setMealPlan(newPlan);
 };
 
   const completeScreening = (profile: UserProfile) => {
@@ -2612,6 +2724,7 @@ const INGREDIENTS = {
 function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => void }) {
   const { userProfile } = useApp();
   const [step, setStep] = useState(1);
+  const [screeningError, setScreeningError] = useState('');
   const totalSteps = 9;
 
   const [profile, setProfile] = useState<UserProfile>(userProfile || {
@@ -2626,9 +2739,27 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
   }, [step]);
 
   const next = () => {
-    if (step < totalSteps) setStep(step + 1);
-    else onComplete(profile);
+  setScreeningError('');
+
+  if (step === 9 && (!profile.restrictions || profile.restrictions.length === 0)) {
+    setScreeningError('Selecione uma restrição ou marque "Nenhuma" para continuar.');
+    return;
+  }
+
+  if (step < totalSteps) {
+    setStep(step + 1);
+    return;
+  }
+
+  const finalProfile = {
+    ...profile,
+    restrictions: (profile.restrictions || []).filter(
+      restriction => restriction !== 'Nenhuma'
+    ),
   };
+
+  onComplete(finalProfile);
+};
 
   const back = () => step > 1 && setStep(step - 1);
 
@@ -2798,21 +2929,36 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               <h2 className="text-4xl font-black text-gray-900 leading-tight">Restrições ou Alergias?</h2>
             </div>
             <p className="text-xs text-gray-400 font-bold px-1 uppercase tracking-tight">Marque apenas o que você precisa evitar.</p>
+            {screeningError && (
+  <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
+    <p className="text-xs font-black text-red-600 leading-relaxed">
+      {screeningError}
+    </p>
+  </div>
+)}
             <div className="grid grid-cols-2 gap-3">
               {['Nenhuma', 'Lactose', 'Glúten', 'Amendoim', 'Castanhas/nozes', 'Ovo', 'Leite', 'Soja', 'Peixes', 'Crustáceos', 'Frutos do Mar', 'Gergelim', 'Corantes/aditivos', 'Outro'].map(res => (
                 <button 
                   key={res}
                   onClick={() => {
-                    let prev = [...profile.restrictions];
-                    if (res === 'Nenhuma') {
-                      prev = ['Nenhuma'];
-                    } else {
-                      prev = prev.filter(x => x !== 'Nenhuma');
-                      if (prev.includes(res)) prev = prev.filter(x => x !== res);
-                      else prev.push(res);
-                    }
-                    setProfile({...profile, restrictions: prev});
-                  }}
+  setScreeningError('');
+
+  let prev = [...profile.restrictions];
+
+  if (res === 'Nenhuma') {
+    prev = ['Nenhuma'];
+  } else {
+    prev = prev.filter(x => x !== 'Nenhuma');
+
+    if (prev.includes(res)) {
+      prev = prev.filter(x => x !== res);
+    } else {
+      prev.push(res);
+    }
+  }
+
+  setProfile({ ...profile, restrictions: prev });
+}}
                   className={`p-4 rounded-2xl border-2 text-center transition-all font-bold text-xs ${profile.restrictions.includes(res) ? 'bg-red-50 border-red-500 text-red-700' : 'bg-gray-50 border-transparent text-gray-400 shadow-sm'}`}
                 >
                   {res}
@@ -2868,15 +3014,21 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
        </div>
 
        <div className="p-8 pb-12">
-          <button 
-            disabled={step === 1 && !profile.name}
-            onClick={next}
-            className={`w-full py-5 rounded-[32px] font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
-              (step === 1 && !profile.name) ? 'bg-gray-100 text-gray-300 shadow-none' : 'bg-green-500 text-white shadow-green-100'
-            }`}
-          >
-            Próximo
-          </button>
+          <button
+  disabled={
+    (step === 1 && !profile.name) ||
+    (step === 9 && (!profile.restrictions || profile.restrictions.length === 0))
+  }
+  onClick={next}
+  className={`w-full py-5 rounded-[32px] font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
+    (step === 1 && !profile.name) ||
+    (step === 9 && (!profile.restrictions || profile.restrictions.length === 0))
+      ? 'bg-gray-100 text-gray-300 shadow-none'
+      : 'bg-green-500 text-white shadow-green-100'
+  }`}
+>
+  {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
+</button>
        </div>
     </div>
   );
@@ -2917,8 +3069,7 @@ function PlanBuilderScreen({ profile, onComplete }: { profile: UserProfile; onCo
   };
 
   const renderIngredientStep = (cat: keyof UserProfile['preferredIngredients'], title: string, options: string[]) => {
-    const restrictions = (data.restrictions || []).map(r => r.toLowerCase());
-    const filteredOptions = options.filter(opt => !isFoodRestricted(opt, restrictions));
+    const filteredOptions = options.filter(opt => !isFoodRestricted(opt, data));
 
     return (
       <div className="space-y-8 pb-20">
@@ -3848,7 +3999,7 @@ const handleAddBlock = () => {
 
           return (
             <div
-              key={`${cfg.key}-${i}-${getPlanOptionSignature(opt)}`}
+            key={`${cfg.key}-${i}-${getPlanOptionSignature(opt)}-${opt.swappedAt || 0}`}
               className="bg-white rounded-[28px] p-5 shadow-md shadow-gray-100/60 border border-gray-100 flex justify-between items-start gap-4 group relative overflow-hidden transition-all hover:shadow-green-100/60"
             >
               <div className="flex-1 pr-3">
@@ -3932,18 +4083,18 @@ const handleAddBlock = () => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    swapMealItem(cfg.key, i);
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-green-50 text-gray-500 hover:text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"
-                >
-                  <Shuffle size={13} />
-                  Trocar opção
-                </button>
+<button
+  type="button"
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+swapMealItem(cfg.key, i);
+  }}
+  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-green-50 text-gray-500 hover:text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"
+>
+  <Shuffle size={13} />
+  Trocar opção
+</button>
               </div>
 
               <div className="text-right flex flex-col items-end pl-3 border-l border-gray-50 min-w-[58px]">

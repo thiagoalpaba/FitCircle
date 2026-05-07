@@ -50,6 +50,8 @@ function extractOptionTitles(section: string) {
     'CALORIAS',
     'SUGESTÃO ALTERNATIVA',
     'TROCAR OPÇÃO',
+    'TROCAR OPÇÕES',
+    'TESTE TROCAR',
     'DICA DE SUCESSO',
     'MEUS OBJETIVOS',
     'PLANO ALIMENTAR',
@@ -244,35 +246,40 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
     }
   });
 
-  test('trocar opção não duplica opções na mesma refeição', async ({ page }) => {
-    const firstSwapButton = page.getByRole('button', { name: /trocar opção/i }).first();
+  test('trocar opções regenera a refeição sem duplicar títulos visíveis', async ({ page }) => {
+   const firstSwapButton = page.getByRole('button', { name: /trocar opção|trocar opções|teste trocar/i }).first();
 
-    await expect(firstSwapButton).toBeVisible();
-    await firstSwapButton.click();
+  await expect(firstSwapButton).toBeVisible();
 
-    await page.waitForTimeout(500);
+  const beforeText = await page.locator('body').innerText();
 
-    const bodyText = await page.locator('body').innerText();
+  await firstSwapButton.click();
 
-    const mealHeadings = [
-      'Café da manhã',
-      'Lanche da manhã',
-      'Almoço',
-      'Lanche da tarde',
-      'Jantar',
-      'Ceia',
-    ];
+  await page.waitForTimeout(700);
 
-    for (const meal of mealHeadings) {
-      const section = getMealSection(bodyText, meal);
-      if (!section) continue;
+  const afterText = await page.locator('body').innerText();
 
-      const optionTitles = extractOptionTitles(section);
-      const normalized = optionTitles.map((title) => normalize(title));
+  expect(afterText).not.toBe(beforeText);
 
-      expect(new Set(normalized).size).toBe(normalized.length);
-    }
-  });
+  const mealHeadings = [
+    'Café da manhã',
+    'Lanche da manhã',
+    'Almoço',
+    'Lanche da tarde',
+    'Jantar',
+    'Ceia',
+  ];
+
+  for (const meal of mealHeadings) {
+    const section = getMealSection(afterText, meal);
+    if (!section) continue;
+
+    const optionTitles = extractOptionTitles(section);
+    const normalized = optionTitles.map((title) => normalize(title));
+
+    expect(new Set(normalized).size).toBe(normalized.length);
+  }
+});
 });
 
 test.describe('FitCircle - banco de alimentos', () => {
