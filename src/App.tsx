@@ -6024,12 +6024,33 @@ function CirculoScreen() {
                              <span className="text-[9px] font-black text-gray-300 uppercase tracking-tight text-right w-16 whitespace-nowrap">{item.time}</span>
                           </div>
 
-                          {item.photo && (
-                             <div className="w-full aspect-[4/3] rounded-[40px] overflow-hidden bg-gray-100 my-4 shadow-xl border border-gray-100 group relative">
-                                <img src={item.photo} alt="Refeição" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                             </div>
-                          )}
+                          <div className="w-full aspect-[4/3] rounded-[34px] overflow-hidden bg-green-50 my-4 border border-green-100 relative">
+  {item.photo ? (
+    <img
+      src={item.photo}
+      alt={item.desc || 'Refeição registrada'}
+      className="w-full h-full object-cover"
+      referrerPolicy="no-referrer"
+      onError={(event) => {
+        event.currentTarget.style.display = 'none';
+      }}
+    />
+  ) : null}
+
+  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br from-green-50 to-emerald-100">
+    <div className="w-14 h-14 rounded-3xl bg-white flex items-center justify-center shadow-sm mb-3">
+      <Camera size={24} className="text-green-600" />
+    </div>
+
+    <p className="text-sm font-black text-green-800">
+      Refeição registrada
+    </p>
+
+    <p className="text-[11px] font-bold text-green-600 mt-1">
+      Foto opcional
+    </p>
+  </div>
+</div>
 
                           <div className="flex items-center justify-between mt-4">
                              <div className="flex items-center gap-2 px-1">
