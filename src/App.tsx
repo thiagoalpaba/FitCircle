@@ -2114,6 +2114,67 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
                         <p className="text-green-600 text-[10px] font-bold opacity-60">Base: {selectedFood.cal} calorias / 100g {selectedFood.source && `(${selectedFood.source})`}</p>
                       </div>
                    </div>
+                   {(selectedFood.recipe?.length || selectedFood.prep || selectedFood.portionNote) && (
+  <div className="bg-amber-50 border border-amber-100 rounded-[28px] p-5 mb-8">
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-8 h-8 bg-amber-500 rounded-2xl flex items-center justify-center text-white">
+        <Book size={16} />
+      </div>
+
+      <div>
+        <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
+          Receita
+        </p>
+        <p className="text-[9px] font-bold text-amber-600/70 uppercase tracking-tight">
+          Como preparar essa opção
+        </p>
+      </div>
+    </div>
+
+    {selectedFood.recipe?.length && (
+      <div className="mb-4">
+        <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">
+          Ingredientes
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          {selectedFood.recipe.map((item) => (
+            <span
+              key={item}
+              className="bg-white text-amber-700 border border-amber-100 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {selectedFood.prep && (
+      <div className="mb-4">
+        <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-1">
+          Preparo
+        </p>
+
+        <p className="text-xs font-bold text-amber-900/80 leading-relaxed">
+          {selectedFood.prep}
+        </p>
+      </div>
+    )}
+
+    {selectedFood.portionNote && (
+      <div className="bg-white/70 border border-amber-100 rounded-2xl px-4 py-3">
+        <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-1">
+          Porção sugerida
+        </p>
+
+        <p className="text-xs font-bold text-amber-900/80">
+          {selectedFood.portionNote}
+        </p>
+      </div>
+    )}
+  </div>
+)}
                    
                    <div className="flex bg-gray-100 p-1.5 rounded-3xl mb-8">
                       <button 
