@@ -39,6 +39,46 @@ function normalize(value: string) {
     .trim();
 }
 
+function extractOptionTitles(section: string) {
+  const ignoredUppercaseLines = [
+    'OPÇÕES GERADAS',
+    'RECOMENDADA',
+    'COMPLETA',
+    'SIMPLES',
+    'LEVE',
+    'CALORIAS',
+    'SUGESTÃO ALTERNATIVA',
+    'TROCAR OPÇÃO',
+    'DICA DE SUCESSO',
+    'MEUS OBJETIVOS',
+    'PLANO ALIMENTAR',
+    'AJUSTAR',
+    'HOJE',
+    'PLANO',
+    'CÍRCULO',
+    'PERFIL',
+  ];
+
+  return section
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => {
+      const upper = line.toUpperCase();
+
+      if (upper !== line) return false;
+      if (/^\d+$/.test(line)) return false;
+
+      // Ignora chips de macros do plano: P 32G, C 48G, G 12G
+      if (/^[PCG]\s*\d+G$/i.test(upper)) return false;
+
+      // Ignora caso os 3 chips venham na mesma linha: P 32G C 48G G 12G
+      if (/^P\s*\d+G\s+C\s*\d+G\s+G\s*\d+G$/i.test(upper)) return false;
+
+      return !ignoredUppercaseLines.some((ignored) => upper.includes(ignored));
+    });
+}
+
 test.describe('FitCircle - qualidade do plano alimentar', () => {
   test.beforeEach(async ({ page }) => {
     page.on('pageerror', (error) => {
@@ -176,55 +216,48 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
       'Ceia',
     ];
 
-    const ignoredUppercaseLines = [
-      'OPÇÕES GERADAS',
-      'RECOMENDADA',
-      'COMPLETA',
-      'SIMPLES',
-      'LEVE',
-      'CALORIAS',
-      'SUGESTÃO ALTERNATIVA',
-      'DICA DE SUCESSO',
-      'MEUS OBJETIVOS',
-      'PLANO ALIMENTAR',
-      'AJUSTAR',
-      'HOJE',
-      'PLANO',
-      'CÍRCULO',
-      'PERFIL',
-      'TROCAR OPÇÃO',
+    for (const meal of mealHeadings) {
+      const section = getMealSection(bodyText, meal);
+      if (!section) continue;
+
+      const optionTitles = extractOptionTitles(section);
+
+      const normalized = optionTitles.map((title) => normalize(title));
+
+      const unique = new Set(normalized);
+
+      expect(unique.size).toBe(normalized.length);
+    }
+  });
+
+  test('trocar opção não duplica opções na mesma refeição', async ({ page }) => {
+    const firstSwapButton = page.getByRole('button', { name: /trocar opção/i }).first();
+
+    await expect(firstSwapButton).toBeVisible();
+    await firstSwapButton.click();
+
+    await page.waitForTimeout(500);
+
+    const bodyText = await page.locator('body').innerText();
+
+    const mealHeadings = [
+      'Café da manhã',
+      'Lanche da manhã',
+      'Almoço',
+      'Lanche da tarde',
+      'Jantar',
+      'Ceia',
     ];
 
     for (const meal of mealHeadings) {
       const section = getMealSection(bodyText, meal);
       if (!section) continue;
 
-      const optionTitles = section
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .filter((line) => {
-          const upper = line.toUpperCase();
+      const optionTitles = extractOptionTitles(section);
 
-          if (upper !== line) return false;
-          if (/^\d+$/.test(line)) return false;
+      const normalized = optionTitles.map((title) => normalize(title));
 
-// Ignora chips de macros do plano: P 32G, C 48G, G 12G
-if (/^[PCG]\s*\d+G$/i.test(upper)) return false;
-
-// Ignora caso os 3 chips venham na mesma linha: P 32G C 48G G 12G
-if (/^P\s*\d+G\s+C\s*\d+G\s+G\s*\d+G$/i.test(upper)) return false;
-
-return !ignoredUppercaseLines.some((ignored) => upper.includes(ignored));
-        });
-
-      const normalized = optionTitles.map((title) =>
-        normalize(title)
-      );
-
-      const unique = new Set(normalized);
-
-      expect(unique.size).toBe(normalized.length);
+      expect(new Set(normalized).size).toBe(normalized.length);
     }
   });
 });
