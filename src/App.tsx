@@ -1489,34 +1489,48 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
 
 // ─── MAIN SCREENS ─────────────────────────────────────────────────────────────
 
-function CalorieRing({ consumed, goal, size = 200, burned = 0 }: { consumed: number; goal: number; size?: number; burned?: number }) {
+function CalorieRing({
+  consumed,
+  goal,
+  size = 200,
+}: {
+  consumed: number;
+  goal: number;
+  size?: number;
+  burned?: number;
+}) {
   const stroke = 16;
   const radius = (size - stroke) / 2;
   const circumference = radius * 2 * Math.PI;
-  
-  const netBalance = consumed - burned;
-  const progress = Math.min(safeNumber(consumed) / safeNumber(goal, 1), 1);
-  const isOver = consumed > goal;
-  
-  // Progress stroke - Green for normal, Amber for overage
+
+  const safeConsumed = Math.round(safeNumber(consumed));
+  const safeGoal = Math.round(safeNumber(goal, 1));
+  const remaining = Math.max(safeGoal - safeConsumed, 0);
+  const progress = Math.min(safeConsumed / safeGoal, 1);
+  const isOver = safeConsumed > safeGoal;
+
   const strokeDashoffset = circumference - progress * circumference;
 
-  let statusText = "Dentro do planejado";
-  let statusColor = "bg-[#005028]/35 text-white border-white/15";
-  let ringColor = "#22C55E";
+  let statusText = 'Dentro do planejado';
+  let helperText = `${remaining} calorias disponíveis`;
+  let statusColor = 'bg-[#005028]/35 text-white border-white/15';
+  let ringColor = '#22C55E';
 
   if (isOver) {
-    ringColor = "#F59E0B";
-    if (netBalance <= goal) {
-      statusText = "Excedido, mas o treino compensou";
-      statusColor = "bg-orange-600/40 text-white border-white/10";
-    } else {
-      statusText = "Tudo bem, ajuste no próximo dia";
-      statusColor = "bg-amber-600/40 text-white border-white/10";
-    }
-  } else if (consumed < goal * 0.7) {
-    statusText = "Você ainda tem margem hoje";
-    statusColor = "bg-[#005028]/35 text-white border-white/15";
+    ringColor = '#F59E0B';
+    statusText = 'Passou da meta hoje';
+    helperText = 'Tudo bem. Ajuste na próxima refeição.';
+    statusColor = 'bg-amber-600/40 text-white border-white/10';
+  } else if (remaining > safeGoal * 0.3) {
+    statusText = 'Você ainda tem margem';
+    helperText = `${remaining} calorias disponíveis`;
+  } else if (remaining > 0) {
+    statusText = 'Perto da meta';
+    helperText = `${remaining} calorias disponíveis`;
+    statusColor = 'bg-lime-600/35 text-white border-white/15';
+  } else {
+    statusText = 'Meta atingida';
+    helperText = 'Bom trabalho por hoje.';
   }
 
   return (
@@ -1530,10 +1544,11 @@ function CalorieRing({ consumed, goal, size = 200, burned = 0 }: { consumed: num
           strokeWidth={stroke}
           fill="transparent"
         />
+
         <motion.circle
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeOut" }}
+          transition={{ duration: 1, ease: 'easeOut' }}
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -1544,14 +1559,30 @@ function CalorieRing({ consumed, goal, size = 200, burned = 0 }: { consumed: num
           strokeLinecap="round"
         />
       </svg>
-      <div className="absolute flex flex-col items-center max-w-[160px] text-center">
-        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Consumido</span>
+
+      <div className="absolute flex flex-col items-center max-w-[170px] text-center">
+        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">
+          Consumido
+        </span>
+
         <div className="flex items-baseline gap-1">
-          <span className="text-5xl font-black">{Math.round(safeNumber(consumed))}</span>
-          <span className="text-sm font-bold opacity-60 uppercase">{consumed === 1 ? 'caloria' : 'calorias'}</span>
+          <span className="text-5xl font-black">{safeConsumed}</span>
+          <span className="text-sm font-bold opacity-60 uppercase">
+            cal
+          </span>
         </div>
-        <div className={`mt-4 ${statusColor} backdrop-blur-md px-4 py-1.5 rounded-full border`}>
-          <span className="text-[9px] font-black uppercase tracking-tighter block leading-tight">{statusText}</span>
+
+        <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">
+          meta: {safeGoal} cal
+        </span>
+
+        <div className={`mt-4 ${statusColor} backdrop-blur-md px-4 py-2 rounded-2xl border`}>
+          <span className="text-[9px] font-black uppercase tracking-tighter block leading-tight">
+            {statusText}
+          </span>
+          <span className="text-[9px] font-bold opacity-80 block mt-1 leading-tight">
+            {helperText}
+          </span>
         </div>
       </div>
     </div>
@@ -2376,7 +2407,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         </div>
 
         <div className="flex justify-center mb-8">
-           <CalorieRing consumed={totals.cal} goal={calorieGoal} burned={burned} />
+           <CalorieRing consumed={totals.cal} goal={calorieGoal} />
         </div>
 
         <div className="flex flex-col items-center">
