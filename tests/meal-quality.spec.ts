@@ -192,6 +192,7 @@ test.describe('FitCircle - qualidade do plano alimentar', () => {
       'PLANO',
       'CÍRCULO',
       'PERFIL',
+      'TROCAR OPÇÃO',
     ];
 
     for (const meal of mealHeadings) {

@@ -2914,7 +2914,7 @@ function PlanoScreen() {
                   {(mealPlan[cfg.key] || []).map((opt: any, i: number) => (
                     <div 
                       key={i} 
-                      className="bg-white rounded-[32px] p-6 shadow-xl shadow-gray-100/50 border border-gray-50 flex justify-between items-center group relative overflow-hidden transition-all hover:shadow-green-100/50"
+                      className="bg-white rounded-[28px] p-5 shadow-md shadow-gray-100/60 border border-gray-100 flex justify-between items-start gap-4 group relative overflow-hidden transition-all hover:shadow-green-100/60"
                     >
                        <div className="flex-1 pr-4">
                           <div className="flex items-center gap-2 mb-2">
@@ -2943,15 +2943,15 @@ function PlanoScreen() {
 
                           <button 
                             onClick={() => swapMealItem(cfg.key, i)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded-xl text-[9px] font-black uppercase transition-all active:scale-95"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded-xl text-[8px] font-black uppercase transition-all active:scale-95"
                           >
                              <Shuffle size={12} />
-                             Sugestão Alternativa
+                             Trocar opção
                           </button>
                        </div>
                        
                        <div className="text-right flex flex-col items-end pl-4 border-l border-gray-50">
-                          <p className="text-2xl font-black text-gray-900 leading-none">{Math.round(safeNumber(opt.cal))}</p>
+                        <p className="text-xl font-black text-gray-900 leading-none">{Math.round(safeNumber(opt.cal))}</p>
                           <p className="text-[9px] font-black text-gray-300 uppercase tracking-tighter mt-1">calorias</p>
                        </div>
                     </div>
