@@ -4217,169 +4217,317 @@ const handleAddBlock = () => {
     </div>
   );
 }
-
 function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }) {
-  const { meals: myMeals, getTotals: getMyTotals, calorieGoal: myGoal, workouts: myWorkouts } = useApp();
-  const isMe = member.id === 'me';
-  const totals = isMe ? getMyTotals() : { cal: member.consumed, p: 0, c: 0, f: 0 };
-  const goal = isMe ? myGoal : 1800 + (member.consumed % 500); 
-  const workouts = isMe ? myWorkouts : (member.workouts || []);
-  const burned = isMe ? workouts.reduce((acc, w) => acc + safeNumber(w.burned), 0) : workouts.reduce((acc: number, w: any) => acc + safeNumber(w.burned), 0) || (member.trained ? 350 : 0);
-  const progress = Math.min((totals.cal / goal) * 100, 100);
+  const {
+    meals: myMeals,
+    getTotals: getMyTotals,
+    calorieGoal: myGoal,
+    workouts: myWorkouts,
+  } = useApp();
 
-  const meals = isMe ? myMeals : [
-    { type: 'Café da Manhã', desc: 'Pão integral com ovos', cal: 320, time: '08:15' },
-    { type: 'Almoço', desc: 'Arroz, feijão preto e frango', cal: 559, time: '12:30' },
-    { type: 'Lanche', desc: 'Iogurte com granola', cal: 361, time: '16:00' }
-  ];
+  const isMe = member.id === 'me';
+
+  const totals = isMe
+    ? getMyTotals()
+    : { cal: safeNumber(member.consumed), p: 0, c: 0, f: 0 };
+
+  const goal = isMe ? myGoal : 1800 + (safeNumber(member.consumed) % 500);
+
+  const workouts = isMe
+    ? myWorkouts
+    : member.workouts?.length
+    ? member.workouts
+    : member.trained
+    ? [{ type: 'Musculação', burned: 350, duration: 45 }]
+    : [];
+
+  const burned = workouts.reduce(
+    (acc: number, workout: any) => acc + safeNumber(workout.burned),
+    0
+  );
+
+  const remaining = Math.max(0, goal - totals.cal);
+
+  const meals = isMe
+    ? myMeals
+    : [
+        {
+          type: 'Café da manhã',
+          desc: 'Pão integral com ovos',
+          cal: 320,
+          time: '08:15',
+        },
+        {
+          type: 'Almoço',
+          desc: 'Arroz, feijão preto e frango',
+          cal: 559,
+          time: '12:30',
+        },
+        {
+          type: 'Lanche da tarde',
+          desc: 'Iogurte com granola',
+          cal: 361,
+          time: '16:00',
+        },
+      ];
+
+  const formatMealType = (type: string) => {
+    const normalized = String(type || '').toLowerCase();
+
+    if (normalized === 'cafe' || normalized === 'café da manhã') return 'Café da manhã';
+    if (normalized === 'almoco' || normalized === 'almoço') return 'Almoço';
+    if (normalized === 'jantar') return 'Jantar';
+    if (normalized === 'lanche') return 'Lanche da tarde';
+    if (normalized === 'lanchemanha') return 'Lanche da manhã';
+    if (normalized === 'ceia') return 'Ceia';
+
+    return type;
+  };
+
+  const getMealDescription = (meal: any) => {
+    if (!isMe) return meal.desc || '';
+
+    return meal.items?.map((item: any) => item.food.name).join(', ') || '';
+  };
+
+  const getWorkoutName = (workout: any) => {
+    if (workout.type === 'musculacao') return 'Musculação';
+
+    return WORKOUT_TYPES.find(wt => wt.key === workout.type)?.label || workout.type || 'Treino';
+  };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 text-gray-900">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl z-10 max-h-[90vh] overflow-y-auto no-scrollbar relative">
-        <div className="sticky top-0 bg-white pb-6 z-10 flex justify-between items-center border-b border-gray-50 mb-6 font-sans">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center font-black text-indigo-500 text-xl shadow-sm overflow-hidden">
-              {member.imgUrl ? (
-                <img src={member.imgUrl} alt={member.name} className="w-full h-full object-cover" />
-              ) : (
-                member.img
-              )}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-5 text-gray-900">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
+
+      <motion.div
+        initial={{ y: 24, scale: 0.96, opacity: 0 }}
+        animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 24, scale: 0.96, opacity: 0 }}
+        className="bg-white w-full max-w-sm rounded-[36px] shadow-2xl z-10 max-h-[88vh] overflow-y-auto no-scrollbar relative"
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-6 pt-6 pb-4 border-b border-gray-100 rounded-t-[36px]">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center font-black text-indigo-500 text-lg shadow-sm overflow-hidden shrink-0">
+                {member.imgUrl ? (
+                  <img
+                    src={member.imgUrl}
+                    alt={member.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  member.img
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <h2 className="text-lg font-black truncate">
+                  {member.name} {isMe && '(Você)'}
+                </h2>
+
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
+                  {member.status || 'Ativo agora'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-black">{member.name} {isMe && "(Você)"}</h2>
-              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{member.status || 'Ativo agora'}</p>
-            </div>
+
+            <button
+              onClick={onClose}
+              className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors shrink-0"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button onClick={onClose} className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"><X size={18}/></button>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-2">
-  <div className="bg-gray-50 p-3 rounded-[22px] border border-gray-100 text-center">
-    <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
-      Meta
-    </p>
-    <p className="text-base font-black text-gray-900">
-      {Math.round(goal)}
-    </p>
-  </div>
+        <div className="p-6 space-y-7">
+          {/* Resumo */}
+          <div className="space-y-3">
+            <div className="bg-indigo-600 rounded-[30px] p-5 text-white shadow-xl shadow-indigo-100">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-200 mb-1">
+                Resumo do dia
+              </p>
 
-  <div className="bg-indigo-50/50 p-3 rounded-[22px] border border-indigo-50 text-center">
-    <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
-      Consumido
-    </p>
-    <p className="text-base font-black text-indigo-600">
-      {Math.round(totals.cal)}
-    </p>
-  </div>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/60">
+                    Consumido
+                  </p>
 
-  <div className="bg-orange-50 p-3 rounded-[22px] border border-orange-100 text-center">
-    <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
-      Treino
-    </p>
-    <p className="text-base font-black text-orange-600">
-      +{Math.round(burned)}
-    </p>
-  </div>
-</div>
-            <div className="bg-indigo-50/50 p-5 rounded-[28px] border border-indigo-50">
-               <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Restante</p>
-               <p className="text-2xl font-black text-indigo-600">{Math.round(Math.max(0, goal - totals.cal))}</p>
-               <p className="text-[8px] font-bold text-indigo-400">sem contar treino</p>
+                  <p className="text-4xl font-black leading-none mt-1">
+                    {Math.round(totals.cal)}
+                  </p>
+
+                  <p className="text-[10px] font-bold text-white/70 mt-1">
+                    calorias
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/60">
+                    Restante
+                  </p>
+
+                  <p className="text-2xl font-black leading-none mt-1">
+                    {Math.round(remaining)}
+                  </p>
+
+                  <p className="text-[9px] font-bold text-white/60 mt-1">
+                    sem contar treino
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-gray-50 p-3 rounded-[22px] border border-gray-100 text-center">
+                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                  Meta
+                </p>
+
+                <p className="text-base font-black text-gray-900">
+                  {Math.round(goal)}
+                </p>
+              </div>
+
+              <div className="bg-indigo-50 p-3 rounded-[22px] border border-indigo-100 text-center">
+                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                  Consumido
+                </p>
+
+                <p className="text-base font-black text-indigo-600">
+                  {Math.round(totals.cal)}
+                </p>
+              </div>
+
+              <div className="bg-orange-50 p-3 rounded-[22px] border border-orange-100 text-center">
+                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                  Treino
+                </p>
+
+                <p className="text-base font-black text-orange-600">
+                  +{Math.round(burned)}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="px-2">
-            <div className="h-4 bg-gray-100 rounded-full overflow-hidden mb-2">
-               <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-            </div>
-            <p className="text-[10px] font-black text-gray-400 uppercase text-center">
-  {Math.round(progress)}% da meta alimentar
-</p>
-          </div>
-
+          {/* Refeições */}
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Treinos de hoje</p>
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                Refeições de hoje
+              </p>
+
+              <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                {meals.length}
+              </span>
+            </div>
+
             <div className="space-y-3">
-              {(workouts.length > 0 || (member.trained && !isMe)) ? (
-                <>
-                  <div className="space-y-2">
-                    {workouts.length > 0 ? workouts.map((w: any, i: number) => (
-                      <div key={i} className="flex justify-between items-center bg-gray-50/50 p-4 rounded-3xl border border-gray-100">
-                        <div className="flex items-center gap-3">
-                           <div className="w-9 h-9 bg-orange-500 text-white rounded-xl flex items-center justify-center">
-                              <Dumbbell size={16} />
-                           </div>
-                           <div>
-                              <p className="text-xs font-black text-gray-800 uppercase tracking-tighter">{w.type === 'musculacao' ? 'Musculação' : (WORKOUT_TYPES.find(wt => wt.key === w.type)?.label || w.type)}</p>
-                              <p className="text-[10px] font-bold text-gray-400">{w.duration} min</p>
-                           </div>
-                        </div>
-                        <p className="text-[10px] font-black text-orange-600">{w.burned} calorias</p>
+              {meals.length > 0 ? (
+                (meals as any[]).map((meal: any, index: number) => (
+                  <div
+                    key={`${meal.type}-${meal.time}-${index}`}
+                    className="bg-gray-50/80 p-4 rounded-[26px] border border-gray-100"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-tight">
+                          {formatMealType(meal.type)}
+                        </p>
+
+                        <p className="text-[10px] font-bold text-gray-500 leading-relaxed mt-1 line-clamp-2">
+                          {getMealDescription(meal)}
+                        </p>
                       </div>
-                    )) : (
-                      <div className="flex justify-between items-center bg-gray-50/50 p-4 rounded-3xl border border-gray-100">
-                        <div className="flex items-center gap-3">
-                           <div className="w-9 h-9 bg-orange-500 text-white rounded-xl flex items-center justify-center">
-                              <Dumbbell size={16} />
-                           </div>
-                           <div>
-                              <p className="text-xs font-black text-gray-800 uppercase tracking-tighter">Musculação</p>
-                              <p className="text-[10px] font-bold text-gray-400">45 min</p>
-                           </div>
-                        </div>
-                        <p className="text-[10px] font-black text-orange-600">350 calorias</p>
+
+                      <div className="text-right shrink-0">
+                        <p className="text-xs font-black text-indigo-600">
+                          {Math.round(safeNumber(meal.cal))}
+                        </p>
+
+                        <p className="text-[8px] font-bold text-gray-300 uppercase">
+                          calorias
+                        </p>
+
+                        <p className="text-[8px] font-bold text-gray-300 mt-1">
+                          {meal.time}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                  {workouts.length >= 1 && (
-                    <div className="pt-2 px-2 flex justify-end">
-                       <p className="text-[9px] font-black text-orange-500/60 uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-full border border-orange-100">Total no treino: {burned} calorias</p>
                     </div>
-                  )}
-                </>
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-6 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Nenhum treino registrado hoje.</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    Nenhuma refeição registrada hoje.
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Treinos */}
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Refeições de Hoje</p>
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                Treinos de hoje
+              </p>
+
+              <span className="text-[9px] font-black text-orange-500 bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
+                {Math.round(burned)} calorias
+              </span>
+            </div>
+
             <div className="space-y-3">
-              {meals.length > 0 ? (meals as any[]).map((m: any, i: number) => (
-                <div key={i} className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100 flex justify-between items-center group">
-                  <div>
-                    <p className="text-xs font-black text-gray-800 uppercase tracking-tighter">{m.type === 'CAFE' || m.type === 'Café da Manhã' ? 'Café da manhã' : (m.type === 'ALMOCO' ? 'Almoço' : (m.type === 'JANTAR' ? 'Jantar' : (m.type === 'LANCHE' ? 'Lanche da tarde' : m.type)))}</p>
-                    <p className="text-[10px] font-bold text-gray-400 italic line-clamp-1">{isMe ? m.items.map((it:any) => it.food.name).join(', ') : m.desc}</p>
+              {workouts.length > 0 ? (
+                workouts.map((workout: any, index: number) => (
+                  <div
+                    key={`${workout.type}-${index}`}
+                    className="flex justify-between items-center bg-orange-50/60 p-4 rounded-[26px] border border-orange-100"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 bg-orange-500 text-white rounded-xl flex items-center justify-center shrink-0">
+                        <Dumbbell size={16} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-tight truncate">
+                          {getWorkoutName(workout)}
+                        </p>
+
+                        <p className="text-[10px] font-bold text-gray-400">
+                          {safeNumber(workout.duration) > 0
+                            ? `${workout.duration} min`
+                            : 'Manual'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] font-black text-orange-600 shrink-0">
+                      {Math.round(safeNumber(workout.burned))} calorias
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-indigo-600">{m.cal} calorias</p>
-                    <p className="text-[8px] font-bold text-gray-300">{m.time}</p>
-                  </div>
-                </div>
-              )) : (
+                ))
+              ) : (
                 <div className="text-center py-6 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Nenhuma refeição registrada hoje.</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    Nenhum treino registrado hoje.
+                  </p>
                 </div>
               )}
             </div>
           </div>
-
-          <div className="bg-indigo-900 rounded-[40px] p-8 text-white text-center shadow-2xl shadow-indigo-200 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
-            <Rocket size={32} className="mx-auto mb-4 text-indigo-300 relative z-10"/>
-            <h4 className="text-xl font-black mb-2 relative z-10">Incentive agora!</h4>
-            <p className="text-[10px] font-bold text-indigo-200 mb-8 opacity-80 uppercase tracking-widest relative z-10">Mande um apoio rápido para {member.name.split(' ')[0]}</p>
-            <div className="flex flex-wrap gap-2 justify-center relative z-10">
-               {["Boa!", "Bora!", "Top!", "No foco!"].map(msg => (
-                 <button key={msg} onClick={() => onClose()} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95 border border-white/5">{msg}</button>
-               ))}
-            </div>
-          </div>
+        </div>
       </motion.div>
     </div>
   );
