@@ -4819,7 +4819,7 @@ function RecipeLibrary() {
               </h3>
 
               <p className="mt-2 max-w-[230px] text-xs font-bold leading-relaxed text-white/80">
-                {visibleRecipes.length} receitas práticas com preparo, ingredientes e macros.
+                {visibleRecipes.length} receitas prontas com ingredientes, preparo e macros.
               </p>
 
               <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 shadow-sm">
@@ -4855,7 +4855,7 @@ function RecipeLibrary() {
                   </h2>
 
                   <p className="mt-1 text-xs font-bold text-gray-400">
-                    Escolha uma receita para ver detalhes ou adicionar ao plano.
+                    Receitas práticas para encaixar no seu plano alimentar.
                   </p>
                 </div>
 
@@ -4933,7 +4933,7 @@ function RecipeLibrary() {
                           onClick={() => setSelectedRecipe(recipe)}
                           className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-gray-600"
                         >
-                          Ver receita
+                          Ver preparo
                         </button>
 
                         <button
@@ -4941,7 +4941,7 @@ function RecipeLibrary() {
                           onClick={() => addRecipeToPlan(recipe, configs[0].key)}
                           className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
                         >
-                          Adicionar rápido
+                          Adicionar ao plano
                         </button>
                       </div>
                     </div>
