@@ -4003,42 +4003,34 @@ function PerfilScreen() {
       : 'Recomposição';
 
   const StatCard = ({
-    label,
-    value,
-    sub,
-    highlight = false,
-    children,
-  }: {
-    label: string;
-    value: string;
-    sub?: string;
-    highlight?: boolean;
-    children?: React.ReactNode;
-  }) => (
-    <div
-      className={`rounded-[28px] p-4 shadow-lg border min-h-[118px] flex flex-col justify-center ${
-        highlight
-          ? 'bg-green-50 border-green-100 text-green-700'
-          : 'bg-white border-gray-50 text-gray-900'
-      }`}
-    >
-      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
-        {label}
-      </p>
+  label,
+  value,
+  highlight = false,
+  children,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  children?: React.ReactNode;
+}) => (
+  <div
+    className={`rounded-[28px] p-5 shadow-lg border min-h-[112px] flex flex-col justify-center text-center ${
+      highlight
+        ? 'bg-green-50 border-green-100 text-green-700'
+        : 'bg-white border-gray-50 text-gray-900'
+    }`}
+  >
+    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">
+      {label}
+    </p>
 
-      <p className="text-2xl font-black leading-none">
-        {value}
-      </p>
+    <p className="text-2xl font-black leading-none">
+      {value}
+    </p>
 
-      {sub && (
-        <p className="text-[10px] font-bold text-gray-400 mt-2 leading-tight">
-          {sub}
-        </p>
-      )}
-
-      {children}
-    </div>
-  );
+    {children}
+  </div>
+);
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
@@ -4106,10 +4098,9 @@ function PerfilScreen() {
 />
 
           <StatCard
-            label="IMC"
-            value={bmiValue}
-            sub={bmiInfo.label}
-          >
+  label="IMC"
+  value={bmiValue}
+>
             <div className="mt-3">
               <div className="h-1.5 bg-gray-100 rounded-full relative overflow-visible">
                 <div className="absolute inset-y-0 left-[23%] right-[45%] bg-green-100 rounded-full" />
