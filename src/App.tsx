@@ -2412,15 +2412,8 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
          </div>
       </div>
 
-      <div className="px-6 mt-4 flex justify-center">
-         <div className="bg-indigo-50/50 px-4 py-2 rounded-2xl border border-indigo-100 flex items-center gap-2">
-            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Saldo Líquido:</span>
-            <span className="text-xs font-black text-indigo-600">{formatKcal(net)}</span>
-         </div>
-      </div>
-
       {/* Macros */}
-      <div className="px-6 -mt-8 relative z-20">
+      <div className="px-6 mt-4 relative z-20">
          <div className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 grid grid-cols-3 gap-4">
             <div className="space-y-3">
                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Proteína</p>
