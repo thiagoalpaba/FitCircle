@@ -3411,308 +3411,578 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
   const totalSteps = 9;
 
   const [profile, setProfile] = useState<UserProfile>(userProfile || {
-    name: '', age: 25, weight: 70, height: 170, gender: 'masculino',
-    goal: 'perda', trainingsPerWeek: 3,
-    mealCount: 4, dietaryProfile: 'sem_restricao', mainDifficulty: '', restrictions: [],
-    preferredIngredients: { breakfast: [], main: [], snacks: [] }
+    name: '',
+    age: 25,
+    weight: 70,
+    height: 170,
+    gender: 'masculino',
+    goal: 'perda',
+    trainingsPerWeek: 3,
+    mealCount: 4,
+    dietaryProfile: 'sem_restricao',
+    mainDifficulty: '',
+    restrictions: [],
+    preferredIngredients: { breakfast: [], main: [], snacks: [] },
   });
+
+  const restrictionOptions = [
+    'Lactose',
+    'Glúten',
+    'Amendoim',
+    'Castanhas/nozes',
+    'Ovo',
+    'Leite',
+    'Soja',
+    'Peixes',
+    'Crustáceos',
+    'Frutos do Mar',
+    'Gergelim',
+    'Corantes/aditivos',
+    'Outro',
+  ];
 
   useEffect(() => {
     scrollToTop();
   }, [step]);
 
   const next = () => {
-  setScreeningError('');
+    setScreeningError('');
 
-  if (step === 9 && (!profile.restrictions || profile.restrictions.length === 0)) {
-    setScreeningError('Selecione uma restrição ou marque "Nenhuma" para continuar.');
-    return;
-  }
+    if (step === 9 && (!profile.restrictions || profile.restrictions.length === 0)) {
+      setScreeningError('Selecione uma restrição ou marque "Nenhuma" para continuar.');
+      return;
+    }
 
-  if (step < totalSteps) {
-    setStep(step + 1);
-    return;
-  }
+    if (step < totalSteps) {
+      setStep(step + 1);
+      return;
+    }
 
-  const finalProfile = {
-    ...profile,
-    restrictions: (profile.restrictions || []).filter(
-      restriction => restriction !== 'Nenhuma'
-    ),
+    const finalProfile = {
+      ...profile,
+      restrictions: (profile.restrictions || []).filter(
+        restriction => restriction !== 'Nenhuma'
+      ),
+    };
+
+    onComplete(finalProfile);
   };
-
-  onComplete(finalProfile);
-};
 
   const back = () => step > 1 && setStep(step - 1);
 
+  const toggleRestriction = (res: string) => {
+    setScreeningError('');
+
+    let prev = [...(profile.restrictions || [])];
+
+    if (res === 'Nenhuma') {
+      prev = ['Nenhuma'];
+    } else {
+      prev = prev.filter(x => x !== 'Nenhuma');
+
+      if (prev.includes(res)) {
+        prev = prev.filter(x => x !== res);
+      } else {
+        prev.push(res);
+      }
+    }
+
+    setProfile({ ...profile, restrictions: prev });
+  };
+
   const renderStep = () => {
-    switch(step) {
+    switch (step) {
       case 1:
         return (
           <div className="space-y-8">
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Boas-vindas</p>
-              <h2 className="text-4xl font-black text-gray-900 leading-tight">Como podemos te chamar?</h2>
+              <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">
+                Boas-vindas
+              </p>
+              <h2 className="text-4xl font-black text-gray-900 leading-tight">
+                Como podemos te chamar?
+              </h2>
             </div>
-            <div className="space-y-2">
-              <input 
-                autoFocus
-                value={profile.name}
-                onChange={e => setProfile({...profile, name: e.target.value})}
-                className="w-full p-6 bg-gray-50 rounded-[32px] border-none focus:ring-2 focus:ring-green-500 font-black text-2xl placeholder:text-gray-200" 
-                placeholder="Seu nome" 
-              />
-            </div>
+
+            <input
+              autoFocus
+              value={profile.name}
+              onChange={e => setProfile({ ...profile, name: e.target.value })}
+              className="w-full rounded-[32px] border border-gray-200 bg-gray-50 p-6 text-2xl font-black text-gray-900 placeholder:text-gray-300 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+              placeholder="Seu nome"
+            />
           </div>
         );
+
       case 2:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Sua idade e sexo biológico</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Sua idade e sexo biológico
+            </h2>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">Idade</label>
-                <input type="number" value={profile.age} onChange={e => setProfile({...profile, age: parseInt(e.target.value) || 0})} className="w-full p-6 bg-gray-50 rounded-[32px] font-black text-xl text-center" />
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
+                  Idade
+                </label>
+
+                <input
+                  type="number"
+                  value={profile.age}
+                  onChange={e => setProfile({ ...profile, age: parseInt(e.target.value) || 0 })}
+                  className="w-full rounded-[32px] border border-gray-200 bg-gray-50 p-6 text-center text-xl font-black text-gray-900 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+                />
               </div>
+
               <div className="space-y-2">
-                 <label className="text-[10px] font-black text-gray-400 uppercase ml-4">Sexo</label>
-                 <div className="flex bg-gray-50 p-1.5 rounded-[32px]">
-                    {['masculino', 'feminino'].map(g => (
-                      <button 
-                        key={g}
-                        onClick={() => setProfile({...profile, gender: g as any})}
-                        className={`flex-1 py-4 rounded-[28px] text-[10px] font-black uppercase transition-all ${profile.gender === g ? 'bg-white text-green-600 shadow-sm' : 'text-gray-400'}`}
-                      >
-                        {g === 'masculino' ? 'Masc' : 'Fem'}
-                      </button>
-                    ))}
-                 </div>
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
+                  Sexo
+                </label>
+
+                <div className="flex bg-gray-50 p-1.5 rounded-[32px]">
+                  {['masculino', 'feminino'].map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setProfile({ ...profile, gender: g as any })}
+                      className={`flex-1 py-4 rounded-[28px] text-[10px] font-black uppercase transition-all ${
+                        profile.gender === g
+                          ? 'bg-white text-green-600 shadow-sm'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {g === 'masculino' ? 'Masc' : 'Fem'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         );
+
       case 3:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Peso e Altura</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Peso e Altura
+            </h2>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">Peso (kg)</label>
-                <input type="number" step="0.1" value={profile.weight} onChange={e => setProfile({...profile, weight: parseFloat(e.target.value) || 0})} className="w-full p-6 bg-gray-50 rounded-[32px] font-black text-xl text-center" />
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
+                  Peso
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={profile.weight}
+                    onChange={e => setProfile({ ...profile, weight: parseFloat(e.target.value) || 0 })}
+                    className="w-full rounded-[32px] border border-gray-200 bg-gray-50 p-6 pr-12 text-center text-xl font-black text-gray-900 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+                  />
+
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black uppercase text-gray-400">
+                    kg
+                  </span>
+                </div>
               </div>
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">Altura (cm)</label>
-                <input type="number" value={profile.height} onChange={e => setProfile({...profile, height: parseInt(e.target.value) || 0})} className="w-full p-6 bg-gray-50 rounded-[32px] font-black text-xl text-center" />
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-4">
+                  Altura
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={profile.height}
+                    onChange={e => setProfile({ ...profile, height: parseInt(e.target.value) || 0 })}
+                    className="w-full rounded-[32px] border border-gray-200 bg-gray-50 p-6 pr-12 text-center text-xl font-black text-gray-900 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+                  />
+
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black uppercase text-gray-400">
+                    cm
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         );
+
       case 4:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Perfil Alimentar</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Perfil Alimentar
+            </h2>
+
             <div className="grid grid-cols-1 gap-3">
               {[
                 { k: 'sem_restricao', l: 'Sem restrição', d: 'Como de tudo' },
                 { k: 'vegetariano', l: 'Vegetariano', d: 'Sem carne (frango, carne, peixe)' },
                 { k: 'vegano', l: 'Vegano', d: 'Sem nenhum item de origem animal' },
                 { k: 'pescetariano', l: 'Pescetariano', d: 'Sem carne, mas como peixe' },
-              ].map(opt => (
-                <button 
-                  key={opt.k}
-                  onClick={() => setProfile({...profile, dietaryProfile: opt.k as any})}
-                  className={`p-6 rounded-[32px] border-2 text-left transition-all ${profile.dietaryProfile === opt.k || (!profile.dietaryProfile && opt.k === 'sem_restricao') ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-transparent shadow-sm'}`}
-                >
-                  <p className="font-black text-gray-900 text-lg">{opt.l}</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-1">{opt.d}</p>
-                </button>
-              ))}
+              ].map(opt => {
+                const selected = profile.dietaryProfile === opt.k || (!profile.dietaryProfile && opt.k === 'sem_restricao');
+
+                return (
+                  <button
+                    key={opt.k}
+                    type="button"
+                    onClick={() => setProfile({ ...profile, dietaryProfile: opt.k as any })}
+                    className={`p-6 rounded-[32px] border-2 text-left transition-all ${
+                      selected
+                        ? 'bg-green-50 border-green-500'
+                        : 'bg-gray-50 border-transparent shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-black text-gray-900 text-lg">
+                          {opt.l}
+                        </p>
+
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight mt-1">
+                          {opt.d}
+                        </p>
+                      </div>
+
+                      {selected && (
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                          <Check size={16} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
+
       case 5:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Qual seu foco hoje?</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Qual seu foco hoje?
+            </h2>
+
             <div className="grid grid-cols-1 gap-3">
               {[
                 { k: 'perda', l: 'Emagrecer', d: 'Focar em queima de gordura' },
                 { k: 'manutencao', l: 'Manter Peso', d: 'Saúde e definição' },
                 { k: 'ganho', l: 'Ganhar Massa', d: 'Foco em músculos e força' },
-              ].map(opt => (
-                <button 
-                  key={opt.k}
-                  onClick={() => setProfile({...profile, goal: opt.k as any})}
-                  className={`p-6 rounded-[32px] border-2 text-left transition-all ${profile.goal === opt.k ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-transparent shadow-sm'}`}
-                >
-                  <p className="font-black text-gray-900 text-lg">{opt.l}</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-1">{opt.d}</p>
-                </button>
-              ))}
+              ].map(opt => {
+                const selected = profile.goal === opt.k;
+
+                return (
+                  <button
+                    key={opt.k}
+                    type="button"
+                    onClick={() => setProfile({ ...profile, goal: opt.k as any })}
+                    className={`p-6 rounded-[32px] border-2 text-left transition-all ${
+                      selected
+                        ? 'bg-green-50 border-green-500'
+                        : 'bg-gray-50 border-transparent shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-black text-gray-900 text-lg">
+                          {opt.l}
+                        </p>
+
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight mt-1">
+                          {opt.d}
+                        </p>
+                      </div>
+
+                      {selected && (
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                          <Check size={16} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
+
       case 6:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Frequência de treinos</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Frequência de treinos
+            </h2>
+
             <div className="space-y-8 text-center">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Sessões por semana</p>
-              <div className="flex justify-center text-9xl font-black text-green-500">{profile.trainingsPerWeek}</div>
-              <input 
-                type="range" min="0" max="7" 
-                value={profile.trainingsPerWeek} 
-                onChange={e => setProfile({...profile, trainingsPerWeek: parseInt(e.target.value)})}
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                Sessões por semana
+              </p>
+
+              <div className="flex justify-center text-9xl font-black text-green-500">
+                {profile.trainingsPerWeek}
+              </div>
+
+              <input
+                type="range"
+                min="0"
+                max="7"
+                value={profile.trainingsPerWeek}
+                onChange={e => setProfile({ ...profile, trainingsPerWeek: parseInt(e.target.value) })}
                 className="w-full accent-green-500 h-2 bg-gray-100 rounded-full"
               />
             </div>
           </div>
         );
+
       case 7:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Refeições por dia</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Refeições por dia
+            </h2>
+
             <div className="grid grid-cols-2 gap-3 mt-8">
-              {[3, 4, 5, 6].map(n => (
-                <button 
-                  key={n}
-                  onClick={() => setProfile({...profile, mealCount: n as any})}
-                  className={`p-8 rounded-[38px] border-2 flex flex-col items-center justify-center transition-all ${profile.mealCount === n ? 'bg-green-50 border-green-500 text-green-600' : 'bg-gray-50 border-transparent text-gray-400'}`}
-                >
-                   <span className="text-3xl font-black">{n}</span>
-                   <span className="text-[10px] font-bold uppercase mt-1">Refeições</span>
-                </button>
-              ))}
+              {[3, 4, 5, 6].map(n => {
+                const selected = profile.mealCount === n;
+
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setProfile({ ...profile, mealCount: n as any })}
+                    className={`p-8 rounded-[38px] border-2 flex flex-col items-center justify-center transition-all ${
+                      selected
+                        ? 'bg-green-50 border-green-500 text-green-600'
+                        : 'bg-gray-50 border-transparent text-gray-600'
+                    }`}
+                  >
+                    <span className="text-3xl font-black">
+                      {n}
+                    </span>
+
+                    <span className="text-[10px] font-bold uppercase mt-1">
+                      Refeições
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
+
       case 8:
         return (
           <div className="space-y-8">
-            <h2 className="text-4xl font-black text-gray-900 leading-tight">Sua maior dificuldade?</h2>
+            <h2 className="text-4xl font-black text-gray-900 leading-tight">
+              Sua maior dificuldade?
+            </h2>
+
             <div className="grid grid-cols-1 gap-2">
-              {['Falta de Tempo', 'Vontade de Doces', 'Fome Excessiva', 'Rotina Social', 'Não saber cozinhar', 'Organização das refeições'].map(diff => (
-                <button 
-                  key={diff}
-                  onClick={() => setProfile({...profile, mainDifficulty: diff})}
-                  className={`p-5 rounded-3xl border-2 text-left font-bold transition-all ${profile.mainDifficulty === diff ? 'bg-green-50 border-green-500 text-green-700' : 'bg-gray-50 border-transparent text-gray-500'}`}
-                >
-                  {diff}
-                </button>
-              ))}
+              {[
+                'Falta de Tempo',
+                'Vontade de Doces',
+                'Fome Excessiva',
+                'Rotina Social',
+                'Não saber cozinhar',
+                'Organização das refeições',
+              ].map(diff => {
+                const selected = profile.mainDifficulty === diff;
+
+                return (
+                  <button
+                    key={diff}
+                    type="button"
+                    onClick={() => setProfile({ ...profile, mainDifficulty: diff })}
+                    className={`p-5 rounded-3xl border-2 text-left font-bold transition-all ${
+                      selected
+                        ? 'bg-green-50 border-green-500 text-green-700'
+                        : 'bg-gray-50 border-transparent text-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span>{diff}</span>
+
+                      {selected && (
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white">
+                          <Check size={14} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
+
       case 9:
         return (
           <div className="space-y-8">
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Segurança</p>
-              <h2 className="text-4xl font-black text-gray-900 leading-tight">Restrições ou Alergias?</h2>
+              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">
+                Segurança
+              </p>
+
+              <h2 className="text-4xl font-black text-gray-900 leading-tight">
+                Restrições ou Alergias?
+              </h2>
             </div>
-            <p className="text-xs text-gray-400 font-bold px-1 uppercase tracking-tight">Marque apenas o que você precisa evitar.</p>
+
+            <p className="text-xs text-gray-500 font-bold px-1 uppercase tracking-tight">
+              Marque apenas o que você precisa evitar.
+            </p>
+
             {screeningError && (
-  <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
-    <p className="text-xs font-black text-red-600 leading-relaxed">
-      {screeningError}
-    </p>
-  </div>
-)}
+              <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
+                <p className="text-xs font-black text-red-600 leading-relaxed">
+                  {screeningError}
+                </p>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleRestriction('Nenhuma')}
+              className={`w-full rounded-[30px] border-2 p-5 text-left transition-all ${
+                profile.restrictions.includes('Nenhuma')
+                  ? 'border-green-500 bg-green-50 text-green-700'
+                  : 'border-green-100 bg-green-50/60 text-green-700'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-black">
+                    Nenhuma restrição
+                  </p>
+
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-tight text-green-600">
+                    Posso comer normalmente
+                  </p>
+                </div>
+
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                  profile.restrictions.includes('Nenhuma')
+                    ? 'bg-green-500 text-white'
+                    : 'bg-white text-green-500'
+                }`}>
+                  <Check size={17} />
+                </div>
+              </div>
+            </button>
+
             <div className="grid grid-cols-2 gap-3">
-              {['Nenhuma', 'Lactose', 'Glúten', 'Amendoim', 'Castanhas/nozes', 'Ovo', 'Leite', 'Soja', 'Peixes', 'Crustáceos', 'Frutos do Mar', 'Gergelim', 'Corantes/aditivos', 'Outro'].map(res => (
-                <button 
-                  key={res}
-                  onClick={() => {
-  setScreeningError('');
+              {restrictionOptions.map(res => {
+                const selected = profile.restrictions.includes(res);
 
-  let prev = [...profile.restrictions];
+                return (
+                  <button
+                    key={res}
+                    type="button"
+                    onClick={() => toggleRestriction(res)}
+                    className={`min-h-[56px] rounded-2xl border-2 px-3 py-4 text-center text-xs font-bold transition-all ${
+                      selected
+                        ? 'bg-red-50 border-red-500 text-red-700'
+                        : 'bg-gray-50 border-transparent text-gray-600 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span>{res}</span>
 
-  if (res === 'Nenhuma') {
-    prev = ['Nenhuma'];
-  } else {
-    prev = prev.filter(x => x !== 'Nenhuma');
-
-    if (prev.includes(res)) {
-      prev = prev.filter(x => x !== res);
-    } else {
-      prev.push(res);
-    }
-  }
-
-  setProfile({ ...profile, restrictions: prev });
-}}
-                  className={`p-4 rounded-2xl border-2 text-center transition-all font-bold text-xs ${profile.restrictions.includes(res) ? 'bg-red-50 border-red-500 text-red-700' : 'bg-gray-50 border-transparent text-gray-400 shadow-sm'}`}
-                >
-                  {res}
-                </button>
-              ))}
+                      {selected && (
+                        <Check size={14} className="text-red-600" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+
             {profile.restrictions.includes('Outro') && (
-              <input 
+              <input
                 autoFocus
-                className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-red-500 font-bold text-sm mt-4"
+                className="w-full mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
                 placeholder="Descreva outra restrição..."
               />
             )}
           </div>
         );
+
       default:
         return null;
     }
   };
 
+  const nextDisabled =
+    (step === 1 && !profile.name) ||
+    (step === 9 && (!profile.restrictions || profile.restrictions.length === 0));
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
-       <div className="p-8 pt-12 flex items-center justify-between">
-          <button 
-            onClick={back} 
-            className={`p-4 rounded-2xl transition-all ${step > 1 ? 'bg-gray-50' : 'opacity-0 pointer-events-none'}`}
-          >
-             <ChevronUp className="-rotate-90 text-gray-400" size={20} />
-          </button>
-          <div className="flex flex-col items-center">
-             <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Passo {step} de {totalSteps}</p>
-             <div className="flex gap-1 mt-2">
-                {Array.from({length: totalSteps}).map((_, i) => (
-                  <div key={i} className={`h-1 rounded-full transition-all ${i + 1 <= step ? 'w-4 bg-green-500' : 'w-2 bg-gray-100'}`} />
-                ))}
-             </div>
+      <div className="p-8 pt-12 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={back}
+          className={`p-4 rounded-2xl transition-all ${
+            step > 1 ? 'bg-gray-50' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <ChevronUp className="-rotate-90 text-gray-400" size={20} />
+        </button>
+
+        <div className="flex flex-col items-center">
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+            Passo {step} de {totalSteps}
+          </p>
+
+          <div className="flex gap-1 mt-2">
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 rounded-full transition-all ${
+                  i + 1 <= step ? 'w-4 bg-green-500' : 'w-2 bg-gray-100'
+                }`}
+              />
+            ))}
           </div>
-          <div className="w-12" />
-       </div>
+        </div>
 
-       <div className="flex-1 px-8 py-4 overflow-y-auto no-scrollbar">
-          <AnimatePresence mode="wait">
-             <motion.div 
-               key={step}
-               initial={{ x: 20, opacity: 0 }}
-               animate={{ x: 0, opacity: 1 }}
-               exit={{ x: -20, opacity: 0 }}
-               className="h-full"
-             >
-                {renderStep()}
-             </motion.div>
-          </AnimatePresence>
-       </div>
+        <div className="w-12" />
+      </div>
 
-       <div className="p-8 pb-12">
-          <button
-  disabled={
-    (step === 1 && !profile.name) ||
-    (step === 9 && (!profile.restrictions || profile.restrictions.length === 0))
-  }
-  onClick={next}
-  className={`w-full py-5 rounded-[32px] font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
-    (step === 1 && !profile.name) ||
-    (step === 9 && (!profile.restrictions || profile.restrictions.length === 0))
-      ? 'bg-gray-100 text-gray-300 shadow-none'
-      : 'bg-green-500 text-white shadow-green-100'
-  }`}
->
-  {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
-</button>
-       </div>
+      <div className="flex-1 px-8 py-4 overflow-y-auto no-scrollbar">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -20, opacity: 0 }}
+            className="h-full"
+          >
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="p-8 pb-12">
+        <button
+          type="button"
+          disabled={nextDisabled}
+          onClick={next}
+          className={`w-full py-5 rounded-[32px] font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
+            nextDisabled
+              ? 'bg-gray-100 text-gray-400 shadow-none'
+              : 'bg-green-500 text-white shadow-green-100'
+          }`}
+        >
+          {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
+        </button>
+      </div>
     </div>
   );
 }
