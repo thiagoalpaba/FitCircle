@@ -17,14 +17,26 @@ function getMealSection(bodyText: string, mealName: string) {
     'Ceia',
   ];
 
+  const planEndMarkers = [
+    'Dica de Sucesso',
+    'Receitas Fitness',
+    'Ideias prontas para variar o plano',
+  ];
+
   const start = bodyText.indexOf(mealName);
 
   if (start === -1) return '';
 
-  const possibleEnds = mealHeadings
+  const possibleMealEnds = mealHeadings
     .filter((heading) => heading !== mealName)
     .map((heading) => bodyText.indexOf(heading, start + mealName.length))
     .filter((index) => index > start);
+
+  const possiblePlanEnds = planEndMarkers
+    .map((marker) => bodyText.indexOf(marker, start + mealName.length))
+    .filter((index) => index > start);
+
+  const possibleEnds = [...possibleMealEnds, ...possiblePlanEnds];
 
   const end = possibleEnds.length > 0 ? Math.min(...possibleEnds) : bodyText.length;
 

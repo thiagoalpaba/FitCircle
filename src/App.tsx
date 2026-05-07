@@ -36,6 +36,7 @@ import {
   removeDuplicateMealOptions,
 } from './data/mealRules';
 import { resolveFoodName } from './data/foodAliases';
+import { FITNESS_RECIPES, type FitnessRecipe } from './data/recipes';
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
@@ -4431,6 +4432,168 @@ function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void;
     </div>
   );
 }
+function RecipeLibrary() {
+  const [openRecipeId, setOpenRecipeId] = useState<string | null>(null);
+
+  const featuredRecipes = FITNESS_RECIPES.slice(0, 8);
+
+  return (
+    <div className="px-6 mt-4 mb-10">
+      <div className="bg-white rounded-[34px] border border-gray-100 shadow-xl shadow-gray-100/70 overflow-hidden">
+        <div className="p-6 border-b border-gray-50">
+          <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
+            Receitas Fitness
+          </p>
+
+          <h3 className="text-xl font-black text-gray-900 tracking-tight">
+            Ideias prontas para variar o plano
+          </h3>
+
+          <p className="text-xs font-bold text-gray-400 leading-relaxed mt-2">
+            Veja receitas com ingredientes, preparo e macros. Depois vamos liberar a opção de adicionar ao plano.
+          </p>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {featuredRecipes.map((recipe: FitnessRecipe) => {
+            const isOpen = openRecipeId === recipe.id;
+
+            return (
+              <div
+                key={recipe.id}
+                className="bg-gray-50 border border-gray-100 rounded-[28px] overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenRecipeId(isOpen ? null : recipe.id)}
+                  className="w-full p-4 text-left flex gap-4 items-center"
+                >
+                  <div className="w-16 h-16 rounded-[24px] bg-white flex items-center justify-center text-3xl shadow-sm border border-gray-100 shrink-0">
+                    {recipe.emoji}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black text-gray-900 leading-tight">
+                      {recipe.friendlyTitle}
+                    </p>
+
+                    {recipe.title !== recipe.friendlyTitle && (
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mt-1">
+                        {recipe.title}
+                      </p>
+                    )}
+
+                    <p className="text-[11px] font-bold text-gray-500 leading-relaxed mt-2 line-clamp-2">
+                      {recipe.description}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black text-green-600">
+                      {recipe.cal}
+                    </p>
+
+                    <p className="text-[8px] font-black text-gray-300 uppercase">
+                      kcal
+                    </p>
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="px-4 pb-4">
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3">
+                        <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest">
+                          Prot.
+                        </p>
+                        <p className="text-sm font-black text-blue-700 mt-1">
+                          {recipe.p}g
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 border border-green-100 rounded-2xl p-3">
+                        <p className="text-[8px] font-black text-green-500 uppercase tracking-widest">
+                          Carbo
+                        </p>
+                        <p className="text-sm font-black text-green-700 mt-1">
+                          {recipe.c}g
+                        </p>
+                      </div>
+
+                      <div className="bg-orange-50 border border-orange-100 rounded-2xl p-3">
+                        <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest">
+                          Gord.
+                        </p>
+                        <p className="text-sm font-black text-orange-700 mt-1">
+                          {recipe.f}g
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-[24px] p-4 border border-gray-100 mb-3">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                        Por que é nutritiva?
+                      </p>
+
+                      <p className="text-xs font-bold text-gray-600 leading-relaxed">
+                        {recipe.whyNutritious}
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-[24px] p-4 border border-gray-100 mb-3">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                        Ingredientes
+                      </p>
+
+                      <div className="space-y-2">
+                        {recipe.ingredients.map((ingredient) => (
+                          <div key={ingredient} className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                            <p className="text-xs font-bold text-gray-600 leading-relaxed">
+                              {ingredient}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-[24px] p-4 border border-gray-100">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                        Como fazer
+                      </p>
+
+                      <div className="space-y-3">
+                        {recipe.steps.map((step, index) => (
+                          <div key={step} className="flex gap-3">
+                            <div className="w-6 h-6 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-[10px] font-black shrink-0">
+                              {index + 1}
+                            </div>
+
+                            <p className="text-xs font-bold text-gray-600 leading-relaxed">
+                              {step}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full mt-4 py-3 rounded-2xl bg-gray-100 text-gray-300 text-[10px] font-black uppercase tracking-widest"
+                    >
+                      Adicionar ao plano em breve
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PlanoScreen() {
   const { userProfile, mealPlan, generateNewPlan, swapMealItem, updateProfile, handleProfileUpdate } = useApp();
@@ -4713,7 +4876,7 @@ swapMealItem(cfg.key, i);
              </p>
           </div>
        </div>
-
+  <RecipeLibrary />
       <AnimatePresence>
   {showAdjustModal && (
     <motion.div
