@@ -132,4 +132,31 @@ test.describe('FitCircle - qualidade textual', () => {
       expect(modalText).not.toMatch(/saldo líquido/i);
     }
   });
+
+  test('modal Ver dia usa resumo Meta Consumido Treino', async ({ page }) => {
+    await page.getByTestId('nav-circulo').click();
+
+    await expect(
+      page.getByText(/membros do círculo|atividade recente|círculo/i).first()
+    ).toBeVisible();
+
+    const verDiaButton = page.getByRole('button', { name: /ver dia/i }).first();
+
+    await expect(verDiaButton).toBeVisible();
+    await verDiaButton.click();
+
+    await expect(
+      page.getByText(/refeições de hoje|treinos de hoje|calorias/i).first()
+    ).toBeVisible();
+
+    const modalText = await page.locator('body').innerText();
+
+    expect(modalText).toMatch(/\bMeta\b/i);
+    expect(modalText).toMatch(/\bConsumido\b/i);
+    expect(modalText).toMatch(/\bTreino\b/i);
+
+    expect(modalText).not.toMatch(/saldo líquido/i);
+    expect(modalText).not.toMatch(/crédito/i);
+    expect(modalText).not.toMatch(/treino compensou/i);
+  });
 });
