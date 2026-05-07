@@ -1625,35 +1625,13 @@ function CalorieRing({
   const radius = (size - stroke) / 2;
   const circumference = radius * 2 * Math.PI;
 
-  const safeConsumed = Math.round(safeNumber(consumed));
-  const safeGoal = Math.round(safeNumber(goal, 1));
-  const remaining = Math.max(safeGoal - safeConsumed, 0);
+  const safeConsumed = Math.max(0, Math.round(safeNumber(consumed)));
+  const safeGoal = Math.max(1, Math.round(safeNumber(goal, 1)));
   const progress = Math.min(safeConsumed / safeGoal, 1);
   const isOver = safeConsumed > safeGoal;
 
   const strokeDashoffset = circumference - progress * circumference;
-
-  let statusText = 'Dentro do planejado';
-  let helperText = `${remaining} calorias disponíveis`;
-  let statusColor = 'bg-[#005028]/35 text-white border-white/15';
-  let ringColor = '#22C55E';
-
-  if (isOver) {
-    ringColor = '#F59E0B';
-    statusText = 'Passou da meta hoje';
-    helperText = 'Tudo bem. Ajuste na próxima refeição.';
-    statusColor = 'bg-amber-600/40 text-white border-white/10';
-  } else if (remaining > safeGoal * 0.3) {
-    statusText = 'Você ainda tem margem';
-    helperText = `${remaining} calorias disponíveis`;
-  } else if (remaining > 0) {
-    statusText = 'Perto da meta';
-    helperText = `${remaining} calorias disponíveis`;
-    statusColor = 'bg-lime-600/35 text-white border-white/15';
-  } else {
-    statusText = 'Meta atingida';
-    helperText = 'Bom trabalho por hoje.';
-  }
+  const ringColor = isOver ? '#F59E0B' : '#FFFFFF';
 
   return (
     <div className="relative flex items-center justify-center">
@@ -1662,7 +1640,7 @@ function CalorieRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="rgba(255,255,255,0.08)"
+          stroke="rgba(255,255,255,0.16)"
           strokeWidth={stroke}
           fill="transparent"
         />
@@ -1682,30 +1660,24 @@ function CalorieRing({
         />
       </svg>
 
-      <div className="absolute flex flex-col items-center max-w-[170px] text-center">
-        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">
+      <div className="absolute flex flex-col items-center justify-center text-center">
+        <span className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">
           Consumido
         </span>
 
         <div className="flex items-baseline gap-1">
-          <span className="text-5xl font-black">{safeConsumed}</span>
-          <span className="text-sm font-bold opacity-60 uppercase">
+          <span className="text-5xl font-black leading-none text-white">
+            {safeConsumed}
+          </span>
+
+          <span className="text-sm font-black text-white/70 uppercase">
             cal
           </span>
         </div>
 
-        <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">
-          meta: {safeGoal} cal
+        <span className="mt-2 text-[9px] font-bold text-white/55 uppercase tracking-widest">
+          hoje
         </span>
-
-        <div className={`mt-4 ${statusColor} backdrop-blur-md px-4 py-2 rounded-2xl border`}>
-          <span className="text-[9px] font-black uppercase tracking-tighter block leading-tight">
-            {statusText}
-          </span>
-          <span className="text-[9px] font-bold opacity-80 block mt-1 leading-tight">
-            {helperText}
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -2494,16 +2466,33 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 }
 
 function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavigate: (s: any) => void }) {
-  const { userProfile, getTotals, calorieGoal, macros, mealCount, meals, workouts, addWorkout, deleteWorkout, estimateBurned, setPendingMealType, setPendingEditMealId, mealPlan, swapMealItem, selectedDate } = useApp();
+  const {
+    userProfile,
+    getTotals,
+    calorieGoal,
+    macros,
+    mealCount,
+    meals,
+    workouts,
+    addWorkout,
+    deleteWorkout,
+    estimateBurned,
+    setPendingMealType,
+    setPendingEditMealId,
+    mealPlan,
+    selectedDate,
+  } = useApp();
+
   const totals = getTotals();
   const remaining = Math.max(safeNumber(calorieGoal) - safeNumber(totals.cal), 0);
   const burned = workouts.reduce((acc, w) => acc + safeNumber(w.burned), 0);
-  const net = totals.cal - burned;
-  
-  const isToday = selectedDate.toDateString() === new Date().toDateString();
-  const dateDisplay = isToday ? 'Hoje' : selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
-  const weekday = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' });
 
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+  const dateDisplay = isToday
+    ? 'Hoje'
+    : selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+
+  const weekday = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' });
   const configs = MEAL_CONFIGS[mealCount];
 
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
@@ -2511,92 +2500,140 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
   const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="w-full bg-gray-50 min-h-screen pb-24">
+    <div className="w-full bg-gray-50 min-h-screen pb-20">
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
-      
-    {/* Header */}
-<div className="bg-[#16A34A] pt-12 px-6 pb-10 rounded-b-[44px] text-white shadow-xl relative z-10">
-  <div className="flex justify-between items-start mb-5">
-    <div>
-      <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em]">
-        {weekday}, {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-      </p>
 
-      <h1 className="text-2xl font-black mt-1">
-        {isToday
-          ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Visitante'} 👋`
-          : `Visualizando ${dateDisplay}`}
-      </h1>
-    </div>
+      {/* Header */}
+      <div className="bg-[#16A34A] pt-12 px-6 pb-9 rounded-b-[42px] text-white shadow-xl relative z-10">
+        <div className="flex justify-between items-start mb-5">
+          <div>
+            <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em]">
+              {weekday}, {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+            </p>
 
-    <button
-      onClick={() => setShowHistory(true)}
-      className="p-3 bg-white/20 rounded-2xl backdrop-blur-md border border-white/10 active:scale-95 transition-all"
-    >
-      <Calendar size={18} />
-    </button>
-  </div>
+            <h1 className="text-2xl font-black mt-1">
+              {isToday
+                ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Visitante'} 👋`
+                : `Visualizando ${dateDisplay}`}
+            </h1>
+          </div>
 
-  <div className="flex justify-center mb-4">
-    <CalorieRing consumed={totals.cal} goal={calorieGoal} size={176} />
-  </div>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="p-3 bg-white/20 rounded-2xl backdrop-blur-md border border-white/10 active:scale-95 transition-all"
+          >
+            <Calendar size={18} />
+          </button>
+        </div>
 
-  <div className="flex justify-center">
-    <div className="bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-2 max-w-[320px]">
-      <Sparkles size={14} className="text-green-200 shrink-0" />
+        <div className="flex justify-center mb-4">
+          <CalorieRing consumed={totals.cal} goal={calorieGoal} size={166} />
+        </div>
 
-      <p className="text-[10px] text-white/85 font-bold leading-tight">
-        {getDailyTip()}
-      </p>
-    </div>
-  </div>
-</div>
+        <div className="flex justify-center mb-3">
+          <div className="bg-white/95 text-[#16A34A] px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2">
+            <Zap size={16} className="fill-current shrink-0" />
+            <div className="leading-tight">
+              <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
+                Restante hoje
+              </p>
+              <p className="text-sm font-black uppercase tracking-tight">
+                {formatKcal(remaining)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-2 max-w-[320px]">
+            <Sparkles size={14} className="text-green-200 shrink-0" />
+
+            <p className="text-[10px] text-white/85 font-bold leading-tight">
+              {getDailyTip()}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Stats Breakdown */}
-      <div className="px-6 grid grid-cols-3 gap-3 -mt-4 relative z-20 font-sans">
-         <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-            <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">Meta</span>
-            <span className="text-sm font-black text-gray-900">{calorieGoal}</span>
-         </div>
-         <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-            <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">Treino</span>
-            <span className="text-sm font-black text-green-500">+{burned}</span>
-         </div>
-         <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
-            <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">Consumido</span>
-            <span className="text-sm font-black text-gray-900">{totals.cal}</span>
-         </div>
+      <div className="px-6 grid grid-cols-3 gap-3 -mt-5 relative z-20 font-sans">
+        <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
+          <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">
+            Meta
+          </span>
+          <span className="text-sm font-black text-gray-900">
+            {calorieGoal}
+          </span>
+        </div>
+
+        <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
+          <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">
+            Treino
+          </span>
+          <span className="text-sm font-black text-green-500">
+            +{burned}
+          </span>
+        </div>
+
+        <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 flex flex-col items-center">
+          <span className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">
+            Consumido
+          </span>
+          <span className="text-sm font-black text-gray-900">
+            {totals.cal}
+          </span>
+        </div>
       </div>
 
       {/* Macros */}
       <div className="px-6 mt-4 relative z-20">
-         <div className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 grid grid-cols-3 gap-4">
-            <div className="space-y-3">
-               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Proteína</p>
-               <ProgressBar val={totals.p} max={macros.p} color={C.protein} />
-               <p className="text-[10px] font-black text-gray-900 text-center">{formatMacro(totals.p)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.p)}</span></p>
-            </div>
-            <div className="space-y-3">
-               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Carbos</p>
-               <ProgressBar val={totals.c} max={macros.c} color={C.carbs} />
-               <p className="text-[10px] font-black text-gray-900 text-center">{formatMacro(totals.c)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.c)}</span></p>
-            </div>
-            <div className="space-y-3">
-               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Gorduras</p>
-               <ProgressBar val={totals.f} max={macros.f} color={C.fat} />
-               <p className="text-[10px] font-black text-gray-900 text-center">{formatMacro(totals.f)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.f)}</span></p>
-            </div>
-         </div>
+        <div className="bg-white rounded-[30px] p-5 shadow-xl border border-gray-50 grid grid-cols-3 gap-4">
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
+              Proteína
+            </p>
+            <ProgressBar val={totals.p} max={macros.p} color={C.protein} />
+            <p className="text-[10px] font-black text-gray-900 text-center">
+              {formatMacro(totals.p)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.p)}</span>
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
+              Carbos
+            </p>
+            <ProgressBar val={totals.c} max={macros.c} color={C.carbs} />
+            <p className="text-[10px] font-black text-gray-900 text-center">
+              {formatMacro(totals.c)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.c)}</span>
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
+              Gorduras
+            </p>
+            <ProgressBar val={totals.f} max={macros.f} color={C.fat} />
+            <p className="text-[10px] font-black text-gray-900 text-center">
+              {formatMacro(totals.f)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.f)}</span>
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Meals */}
-      <div className="px-5 mt-10 space-y-5">
+      <div className="px-5 mt-9 space-y-5">
         <div className="flex justify-between items-end px-1">
           <div>
             <h3 className="text-xl font-black text-gray-900">Refeições</h3>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Clique para registrar</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+              Clique para registrar
+            </p>
           </div>
-          <button onClick={onGoToList} className="text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-xl transition-all active:scale-95">
+
+          <button
+            onClick={onGoToList}
+            className="text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-xl transition-all active:scale-95"
+          >
             Ver tudo
           </button>
         </div>
@@ -2604,51 +2641,99 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         {configs.map(cfg => {
           const registeredMeals = meals.filter(m => m.type === cfg.key);
           const meal = registeredMeals[0];
-          
+
           return meal ? (
-            <div key={cfg.key} className="bg-white rounded-[28px] overflow-hidden border border-gray-100 shadow-sm transition-all">
-              <div onClick={() => setExpandedMeal(expandedMeal === cfg.key ? null : cfg.key)} className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50">
+            <div
+              key={cfg.key}
+              className="bg-white rounded-[28px] overflow-hidden border border-gray-100 shadow-sm transition-all"
+            >
+              <div
+                onClick={() => setExpandedMeal(expandedMeal === cfg.key ? null : cfg.key)}
+                className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50"
+              >
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-2xl" style={{ backgroundColor: `${cfg.color}15` }}>
-                    <cfg.icon size={22} style={{ color: cfg.color }}/>
+                    <cfg.icon size={22} style={{ color: cfg.color }} />
                   </div>
+
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{cfg.label}</p>
-                    <p className="text-xs text-gray-500 font-semibold">{meal.time} · {meal.items.length} itens</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      {cfg.label}
+                    </p>
+                    <p className="text-xs text-gray-500 font-semibold">
+                      {meal.time} · {meal.items.length} itens
+                    </p>
                   </div>
                 </div>
+
                 <div className="text-right flex items-center gap-4">
                   {registeredMeals.length > 1 && (
-                     <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">+{registeredMeals.length - 1}</span>
+                    <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
+                      +{registeredMeals.length - 1}
+                    </span>
                   )}
+
                   <div className="flex flex-col items-end">
-                    <span className="font-black text-gray-900">{registeredMeals.reduce((a,b) => a+b.cal, 0)} <span className="text-[10px] uppercase opacity-40">calorias</span></span>
+                    <span className="font-black text-gray-900">
+                      {registeredMeals.reduce((a, b) => a + b.cal, 0)}{' '}
+                      <span className="text-[10px] uppercase opacity-40">calorias</span>
+                    </span>
                   </div>
-                  {expandedMeal === cfg.key ? <ChevronUp size={16} className="text-gray-300"/> : <ChevronDown size={16} className="text-gray-300"/>}
+
+                  {expandedMeal === cfg.key ? (
+                    <ChevronUp size={16} className="text-gray-300" />
+                  ) : (
+                    <ChevronDown size={16} className="text-gray-300" />
+                  )}
                 </div>
               </div>
+
               <AnimatePresence>
                 {expandedMeal === cfg.key && (
-                  <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden bg-gray-50/50">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    className="overflow-hidden bg-gray-50/50"
+                  >
                     <div className="p-4 pt-0 border-t border-dashed border-gray-200">
                       <div className="mt-4 space-y-4">
                         {registeredMeals.map((rm, ridx) => (
                           <div key={rm.id} className={`${ridx > 0 ? 'pt-4 border-t border-gray-100' : ''}`}>
-                             <div className="flex justify-between items-center mb-2">
-                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Registro {ridx + 1}</p>
-                                <button onClick={() => { setPendingEditMealId(rm.id); onNavigate('registrar'); }} className="text-[10px] font-black text-green-600 uppercase">Editar</button>
-                             </div>
-                             <div className="space-y-2">
-                                {rm.items.map((it, idx) => (
-                                  <div key={idx} className="flex justify-between items-center">
-                                    <div>
-                                      <p className="text-xs font-bold text-gray-800">{it.food.name}</p>
-                                      <p className="text-[10px] text-gray-400 font-semibold">{it.qty}{it.unit === 'g' ? 'g' : (it.food.un || 'un')} · P:{it.p} C:{it.c} G:{it.f}</p>
-                                    </div>
-                                    <span className="text-[xs] font-bold text-gray-500">{it.cal} calorias</span>
+                            <div className="flex justify-between items-center mb-2">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                Registro {ridx + 1}
+                              </p>
+
+                              <button
+                                onClick={() => {
+                                  setPendingEditMealId(rm.id);
+                                  onNavigate('registrar');
+                                }}
+                                className="text-[10px] font-black text-green-600 uppercase"
+                              >
+                                Editar
+                              </button>
+                            </div>
+
+                            <div className="space-y-2">
+                              {rm.items.map((it, idx) => (
+                                <div key={idx} className="flex justify-between items-center">
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">
+                                      {it.food.name}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 font-semibold">
+                                      {it.qty}{it.unit === 'g' ? 'g' : (it.food.un || 'un')} · P:{it.p} C:{it.c} G:{it.f}
+                                    </p>
                                   </div>
-                                ))}
-                             </div>
+
+                                  <span className="text-xs font-bold text-gray-500">
+                                    {it.cal} calorias
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -2658,51 +2743,71 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
               </AnimatePresence>
             </div>
           ) : (
-            <div key={cfg.key} className="bg-white rounded-[28px] p-5 border border-dashed border-gray-200 shadow-sm">
-               <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 rounded-2xl" style={{ backgroundColor: `${cfg.color}10` }}>
-                    <cfg.icon size={22} style={{ color: cfg.color }} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{cfg.label}</p>
-                    <p className="text-[10px] text-green-600 font-black uppercase mt-0.5">Plano</p>
-                  </div>
-               </div>
-               
-               <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100">
-                  <div className="flex justify-between items-start mb-5">
-                    <p className="text-xs font-black text-gray-800 flex-1 pr-4">{mealPlan[cfg.key]?.[0]?.name || '---'}</p>
-                    <span className="text-[10px] font-black text-green-600 whitespace-nowrap">{mealPlan[cfg.key]?.[0]?.cal || 0} calorias</span>
-                  </div>
-                  
-                  <div className="flex gap-2 mt-4">
-                    <button 
-                      onClick={() => { setPendingMealType(cfg.key); onNavigate('registrar'); }}
-                      className="w-full py-3 bg-[#16A34A] text-white rounded-2xl text-[9px] font-black uppercase shadow-lg shadow-green-100 active:scale-95 transition-all text-center"
-                    >
-                      Registrar
-                    </button>
-                  </div>
-               </div>
+            <div
+              key={cfg.key}
+              className="bg-white rounded-[28px] p-5 border border-dashed border-gray-200 shadow-sm"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 rounded-2xl" style={{ backgroundColor: `${cfg.color}10` }}>
+                  <cfg.icon size={22} style={{ color: cfg.color }} />
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    {cfg.label}
+                  </p>
+                  <p className="text-[10px] text-green-600 font-black uppercase mt-0.5">
+                    Plano
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100">
+                <div className="flex justify-between items-start mb-5">
+                  <p className="text-xs font-black text-gray-800 flex-1 pr-4">
+                    {mealPlan[cfg.key]?.[0]?.name || '---'}
+                  </p>
+                  <span className="text-[10px] font-black text-green-600 whitespace-nowrap">
+                    {mealPlan[cfg.key]?.[0]?.cal || 0} calorias
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setPendingMealType(cfg.key);
+                    onNavigate('registrar');
+                  }}
+                  className="w-full py-3 bg-[#16A34A] text-white rounded-2xl text-[9px] font-black uppercase shadow-lg shadow-green-100 active:scale-95 transition-all text-center"
+                >
+                  Registrar
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* Workout */}
-      <div className="px-5 mt-10">
-        <div className="bg-[#FFFBEB] rounded-[32px] p-6 border border-orange-100 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
+      <div className="px-5 mt-8">
+        <div className="bg-[#FFFBEB] rounded-[30px] p-5 border border-orange-100 shadow-sm">
+          <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-orange-100 rounded-2xl">
                 <Flame size={22} className="text-orange-600" />
               </div>
+
               <div>
                 <h3 className="font-bold text-gray-900">Treino de Hoje</h3>
-                <p className="text-[10px] text-gray-500 font-bold uppercase">Gasto estimado total</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase">
+                  Gasto estimado total
+                </p>
               </div>
             </div>
-            <button onClick={() => setShowWorkoutModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-100 active:scale-95 transition-all">
+
+            <button
+              onClick={() => setShowWorkoutModal(true)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-100 active:scale-95 transition-all"
+            >
               Adicionar
             </button>
           </div>
@@ -2711,24 +2816,42 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <div className="space-y-4">
               <div className="space-y-3">
                 {workouts.map(w => (
-                  <div key={w.id} className="flex justify-between items-center bg-white p-4 rounded-2xl border border-orange-50">
+                  <div
+                    key={w.id}
+                    className="flex justify-between items-center bg-white p-4 rounded-2xl border border-orange-50"
+                  >
                     <div>
-                       <p className="text-sm font-black text-gray-800">{WORKOUT_TYPES.find(wt => wt.key === w.type)?.label}</p>
-                       <p className="text-[10px] text-gray-500 font-bold uppercase">{w.duration > 0 ? `${w.duration} min` : 'Manual'} · {w.burned} calorias</p>
+                      <p className="text-sm font-black text-gray-800">
+                        {WORKOUT_TYPES.find(wt => wt.key === w.type)?.label}
+                      </p>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase">
+                        {w.duration > 0 ? `${w.duration} min` : 'Manual'} · {w.burned} calorias
+                      </p>
                     </div>
-                    <button onClick={() => deleteWorkout(w.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
-                      <X size={16}/>
+
+                    <button
+                      onClick={() => deleteWorkout(w.id)}
+                      className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                    >
+                      <X size={16} />
                     </button>
                   </div>
                 ))}
               </div>
-              
+
               <div className="bg-orange-500/10 rounded-2xl p-4 flex justify-between items-center border border-orange-100">
-                 <p className="text-xs font-black text-orange-800 uppercase">Total gasto no treino</p>
-                 <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-orange-600">{burned}</span>
-                    <span className="text-[10px] font-bold text-orange-400 uppercase">calorias</span>
-                 </div>
+                <p className="text-xs font-black text-orange-800 uppercase">
+                  Total gasto no treino
+                </p>
+
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-orange-600">
+                    {burned}
+                  </span>
+                  <span className="text-[10px] font-bold text-orange-400 uppercase">
+                    calorias
+                  </span>
+                </div>
               </div>
             </div>
           ) : (
@@ -2740,43 +2863,66 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
       </div>
 
       {/* Support Summary */}
-      <div className="px-5 mt-8 mb-10">
-        <button 
+      <div className="px-5 mt-7 mb-2">
+        <button
           onClick={() => onNavigate('circulo')}
-          className="w-full bg-indigo-600 rounded-[32px] p-6 text-white shadow-xl shadow-indigo-100 relative overflow-hidden text-left group"
+          className="w-full bg-indigo-600 rounded-[30px] p-5 text-white shadow-xl shadow-indigo-100 relative overflow-hidden text-left group"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
-          <div className="flex items-center justify-between mb-4">
+
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/10">
-                  <Heart size={18} className="fill-white"/>
+                <Heart size={18} className="fill-white" />
               </div>
               <h3 className="font-bold">Círculo de Apoio</h3>
             </div>
-            <span className="text-[10px] font-black uppercase bg-white/20 px-3 py-1 rounded-full border border-white/10">Abrir</span>
+
+            <span className="text-[10px] font-black uppercase bg-white/20 px-3 py-1 rounded-full border border-white/10">
+              Abrir
+            </span>
           </div>
-          <p className="text-lg font-black leading-tight mb-2">Interaja com seu grupo 🚀</p>
+
+          <p className="text-lg font-black leading-tight">
+            Interaja com seu grupo 🚀
+          </p>
         </button>
       </div>
-      
+
       {/* Workout Modal */}
       <AnimatePresence>
         {showWorkoutModal && (
           <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWorkoutModal(false)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar">
-                <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
-                <h2 className="text-3xl font-black text-gray-900 mb-2">Novo Exercício</h2>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">Adicione um ou mais realizados hoje</p>
-                
-                <WorkoutForm 
-                  onClose={() => setShowWorkoutModal(false)} 
-                  onSave={(w) => {
-                    addWorkout(w);
-                    setShowWorkoutModal(false);
-                  }}
-                  estimateBurned={estimateBurned}
-                />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWorkoutModal(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
+              <h2 className="text-3xl font-black text-gray-900 mb-2">
+                Novo Exercício
+              </h2>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">
+                Adicione um ou mais realizados hoje
+              </p>
+
+              <WorkoutForm
+                onClose={() => setShowWorkoutModal(false)}
+                onSave={(w) => {
+                  addWorkout(w);
+                  setShowWorkoutModal(false);
+                }}
+                estimateBurned={estimateBurned}
+              />
             </motion.div>
           </div>
         )}
@@ -2784,7 +2930,6 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
     </div>
   );
 }
-
 function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void; onSave: (w: Workout) => void; estimateBurned: any }) {
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [type, setType] = useState<WorkoutType>('musculacao');
@@ -2984,7 +3129,7 @@ function PlanoScreen() {
   };
 
   return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-20">
        {/* Toast notification */}
        <AnimatePresence>
          {showToast && (
@@ -3749,7 +3894,7 @@ function CirculoScreen() {
   };
 
   return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-20">
        {/* Feedback Pop */}
        <AnimatePresence>
          {incentiveFeedback && (
@@ -4301,7 +4446,7 @@ function PerfilScreen() {
 );
 
   return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-20">
       <div className="bg-[#16A34A] pt-12 px-6 pb-12 rounded-b-[40px] text-white text-center relative shadow-lg">
         <div className="absolute top-4 right-6">
           <button
@@ -4645,7 +4790,7 @@ function RefeicoesListScreen({ onBack, onEdit, onAdd }: { onBack: () => void; on
   const configs = MEAL_CONFIGS[mealCount];
 
   return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-20">
        <div className="bg-white pt-12 px-6 pb-6 flex items-center gap-4">
           <button onClick={onBack} className="p-2 bg-gray-100 rounded-xl">
              <X size={20} className="text-gray-500" />
