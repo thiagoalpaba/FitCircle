@@ -3496,9 +3496,9 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">
-                Boas-vindas
-              </p>
+              <p className="text-xs font-bold text-green-600">
+  Boas-vindas
+</p>
               <h2 className="text-4xl font-black text-gray-900 leading-tight">
                 Como podemos te chamar?
               </h2>
@@ -3825,9 +3825,9 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">
-                Segurança
-              </p>
+              <p className="text-xs font-bold text-red-500">
+  Segurança
+</p>
 
               <h2 className="text-4xl font-black text-gray-900 leading-tight">
                 Restrições ou Alergias?
@@ -3936,9 +3936,9 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         </button>
 
         <div className="flex flex-col items-center">
-          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
-            Passo {step} de {totalSteps}
-          </p>
+          <p className="text-xs font-bold text-gray-400">
+  Passo {step} de {totalSteps}
+</p>
 
           <div className="flex gap-1 mt-2">
             {Array.from({ length: totalSteps }).map((_, i) => (
@@ -4941,7 +4941,7 @@ function RecipeLibrary() {
                           onClick={() => addRecipeToPlan(recipe, configs[0].key)}
                           className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
                         >
-                          Adicionar
+                          Adicionar rápido
                         </button>
                       </div>
                     </div>
@@ -6320,7 +6320,7 @@ function CirculoScreen() {
     </p>
 
     <p className="text-[11px] font-bold text-green-600 mt-1">
-      Foto opcional
+      Sem foto publicada
     </p>
   </div>
 </div>
@@ -7980,7 +7980,7 @@ function CirculoScreenFoodstagram() {
                       </div>
 
                       <p className="text-sm font-black text-green-700">
-                        {post.type === 'workout' ? 'Treino registrado' : 'Refeição registrada'}
+                        {post.type === 'workout' ? 'Treino registrado' : 'Registro do dia'}
                       </p>
                     </div>
                   )}
