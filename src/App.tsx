@@ -112,7 +112,7 @@ const normalizePlanText = (value: string) =>
 
 const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
   const match = line.match(
-    /(\d+(?:[.,]\d+)?)\s*(g|gramas|unidade|unidades|un|fatia|fatias|pote|potes|colher de sopa|colheres de sopa|colher|colheres)/i
+    /(\d+(?:[.,]\d+)?)\s*(colheres de sopa|colher de sopa|colheres de chá|colher de chá|colheres|colher|xícaras|xícara|xicaras|xicara|copos|copo|doses|dose|porções|porção|porcoes|porcao|potes|pote|fatias|fatia|unidades|unidade|un|gramas|g|ml)/i
   );
 
   if (!match) return 0;
@@ -122,42 +122,97 @@ const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
 
   if (!Number.isFinite(amount) || amount <= 0) return 0;
 
-  if (unit === 'g' || unit === 'gramas') return amount;
+  if (unit === 'g' || unit === 'gramas' || unit === 'ml') {
+    return amount;
+  }
 
-  if (unit.includes('colher')) return amount * 15;
-  if (unit.includes('pote')) return amount * 170;
-  if (unit.includes('fatia')) return amount * (food.amountPerUn || 30);
-  if (unit.includes('un')) return amount * (food.amountPerUn || 100);
+  if (unit.includes('colher de sopa')) {
+    return amount * (food.amountPerUn || 15);
+  }
+
+  if (unit.includes('colher de chá')) {
+    return amount * (food.amountPerUn || 5);
+  }
+
+  if (unit.includes('colher')) {
+    return amount * (food.amountPerUn || 15);
+  }
+
+  if (unit.includes('copo')) {
+    return amount * (food.amountPerUn || 200);
+  }
+
+  if (unit.includes('xicara') || unit.includes('xícara')) {
+    return amount * (food.amountPerUn || 200);
+  }
+
+  if (unit.includes('dose')) {
+    return amount * (food.amountPerUn || 35);
+  }
+
+  if (
+    unit.includes('porcao') ||
+    unit.includes('porção') ||
+    unit.includes('porcoes') ||
+    unit.includes('porções')
+  ) {
+    return amount * (food.amountPerUn || 100);
+  }
+
+  if (unit.includes('pote')) {
+    return amount * (food.amountPerUn || 170);
+  }
+
+  if (unit.includes('fatia')) {
+    return amount * (food.amountPerUn || 30);
+  }
+
+  if (unit.includes('un')) {
+    return amount * (food.amountPerUn || 100);
+  }
 
   return 0;
 };
 
 const getPlanOptionMacros = (qtyText: string) => {
-  const parts = (qtyText || '')
+  const normalizeMacroText = (value: string = '') =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const findFoodInLine = (line: string) => {
+    const normalizedLine = normalizeMacroText(line);
+
+    return [...FOOD_DATABASE]
+      .sort((a, b) => b.name.length - a.name.length)
+      .find(food => normalizedLine.includes(normalizeMacroText(food.name)));
+  };
+
+  const lines = sanitizeOptionQtyText(qtyText || '')
     .split(' + ')
-    .map(part => part.trim())
+    .map(line => line.trim())
     .filter(Boolean);
 
-  const totals = parts.reduce(
-    (acc, part) => {
-      const normalizedPart = normalizePlanText(part);
-
-      const food = [...FOOD_DATABASE]
-        .sort((a, b) => b.name.length - a.name.length)
-        .find(item => normalizedPart.includes(normalizePlanText(item.name)));
+  const totals = lines.reduce(
+    (acc, line) => {
+      const food = findFoodInLine(line);
 
       if (!food) return acc;
 
-      const grams = getApproxGramsFromPlanLine(part, food);
-      if (grams <= 0) return acc;
+      const grams = getApproxGramsFromPlanLine(line, food);
+
+      if (!grams || grams <= 0) return acc;
 
       const factor = grams / 100;
 
-      return {
-        p: acc.p + safeNumber(food.p) * factor,
-        c: acc.c + safeNumber(food.c) * factor,
-        f: acc.f + safeNumber(food.f) * factor,
-      };
+      acc.p += safeNumber(food.p) * factor;
+      acc.c += safeNumber(food.c) * factor;
+      acc.f += safeNumber(food.f) * factor;
+
+      return acc;
     },
     { p: 0, c: 0, f: 0 }
   );
@@ -424,33 +479,220 @@ const RESTRICTION_MAPPING: Record<string, string[]> = {
   ]
 };
 
+const normalizeRestrictionText = (value: string = '') =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const normalizeRestrictionKey = (value: string = '') => {
+  const key = normalizeRestrictionText(value).replace(/^sem\s+/, '').trim();
+
+  if (key === 'lactose') return 'leite';
+  if (key === 'leite') return 'leite';
+  if (key === 'ovo') return 'ovo';
+  if (key === 'ovos') return 'ovo';
+  if (key === 'gluten') return 'gluten';
+  if (key === 'peixe') return 'peixes';
+  if (key === 'peixes') return 'peixes';
+  if (key === 'amendoim') return 'amendoim';
+  if (key === 'castanhas') return 'castanhas/nozes';
+  if (key === 'nozes') return 'castanhas/nozes';
+  if (key === 'soja') return 'soja';
+
+  return key;
+};
+
+const RESTRICTION_TERMS: Record<string, string[]> = {
+  leite: [
+    'leite',
+    'iogurte',
+    'queijo',
+    'cottage',
+    'ricota',
+    'requeijao',
+    'manteiga',
+    'cream cheese',
+    'whey',
+    'vitamina',
+    'shake com leite',
+    'cafe com leite',
+  ],
+
+  ovo: [
+    'ovo',
+    'ovos',
+    'clara',
+    'clara de ovo',
+    'omelete',
+    'crepioca',
+    'panqueca',
+    'bolo fitness',
+    'bolo proteico',
+    'brownie',
+    'muffin',
+    'cookie',
+  ],
+
+  gluten: [
+    'pao',
+    'pão',
+    'macarrao',
+    'macarrão',
+    'trigo',
+    'wrap',
+    'torrada',
+    'bolo',
+    'cookie',
+    'muffin',
+    'panqueca',
+    'aveia',
+  ],
+
+  peixes: [
+    'peixe',
+    'tilapia',
+    'tilápia',
+    'atum',
+    'sardinha',
+    'salmao',
+    'salmão',
+    'frutos do mar',
+    'camarao',
+    'camarão',
+  ],
+
+  amendoim: [
+    'amendoim',
+    'pasta de amendoim',
+  ],
+
+  'castanhas/nozes': [
+    'castanhas',
+    'nozes',
+    'amendoas',
+    'amêndoas',
+    'mix de nuts',
+    'granola',
+  ],
+
+  soja: [
+    'soja',
+    'proteina de soja',
+    'proteína de soja',
+    'tofu',
+    'leite de soja',
+    'bebida de soja',
+  ],
+};
+
 const isFoodRestricted = (foodName: string, userProfile: UserProfile | null) => {
   if (!userProfile) return false;
-  const nameL = foodName.toLowerCase();
-  const userRestrictions = userProfile.restrictions || [];
+
+  const rawText = String(foodName || '');
+
+  const matchedFood = [...FOOD_DATABASE]
+    .sort((a, b) => b.name.length - a.name.length)
+    .find(food => normalizeRestrictionText(rawText).includes(normalizeRestrictionText(food.name)));
+
+  const extraRecipeText = matchedFood
+    ? [
+        matchedFood.name,
+        ...(matchedFood.recipe || []),
+        matchedFood.prep || '',
+        matchedFood.portionNote || '',
+      ].join(' ')
+    : '';
+
+  const text = normalizeRestrictionText(`${rawText} ${extraRecipeText}`);
+
+  const userRestrictions = (userProfile.restrictions || [])
+    .filter(Boolean)
+    .map(normalizeRestrictionKey)
+    .filter(key => key !== 'nenhuma');
+
   const blockedFoods = userProfile.blockedFoods || [];
   const dietaryProfile = userProfile.dietaryProfile || 'sem_restricao';
 
-  // 1. Blocked Foods (highest priority)
-  if (blockedFoods.some(b => nameL === b.toLowerCase() || nameL.includes(b.toLowerCase()))) return true;
-
-  // 2. Dietary Profile blocks
-  if (dietaryProfile === 'vegetariano') {
-    const meat = ['frango', 'carne', 'patinho', 'peixe', 'atum', 'tilápia', 'sobrecoxa', 'sardinha', 'frutos do mar', 'camarão'];
-    if (meat.some(m => nameL.includes(m))) return true;
-  } else if (dietaryProfile === 'vegano') {
-    const animal = ['frango', 'carne', 'patinho', 'peixe', 'atum', 'tilápia', 'sobrecoxa', 'sardinha', 'frutos do mar', 'camarão', 'ovo', 'clara', 'leite', 'iogurte', 'queijo', 'requeijão', 'manteiga', 'whey', 'mel'];
-    if (animal.some(a => nameL.includes(a))) return true;
-  } else if (dietaryProfile === 'pescetariano') {
-    const meat = ['frango', 'carne', 'patinho', 'sobrecoxa'];
-    if (meat.some(m => nameL.includes(m))) return true;
+  if (
+    blockedFoods.some(blocked => {
+      const b = normalizeRestrictionText(blocked);
+      return text === b || text.includes(b);
+    })
+  ) {
+    return true;
   }
 
-  // 3. Specific Allergies/Restrictions
-  return userRestrictions.some(restriction => {
-    const resKey = restriction.toLowerCase();
-    const blockedTerms = RESTRICTION_MAPPING[resKey] || [resKey];
-    return blockedTerms.some(term => nameL.includes(term));
+  if (dietaryProfile === 'vegetariano') {
+    const meat = [
+      'frango',
+      'carne',
+      'patinho',
+      'peixe',
+      'atum',
+      'tilapia',
+      'tilápia',
+      'sobrecoxa',
+      'sardinha',
+      'camarao',
+      'camarão',
+    ];
+
+    if (meat.some(term => text.includes(normalizeRestrictionText(term)))) {
+      return true;
+    }
+  }
+
+  if (dietaryProfile === 'vegano') {
+    const animal = [
+      'frango',
+      'carne',
+      'patinho',
+      'peixe',
+      'atum',
+      'tilapia',
+      'tilápia',
+      'sobrecoxa',
+      'sardinha',
+      'camarao',
+      'camarão',
+      'ovo',
+      'ovos',
+      'clara',
+      'leite',
+      'iogurte',
+      'queijo',
+      'cottage',
+      'ricota',
+      'requeijao',
+      'manteiga',
+      'whey',
+      'mel',
+    ];
+
+    if (animal.some(term => text.includes(normalizeRestrictionText(term)))) {
+      return true;
+    }
+  }
+
+  if (dietaryProfile === 'pescetariano') {
+    const meat = ['frango', 'carne', 'patinho', 'sobrecoxa'];
+
+    if (meat.some(term => text.includes(normalizeRestrictionText(term)))) {
+      return true;
+    }
+  }
+
+  return userRestrictions.some(restrictionKey => {
+    const terms = RESTRICTION_TERMS[restrictionKey] || [restrictionKey];
+
+    if (restrictionKey === 'leite' && matchedFood?.isLactose) return true;
+    if (restrictionKey === 'ovo' && matchedFood?.isEgg) return true;
+    if (restrictionKey === 'gluten' && matchedFood?.isGluten) return true;
+
+    return terms.some(term => text.includes(normalizeRestrictionText(term)));
   });
 };
 
@@ -1379,14 +1621,271 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const finalOptions = [...results]
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-    .slice(0, 3);
+  const emergencyOptionsByMealKey: Record<string, any[]> = {
+  cafe: [
+    {
+      name: 'Tapioca com banana e canela',
+      qty: 'Tapioca (goma) 50g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+      cal: 335,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 700,
+    },
+    {
+      name: 'Cuscuz com banana e chia',
+      qty: 'Cuscuz de milho 120g + Banana prata 1 unidade + Chia 1 colher de sopa',
+      cal: 310,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 690,
+    },
+    {
+      name: 'Pão integral com pasta de amendoim e fruta',
+      qty: 'Pão integral 2 fatias + Pasta de amendoim 1 colher de sopa + Maçã 1 unidade',
+      cal: 390,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 680,
+    },
+    {
+      name: 'Pão árabe com homus e tomate',
+      qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa + Tomate 80g',
+      cal: 330,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 670,
+    },
+    {
+      name: 'Vitamina de banana com aveia',
+      qty: 'Vitamina de banana com aveia 1 copo',
+      cal: 230,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 660,
+    },
+  ],
 
-  return finalOptions.map((option, index) => ({
-    ...option,
-    badge: index === 0 ? 'Recomendada' : option.badge === 'Recomendada' ? 'Completa' : option.badge || 'Completa',
-  }));
+  almoco: [
+    {
+      name: 'Arroz, feijão e frango',
+      qty: 'Arroz branco cozido 140g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+      cal: 555,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 700,
+    },
+    {
+      name: 'Peixe com batata e legumes',
+      qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
+      cal: 450,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 690,
+    },
+    {
+      name: 'Patinho com arroz e legumes',
+      qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 180g',
+      cal: 520,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 680,
+    },
+    {
+      name: 'Arroz, feijão e tofu grelhado',
+      qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+      cal: 500,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 670,
+    },
+    {
+      name: 'Batata com lentilha e salada',
+      qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde à vontade',
+      cal: 420,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 660,
+    },
+  ],
+
+  jantar: [
+    {
+      name: 'Inhame, carne magra e legumes',
+      qty: 'Inhame cozido 180g + Carne magra grelhada 140g + Legumes variados 180g',
+      cal: 520,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 700,
+    },
+    {
+      name: 'Frango com mandioca e salada',
+      qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+      cal: 485,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 690,
+    },
+    {
+      name: 'Peixe com batata e legumes',
+      qty: 'Tilápia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 180g',
+      cal: 420,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 680,
+    },
+    {
+      name: 'Arroz, feijão e tofu grelhado',
+      qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+      cal: 500,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 670,
+    },
+    {
+      name: 'Cuscuz com grão-de-bico e legumes',
+      qty: 'Cuscuz de milho cozido 150g + Grão-de-bico cozido 140g + Legumes variados 180g',
+      cal: 465,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 660,
+    },
+  ],
+
+  lanche: [
+    {
+      name: 'Pipoca com fruta',
+      qty: 'Pipoca (milho p/ estourar) 30g + Maçã 1 unidade',
+      cal: 240,
+      badge: 'Simples',
+      badgeDesc: '',
+      score: 700,
+    },
+    {
+      name: 'Tapioca com banana e canela',
+      qty: 'Tapioca (goma) 40g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+      cal: 285,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 690,
+    },
+    {
+      name: 'Pão árabe com homus',
+      qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa',
+      cal: 285,
+      badge: 'Completa',
+      badgeDesc: '',
+      score: 680,
+    },
+    {
+      name: 'Vitamina de banana com aveia',
+      qty: 'Vitamina de banana com aveia 1 copo',
+      cal: 230,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 670,
+    },
+  ],
+
+  lancheManha: [
+    {
+      name: 'Fruta com chia',
+      qty: 'Maçã 1 unidade + Chia 1 colher de sopa',
+      cal: 125,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 700,
+    },
+    {
+      name: 'Banana com aveia',
+      qty: 'Banana prata 1 unidade + Aveia em flocos 20g',
+      cal: 155,
+      badge: 'Simples',
+      badgeDesc: '',
+      score: 690,
+    },
+    {
+      name: 'Pipoca simples',
+      qty: 'Pipoca (milho p/ estourar) 25g',
+      cal: 90,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 680,
+    },
+  ],
+
+  ceia: [
+    {
+      name: 'Chá com fruta',
+      qty: 'Chá sem açúcar 1 xícara + Maçã 1 unidade',
+      cal: 70,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 700,
+    },
+    {
+      name: 'Banana com canela',
+      qty: 'Banana prata 1 unidade + Canela em pó 1 colher de chá',
+      cal: 85,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 690,
+    },
+    {
+      name: 'Morango com chia',
+      qty: 'Morango 150g + Chia 1 colher de sopa',
+      cal: 105,
+      badge: 'Leve',
+      badgeDesc: '',
+      score: 680,
+    },
+  ],
+};
+
+const addUniqueOption = (list: any[], option: any) => {
+  if (!option) return;
+
+  const fullText = `${option.name || ''} ${option.qty || ''}`;
+
+  if (isFoodRestricted(fullText, profile)) {
+    return;
+  }
+
+  const alreadyExists = list.some(existing => {
+    const sameName = normalizeLocal(existing.name || '') === normalizeLocal(option.name || '');
+    const sameSignature = getOptionSignature(existing) === getOptionSignature(option);
+    const tooSimilar = optionsAreTooSimilar(existing, option);
+
+    return sameName || sameSignature || tooSimilar;
+  });
+
+  if (!alreadyExists) {
+    list.push(option);
+  }
+};
+
+const uniqueFinalOptions: any[] = [];
+
+[...results]
+  .sort((a, b) => (b.score || 0) - (a.score || 0))
+  .forEach(option => addUniqueOption(uniqueFinalOptions, option));
+
+getFallbackOptions().forEach(option => addUniqueOption(uniqueFinalOptions, option));
+
+const emergencyOptions =
+  emergencyOptionsByMealKey[safeMealKey] ||
+  emergencyOptionsByMealKey.lanche;
+
+emergencyOptions.forEach(option => addUniqueOption(uniqueFinalOptions, option));
+
+return uniqueFinalOptions.slice(0, 3).map((option, index) => ({
+  ...option,
+  badge:
+    index === 0
+      ? 'Recomendada'
+      : option.badge === 'Recomendada'
+      ? 'Completa'
+      : option.badge || 'Completa',
+}));
 };
 
   const generateNewPlan = (mealKey?: string) => {
@@ -1638,6 +2137,8 @@ validatedPlan[mealKey] = applySmartBadges(mealKey, uniqueOptions).slice(0, 3);
 };
 
 const swapMealItem = (mealKey: string, index: number) => {
+  if (!userProfile) return;
+
   const normalizeSwap = (value: string = '') =>
     value
       .toLowerCase()
@@ -1649,44 +2150,60 @@ const swapMealItem = (mealKey: string, index: number) => {
   const swapBank: Record<string, any[]> = {
     cafe: [
       {
-        name: 'Pão árabe com queijo minas e maçã',
-        qty: 'Pão árabe 1 unidade + Queijo minas frescal 1 fatia + Maçã 1 unidade',
-        cal: 365,
+        name: 'Tapioca com banana e canela',
+        qty: 'Tapioca (goma) 50g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+        cal: 335,
         badge: 'Completa',
         badgeDesc: '',
         score: 900,
       },
       {
-        name: 'Overnight oats com banana',
-        qty: 'Aveia em flocos 30g + Iogurte natural 1 pote + Banana prata 1 unidade',
-        cal: 340,
+        name: 'Cuscuz com banana e chia',
+        qty: 'Cuscuz de milho 120g + Banana prata 1 unidade + Chia 1 colher de sopa',
+        cal: 310,
         badge: 'Completa',
         badgeDesc: '',
         score: 880,
       },
       {
-        name: 'Omelete com pão integral',
-        qty: 'Ovo de galinha 2 unidades + Pão integral 1 fatia',
-        cal: 290,
+        name: 'Pão árabe com homus e tomate',
+        qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa + Tomate 80g',
+        cal: 330,
         badge: 'Completa',
         badgeDesc: '',
         score: 860,
       },
       {
-        name: 'Vitamina de banana com aveia',
-        qty: 'Vitamina de banana com aveia 1 copo',
-        cal: 230,
+        name: 'Fruta com chia e bebida de amêndoas',
+        qty: 'Maçã 1 unidade + Chia 1 colher de sopa + Bebida de amêndoas 1 copo',
+        cal: 180,
         badge: 'Leve',
         badgeDesc: '',
         score: 840,
+      },
+      {
+        name: 'Iogurte com banana e aveia',
+        qty: 'Iogurte natural 1 pote + Banana prata 1 unidade + Aveia em flocos 20g',
+        cal: 300,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 820,
+      },
+      {
+        name: 'Pão integral com ovos',
+        qty: 'Pão integral 2 fatias + Ovo de galinha 2 unidades',
+        cal: 330,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 800,
       },
     ],
 
     almoco: [
       {
-        name: 'Frango com mandioca e salada',
-        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
-        cal: 485,
+        name: 'Arroz, feijão e frango',
+        qty: 'Arroz branco cozido 140g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+        cal: 555,
         badge: 'Completa',
         badgeDesc: '',
         score: 900,
@@ -1700,9 +2217,9 @@ const swapMealItem = (mealKey: string, index: number) => {
         score: 880,
       },
       {
-        name: 'Macarrão com carne moída e legumes',
-        qty: 'Macarrão integral 160g + Patinho moído 140g + Legumes variados 180g',
-        cal: 610,
+        name: 'Patinho com arroz e legumes',
+        qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 180g',
+        cal: 520,
         badge: 'Completa',
         badgeDesc: '',
         score: 860,
@@ -1714,6 +2231,22 @@ const swapMealItem = (mealKey: string, index: number) => {
         badge: 'Completa',
         badgeDesc: '',
         score: 840,
+      },
+      {
+        name: 'Batata com lentilha e salada',
+        qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde à vontade',
+        cal: 420,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 820,
+      },
+      {
+        name: 'Cuscuz com grão-de-bico e legumes',
+        qty: 'Cuscuz de milho cozido 150g + Grão-de-bico cozido 140g + Legumes variados 180g',
+        cal: 465,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 800,
       },
     ],
 
@@ -1727,9 +2260,9 @@ const swapMealItem = (mealKey: string, index: number) => {
         score: 900,
       },
       {
-        name: 'Patinho com arroz e legumes',
-        qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 180g',
-        cal: 520,
+        name: 'Frango com mandioca e salada',
+        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+        cal: 485,
         badge: 'Completa',
         badgeDesc: '',
         score: 880,
@@ -1743,23 +2276,63 @@ const swapMealItem = (mealKey: string, index: number) => {
         score: 860,
       },
       {
-        name: 'Frango com mandioca e salada',
-        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
-        cal: 485,
+        name: 'Arroz, feijão e tofu grelhado',
+        qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+        cal: 500,
         badge: 'Completa',
         badgeDesc: '',
         score: 840,
+      },
+      {
+        name: 'Cuscuz com grão-de-bico e legumes',
+        qty: 'Cuscuz de milho cozido 150g + Grão-de-bico cozido 140g + Legumes variados 180g',
+        cal: 465,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 820,
+      },
+      {
+        name: 'Batata com lentilha e salada',
+        qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde à vontade',
+        cal: 420,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 800,
       },
     ],
 
     lanche: [
       {
-        name: 'Wrap de frango',
-        qty: 'Wrap integral 1 unidade + Frango desfiado 100g + Requeijão light 20g',
-        cal: 390,
-        badge: 'Completa',
+        name: 'Pipoca com fruta',
+        qty: 'Pipoca (milho p/ estourar) 30g + Maçã 1 unidade',
+        cal: 240,
+        badge: 'Simples',
         badgeDesc: '',
         score: 900,
+      },
+      {
+        name: 'Tapioca com banana e canela',
+        qty: 'Tapioca (goma) 40g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+        cal: 285,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Pão árabe com homus',
+        qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa',
+        cal: 285,
+        badge: 'Completa',
+        badgeDesc: '',
+        score: 860,
+      },
+      {
+        name: 'Fruta com chia',
+        qty: 'Maçã 1 unidade + Chia 1 colher de sopa',
+        cal: 125,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 840,
       },
       {
         name: 'Sanduíche natural de atum',
@@ -1767,7 +2340,7 @@ const swapMealItem = (mealKey: string, index: number) => {
         cal: 360,
         badge: 'Completa',
         badgeDesc: '',
-        score: 880,
+        score: 820,
       },
       {
         name: 'Iogurte com fruta e aveia',
@@ -1775,53 +2348,69 @@ const swapMealItem = (mealKey: string, index: number) => {
         cal: 280,
         badge: 'Completa',
         badgeDesc: '',
+        score: 800,
+      },
+    ],
+
+    lancheManha: [
+      {
+        name: 'Fruta com chia',
+        qty: 'Maçã 1 unidade + Chia 1 colher de sopa',
+        cal: 125,
+        badge: 'Leve',
+        badgeDesc: '',
+        score: 900,
+      },
+      {
+        name: 'Banana com aveia',
+        qty: 'Banana prata 1 unidade + Aveia em flocos 20g',
+        cal: 155,
+        badge: 'Simples',
+        badgeDesc: '',
+        score: 880,
+      },
+      {
+        name: 'Pipoca simples',
+        qty: 'Pipoca (milho p/ estourar) 25g',
+        cal: 90,
+        badge: 'Leve',
+        badgeDesc: '',
         score: 860,
       },
       {
-        name: 'Pipoca com queijo minas',
-        qty: 'Pipoca (milho p/ estourar) 30g + Queijo minas frescal 1 fatia',
-        cal: 260,
+        name: 'Cuscuz com banana',
+        qty: 'Cuscuz de milho 100g + Banana prata 1 unidade',
+        cal: 190,
         badge: 'Simples',
         badgeDesc: '',
         score: 840,
       },
     ],
 
-    lancheManha: [
+    ceia: [
       {
-        name: 'Fruta com iogurte',
-        qty: 'Iogurte natural 1 pote + Maçã 1 unidade',
-        cal: 190,
+        name: 'Chá com fruta',
+        qty: 'Chá sem açúcar 1 xícara + Maçã 1 unidade',
+        cal: 70,
         badge: 'Leve',
         badgeDesc: '',
         score: 900,
       },
       {
-        name: 'Queijo minas com fruta',
-        qty: 'Queijo minas frescal 1 fatia + Banana prata 1 unidade',
-        cal: 210,
-        badge: 'Simples',
+        name: 'Banana com canela',
+        qty: 'Banana prata 1 unidade + Canela em pó 1 colher de chá',
+        cal: 85,
+        badge: 'Leve',
         badgeDesc: '',
         score: 880,
       },
       {
-        name: 'Vitamina de mamão com leite',
-        qty: 'Vitamina de mamão com leite 1 copo',
-        cal: 160,
+        name: 'Morango com chia',
+        qty: 'Morango 150g + Chia 1 colher de sopa',
+        cal: 105,
         badge: 'Leve',
         badgeDesc: '',
         score: 860,
-      },
-    ],
-
-    ceia: [
-      {
-        name: 'Iogurte natural com chia',
-        qty: 'Iogurte natural 1 pote + Chia 1 colher de sopa',
-        cal: 210,
-        badge: 'Simples',
-        badgeDesc: '',
-        score: 900,
       },
       {
         name: 'Leite com canela',
@@ -1829,48 +2418,51 @@ const swapMealItem = (mealKey: string, index: number) => {
         cal: 75,
         badge: 'Leve',
         badgeDesc: '',
-        score: 880,
-      },
-      {
-        name: 'Cottage com morango',
-        qty: 'Queijo cottage 2 colheres de sopa + Morango 120g',
-        cal: 140,
-        badge: 'Leve',
-        badgeDesc: '',
-        score: 860,
+        score: 840,
       },
     ],
   };
+
+  const optionSignature = (option: any) =>
+    normalizeSwap(`${option?.name || ''} ${option?.qty || ''}`);
 
   setMealPlan(prev => {
     const currentOptions = prev[mealKey] || [];
 
     if (!currentOptions[index]) {
-      console.warn(`Não achei a opção ${index} em ${mealKey}`);
+      console.warn('Trocar opção: opção não encontrada', { mealKey, index });
       return prev;
     }
 
-    const currentOption = currentOptions[index];
-    const currentName = normalizeSwap(currentOption.name);
-    const usedNames = new Set(
+    const current = currentOptions[index];
+    const currentSignature = optionSignature(current);
+
+    const usedByOtherCards = new Set(
       currentOptions
         .filter((_, optionIndex) => optionIndex !== index)
-        .map(option => normalizeSwap(option.name))
+        .map(optionSignature)
     );
 
     const bank = swapBank[mealKey] || swapBank.lanche;
 
-    const replacement =
-      bank.find(option => {
-        const optionName = normalizeSwap(option.name);
+    const allowedBank = bank.filter(option => {
+      const text = `${option.name || ''} ${option.qty || ''}`;
+      return !isFoodRestricted(text, userProfile);
+    });
 
-        return optionName !== currentName && !usedNames.has(optionName);
+    const sourceBank = allowedBank.length > 0 ? allowedBank : bank;
+
+    let replacement =
+      sourceBank.find(option => {
+        const signature = optionSignature(option);
+
+        return signature !== currentSignature && !usedByOtherCards.has(signature);
       }) ||
-      bank.find(option => normalizeSwap(option.name) !== currentName) ||
-      bank[0];
+      sourceBank.find(option => optionSignature(option) !== currentSignature) ||
+      sourceBank[0];
 
     if (!replacement) {
-      console.warn(`Não encontrei substituição para ${mealKey}`);
+      console.warn('Trocar opção: nenhuma substituição encontrada', { mealKey, index });
       return prev;
     }
 
@@ -1886,7 +2478,6 @@ const swapMealItem = (mealKey: string, index: number) => {
         swappedAt: Date.now(),
       };
     });
-
 
     return {
       ...prev,
