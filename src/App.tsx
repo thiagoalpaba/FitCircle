@@ -4870,7 +4870,6 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
     <div className="w-full bg-gray-50 min-h-screen pb-16">
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
 
-      {/* Header */}
       <div className="bg-[#16A34A] pt-12 px-6 pb-9 rounded-b-[42px] text-white shadow-xl relative z-10">
         <div className="flex justify-between items-start mb-5">
           <div>
@@ -4919,7 +4918,6 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         </div>
       </div>
 
-      {/* Macros */}
       <div className="px-6 mt-4 relative z-20">
         <div className="bg-white rounded-[30px] p-5 shadow-xl border border-gray-50 grid grid-cols-3 gap-4">
           <div className="space-y-3">
@@ -4960,7 +4958,6 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         </div>
       </div>
 
-      {/* Meals */}
       <div className="px-5 mt-9 space-y-5">
         <div className="flex justify-between items-end px-1">
           <div>
@@ -5059,6 +5056,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    setPendingMealType(rm.type || cfg.key);
                                     setPendingEditMealId(rm.id);
                                     onNavigate('registrar');
                                   }}
@@ -5172,7 +5170,6 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         })}
       </div>
 
-      {/* Workout */}
       <div className="px-5 mt-8 mb-6">
         <div className="bg-[#FFFBEB] rounded-[30px] p-5 border border-orange-100 shadow-sm">
           <div className="flex justify-between items-center mb-5">
@@ -5254,7 +5251,6 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         </div>
       </div>
 
-      {/* Workout Modal */}
       <AnimatePresence>
         {showWorkoutModal && (
           <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
