@@ -4942,7 +4942,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                                       {it.food.name}
                                     </p>
                                     <p className="text-[10px] text-gray-400 font-semibold">
-                                      {it.qty}{it.unit === 'g' ? 'g' : (it.food.un || 'un')} · P:{it.p} C:{it.c} G:{it.f}
+                                     {it.qty} {it.unit === 'g' ? 'g' : it.food?.un || 'un'} • P: {it.p}g | C: {it.c}g | G: {it.f}g
                                     </p>
                                   </div>
 
@@ -8335,6 +8335,8 @@ function CirculoScreenFoodstagram() {
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
+  const [showInviteModal, setShowInviteModal] = useState(false);
+const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
 
   const totals = getTotals();
   const consumed = Math.round(safeNumber(totals.cal));
@@ -8465,28 +8467,15 @@ function CirculoScreenFoodstagram() {
             <h1 className="text-2xl font-black mt-1">
               Círculo de apoio
             </h1>
-
-            <p className="text-xs font-bold text-white/75 mt-2 leading-relaxed max-w-[270px]">
-              Um feed leve para apoiar seu progresso sem cobrança.
-            </p>
           </div>
 
-          <button
+        <button
   type="button"
-  onClick={async () => {
-    if (navigator.share) {
-      await navigator.share({
-        title: 'FitCircle',
-        text: 'Venha participar do meu Círculo no FitCircle!',
-      });
-    } else {
-      alert('Venha participar do meu Círculo no FitCircle!');
-    }
-  }}
-  className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
+  onClick={() => setShowInviteModal(true)}
+  className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-95 transition-all"
   aria-label="Convidar para o círculo"
 >
-  <Users size={24} />
+  <UserPlus size={20} className="text-white" />
 </button>
         </div>
 
@@ -8948,60 +8937,68 @@ function AddMealScreen({
             <div className="space-y-3">
               {planOptions.slice(0, 3).map((option: any, index: number) => {
                 const optionMacros = getPlanOptionMacros(option.qty || '');
+           return (
+  <div
+    key={`${option.name}-${index}`}
+    className="w-full rounded-[24px] bg-white border border-gray-100 p-4 shadow-sm"
+  >
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-gray-900 leading-tight">
+          {option.name}
+        </p>
 
-                return (
-                  <button
-                    key={`${option.name}-${index}`}
-                    type="button"
-                    onClick={() => addPlanOption(option)}
-                    className="w-full rounded-[24px] bg-white p-4 text-left shadow-sm active:scale-[0.99] transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-black text-gray-900">
-                          {option.name}
-                        </p>
+        <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400">
+          {sanitizeOptionQtyText(option.qty || '')}
+        </p>
+      </div>
 
-                        <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400">
-                          {sanitizeOptionQtyText(option.qty || '')}
-                        </p>
-                      </div>
+      <div className="flex flex-col items-end gap-2 shrink-0">
+        <span className="rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
+          {Math.round(safeNumber(option.cal))} cal
+        </span>
 
-                      <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
-                        {Math.round(safeNumber(option.cal))} cal
-                      </span>
-                    </div>
+        <button
+          type="button"
+          onClick={() => addPlanOption(option)}
+          className="w-10 h-10 shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-100 active:scale-90 transition-all"
+          aria-label={`Registrar ${option.name}`}
+        >
+          <Plus size={20} />
+        </button>
+      </div>
+    </div>
 
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <div className="rounded-2xl bg-blue-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-blue-500">
-                          Prot.
-                        </p>
-                        <p className="text-xs font-black text-blue-700">
-                          {optionMacros.p}g
-                        </p>
-                      </div>
+    <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="rounded-2xl bg-blue-50 px-3 py-2">
+        <p className="text-[8px] font-black uppercase text-blue-500">
+          Prot.
+        </p>
+        <p className="text-xs font-black text-blue-700">
+          {optionMacros.p}g
+        </p>
+      </div>
 
-                      <div className="rounded-2xl bg-green-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-green-500">
-                          Carbo
-                        </p>
-                        <p className="text-xs font-black text-green-700">
-                          {optionMacros.c}g
-                        </p>
-                      </div>
+      <div className="rounded-2xl bg-green-50 px-3 py-2">
+        <p className="text-[8px] font-black uppercase text-green-500">
+          Carbo
+        </p>
+        <p className="text-xs font-black text-green-700">
+          {optionMacros.c}g
+        </p>
+      </div>
 
-                      <div className="rounded-2xl bg-orange-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-orange-500">
-                          Gord.
-                        </p>
-                        <p className="text-xs font-black text-orange-700">
-                          {optionMacros.f}g
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
+      <div className="rounded-2xl bg-orange-50 px-3 py-2">
+        <p className="text-[8px] font-black uppercase text-orange-500">
+          Gord.
+        </p>
+        <p className="text-xs font-black text-orange-700">
+          {optionMacros.f}g
+        </p>
+      </div>
+    </div>
+  </div>
+);
               })}
             </div>
           ) : (
