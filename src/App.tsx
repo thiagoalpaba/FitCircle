@@ -4736,6 +4736,11 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
     selectedDate,
   } = useApp();
 
+  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [planChoiceByMeal, setPlanChoiceByMeal] = useState<Record<string, number>>({});
+
   const totals = getTotals();
   const remaining = Math.max(safeNumber(calorieGoal) - safeNumber(totals.cal), 0);
   const burned = workouts.reduce((acc, w) => acc + safeNumber(w.burned), 0);
@@ -4746,11 +4751,120 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
     : selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
 
   const weekday = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' });
-  const configs = MEAL_CONFIGS[mealCount];
+  const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
 
-  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
-  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const buildItemsFromPlanOption = (option: any): MealEntry[] => {
+    const lines = sanitizeOptionQtyText(option?.qty || '')
+      .split(' + ')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    return lines.map((line) => {
+      const matchedFood = [...FOOD_DATABASE]
+        .sort((a, b) => b.name.length - a.name.length)
+        .find(food =>
+          normalizePlanText(line).includes(normalizePlanText(food.name))
+        );
+
+      if (!matchedFood) {
+        return {
+          food: {
+            name: line,
+            cal: 0,
+            p: 0,
+            c: 0,
+            f: 0,
+            category: 'Plano',
+          } as FoodItem,
+          qty: 1,
+          unit: 'un',
+          cal: 0,
+          p: 0,
+          c: 0,
+          f: 0,
+        };
+      }
+
+      const grams = getApproxGramsFromPlanLine(line, matchedFood);
+      const safeGrams = grams > 0 ? grams : 100;
+      const factor = safeGrams / 100;
+
+      return {
+        food: matchedFood,
+        qty: Math.round(safeGrams),
+        unit: 'g',
+        cal: Math.round(safeNumber(matchedFood.cal) * factor),
+        p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
+        c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
+        f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
+      };
+    });
+  };
+
+  const getPlanOptionTotals = (option: any) => {
+    const items = buildItemsFromPlanOption(option);
+
+    const totalsFromItems = items.reduce(
+      (acc, item) => ({
+        cal: acc.cal + safeNumber(item.cal),
+        p: acc.p + safeNumber(item.p),
+        c: acc.c + safeNumber(item.c),
+        f: acc.f + safeNumber(item.f),
+      }),
+      { cal: 0, p: 0, c: 0, f: 0 }
+    );
+
+    return {
+      items,
+      cal: Math.round(totalsFromItems.cal || safeNumber(option?.cal)),
+      p: Math.round(totalsFromItems.p),
+      c: Math.round(totalsFromItems.c),
+      f: Math.round(totalsFromItems.f),
+    };
+  };
+
+  const cyclePlanOption = (mealKey: string) => {
+    const options = mealPlan[mealKey] || [];
+
+    if (options.length <= 1) return;
+
+    setPlanChoiceByMeal(prev => {
+      const current = prev[mealKey] || 0;
+
+      return {
+        ...prev,
+        [mealKey]: (current + 1) % options.length,
+      };
+    });
+  };
+
+  const addCurrentPlanOptionToDay = (mealKey: string) => {
+    const options = mealPlan[mealKey] || [];
+    const selectedIndex = planChoiceByMeal[mealKey] || 0;
+    const option = options[selectedIndex];
+
+    if (!option) {
+      setPendingMealType(mealKey);
+      onNavigate('registrar');
+      return;
+    }
+
+    const parsed = getPlanOptionTotals(option);
+    const now = new Date();
+
+    addMeal({
+      type: mealKey,
+      time: now.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      items: parsed.items,
+      cal: parsed.cal,
+      p: parsed.p,
+      c: parsed.c,
+      f: parsed.f,
+    });
+  };
 
   return (
     <div className="w-full bg-gray-50 min-h-screen pb-16">
@@ -4772,6 +4886,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           </div>
 
           <button
+            type="button"
             onClick={() => setShowHistory(true)}
             className="p-3 bg-white/20 rounded-2xl backdrop-blur-md border border-white/10 active:scale-95 transition-all"
           >
@@ -4790,18 +4905,18 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         <div className="flex justify-center mb-3">
           <div className="bg-white/95 text-[#16A34A] px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2">
             <Zap size={16} className="fill-current shrink-0" />
+
             <div className="leading-tight">
               <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
                 Disponível hoje
               </p>
+
               <p className="text-sm font-black uppercase tracking-tight">
                 {formatKcal(remaining)}
               </p>
             </div>
           </div>
         </div>
-
-      
       </div>
 
       {/* Macros */}
@@ -4811,7 +4926,9 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
               Proteína
             </p>
+
             <ProgressBar val={totals.p} max={macros.p} color={C.protein} />
+
             <p className="text-[10px] font-black text-gray-900 text-center">
               {formatMacro(totals.p)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.p)}</span>
             </p>
@@ -4821,7 +4938,9 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
               Carbos
             </p>
+
             <ProgressBar val={totals.c} max={macros.c} color={C.carbs} />
+
             <p className="text-[10px] font-black text-gray-900 text-center">
               {formatMacro(totals.c)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.c)}</span>
             </p>
@@ -4831,7 +4950,9 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
               Gorduras
             </p>
+
             <ProgressBar val={totals.f} max={macros.f} color={C.fat} />
+
             <p className="text-[10px] font-black text-gray-900 text-center">
               {formatMacro(totals.f)} <span className="opacity-30 text-[8px]">/ {formatMacro(macros.f)}</span>
             </p>
@@ -4843,13 +4964,17 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
       <div className="px-5 mt-9 space-y-5">
         <div className="flex justify-between items-end px-1">
           <div>
-            <h3 className="text-xl font-black text-gray-900">Refeições</h3>
+            <h3 className="text-xl font-black text-gray-900">
+              Refeições
+            </h3>
+
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
               Planejamento do dia
             </p>
           </div>
 
           <button
+            type="button"
             onClick={onGoToList}
             className="text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-xl transition-all active:scale-95"
           >
@@ -4861,107 +4986,124 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           const registeredMeals = meals.filter(m => m.type === cfg.key);
           const meal = registeredMeals[0];
 
-          return meal ? (
-            <div
-              key={cfg.key}
-              className="bg-white rounded-[28px] overflow-hidden border border-gray-100 shadow-sm transition-all"
-            >
+          if (meal) {
+            return (
               <div
-                onClick={() => setExpandedMeal(expandedMeal === cfg.key ? null : cfg.key)}
-                className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50"
+                key={cfg.key}
+                className="bg-white rounded-[28px] overflow-hidden border border-gray-100 shadow-sm transition-all"
               >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl" style={{ backgroundColor: `${cfg.color}15` }}>
-                    <cfg.icon size={22} style={{ color: cfg.color }} />
-                  </div>
-
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      {cfg.label}
-                    </p>
-                    <p className="text-xs text-gray-500 font-semibold">
-                      {meal.time} · {meal.items.length} itens
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right flex items-center gap-4">
-                  {registeredMeals.length > 1 && (
-                    <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
-                      +{registeredMeals.length - 1}
-                    </span>
-                  )}
-
-                  <div className="flex flex-col items-end">
-                    <span className="font-black text-gray-900">
-                      {registeredMeals.reduce((a, b) => a + b.cal, 0)}{' '}
-                      <span className="text-[10px] uppercase opacity-40">calorias</span>
-                    </span>
-                  </div>
-
-                  {expandedMeal === cfg.key ? (
-                    <ChevronUp size={16} className="text-gray-300" />
-                  ) : (
-                    <ChevronDown size={16} className="text-gray-300" />
-                  )}
-                </div>
-              </div>
-
-              <AnimatePresence>
-                {expandedMeal === cfg.key && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: 'auto' }}
-                    exit={{ height: 0 }}
-                    className="overflow-hidden bg-gray-50/50"
-                  >
-                    <div className="p-4 pt-0 border-t border-dashed border-gray-200">
-                      <div className="mt-4 space-y-4">
-                        {registeredMeals.map((rm, ridx) => (
-                          <div key={rm.id} className={`${ridx > 0 ? 'pt-4 border-t border-gray-100' : ''}`}>
-                            <div className="flex justify-between items-center mb-2">
-                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                                Registro {ridx + 1}
-                              </p>
-
-                              <button
-                                onClick={() => {
-                                  setPendingEditMealId(rm.id);
-                                  onNavigate('registrar');
-                                }}
-                                className="text-[10px] font-black text-green-600 uppercase"
-                              >
-                                Editar
-                              </button>
-                            </div>
-
-                            <div className="space-y-2">
-                              {rm.items.map((it, idx) => (
-                                <div key={idx} className="flex justify-between items-center">
-                                  <div>
-                                    <p className="text-xs font-bold text-gray-800">
-                                      {it.food.name}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 font-semibold">
-                                     {it.qty} {it.unit === 'g' ? 'g' : it.food?.un || 'un'} • P: {it.p}g | C: {it.c}g | G: {it.f}g
-                                    </p>
-                                  </div>
-
-                                  <span className="text-xs font-bold text-gray-500">
-                                    {it.cal} calorias
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                <div
+                  onClick={() => setExpandedMeal(expandedMeal === cfg.key ? null : cfg.key)}
+                  className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl" style={{ backgroundColor: `${cfg.color}15` }}>
+                      <cfg.icon size={22} style={{ color: cfg.color }} />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ) : (
+
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        {cfg.label}
+                      </p>
+
+                      <p className="text-xs text-gray-500 font-semibold">
+                        {meal.time} · {meal.items.length} itens
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex items-center gap-4">
+                    {registeredMeals.length > 1 && (
+                      <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
+                        +{registeredMeals.length - 1}
+                      </span>
+                    )}
+
+                    <div className="flex flex-col items-end">
+                      <span className="font-black text-gray-900">
+                        {registeredMeals.reduce((a, b) => a + safeNumber(b.cal), 0)}{' '}
+                        <span className="text-[10px] uppercase opacity-40">
+                          calorias
+                        </span>
+                      </span>
+                    </div>
+
+                    {expandedMeal === cfg.key ? (
+                      <ChevronUp size={16} className="text-gray-300" />
+                    ) : (
+                      <ChevronDown size={16} className="text-gray-300" />
+                    )}
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {expandedMeal === cfg.key && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: 'auto' }}
+                      exit={{ height: 0 }}
+                      className="overflow-hidden bg-gray-50/50"
+                    >
+                      <div className="p-4 pt-0 border-t border-dashed border-gray-200">
+                        <div className="mt-4 space-y-4">
+                          {registeredMeals.map((rm, ridx) => (
+                            <div
+                              key={rm.id}
+                              className={`${ridx > 0 ? 'pt-4 border-t border-gray-100' : ''}`}
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                  Registro {ridx + 1}
+                                </p>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPendingEditMealId(rm.id);
+                                    onNavigate('registrar');
+                                  }}
+                                  className="text-[10px] font-black text-green-600 uppercase"
+                                >
+                                  Editar
+                                </button>
+                              </div>
+
+                              <div className="space-y-2">
+                                {rm.items.map((it, idx) => (
+                                  <div key={idx} className="flex justify-between items-center gap-4">
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold text-gray-800 truncate">
+                                        {it.food.name}
+                                      </p>
+
+                                      <p className="text-[10px] text-gray-400 font-semibold">
+                                        {it.qty} {it.unit === 'g' ? 'g' : it.food?.un || 'un'} • P: {it.p}g | C: {it.c}g | G: {it.f}g
+                                      </p>
+                                    </div>
+
+                                    <span className="text-xs font-bold text-gray-500 shrink-0">
+                                      {it.cal} calorias
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          }
+
+          const selectedPlanIndex = planChoiceByMeal[cfg.key] || 0;
+          const selectedPlanOption = mealPlan[cfg.key]?.[selectedPlanIndex];
+          const parsedPlan = selectedPlanOption ? getPlanOptionTotals(selectedPlanOption) : null;
+          const optionsCount = mealPlan[cfg.key]?.length || 0;
+
+          return (
             <div
               key={cfg.key}
               className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm"
@@ -4975,6 +5117,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                     {cfg.label}
                   </p>
+
                   <p className="text-[10px] text-green-600 font-black uppercase mt-0.5">
                     Do plano
                   </p>
@@ -4982,120 +5125,47 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
               </div>
 
               <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100">
-                <div className="flex justify-between items-start mb-5">
-                  <p className="text-xs font-black text-gray-800 flex-1 pr-4">
-                    {mealPlan[cfg.key]?.[0]?.name || '---'}
-                  </p>
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black text-gray-800 leading-snug">
+                      {selectedPlanOption?.name || 'Sugestão do plano'}
+                    </p>
+
+                    {selectedPlanOption?.qty && (
+                      <p className="mt-1 text-[10px] font-bold text-gray-400 leading-relaxed line-clamp-2">
+                        {sanitizeOptionQtyText(selectedPlanOption.qty)}
+                      </p>
+                    )}
+                  </div>
+
                   <span className="text-[10px] font-black text-green-600 whitespace-nowrap">
-                    {mealPlan[cfg.key]?.[0]?.cal || 0} calorias
+                    {parsedPlan?.cal || 0} calorias
                   </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-  const option = mealPlan[cfg.key]?.[0];
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => cyclePlanOption(cfg.key)}
+                    disabled={optionsCount <= 1}
+                    className={`w-11 h-11 rounded-2xl border flex items-center justify-center active:scale-95 transition-all ${
+                      optionsCount <= 1
+                        ? 'border-gray-100 bg-gray-50 text-gray-300'
+                        : 'border-gray-200 bg-white text-gray-500'
+                    }`}
+                    aria-label="Trocar opção do plano"
+                  >
+                    <Shuffle size={16} />
+                  </button>
 
-  if (!option) {
-    setPendingMealType(cfg.key);
-    onNavigate('registrar');
-    return;
-  }
-
-  const lines = sanitizeOptionQtyText(option.qty || '')
-    .split(' + ')
-    .map(line => line.trim())
-    .filter(Boolean);
-
-  const items: MealEntry[] = lines.map((line) => {
-    const matchedFood = [...FOOD_DATABASE]
-      .sort((a, b) => b.name.length - a.name.length)
-      .find(food =>
-        normalizePlanText(line).includes(normalizePlanText(food.name))
-      );
-
-    if (!matchedFood) {
-      return {
-        food: {
-          name: line,
-          cal: 0,
-          p: 0,
-          c: 0,
-          f: 0,
-          category: 'Plano',
-        } as FoodItem,
-        qty: 1,
-        unit: 'un',
-        cal: 0,
-        p: 0,
-        c: 0,
-        f: 0,
-      };
-    }
-
-    const grams = getApproxGramsFromPlanLine(line, matchedFood);
-    const safeGrams = grams > 0 ? grams : 100;
-    const factor = safeGrams / 100;
-
-    return {
-      food: matchedFood,
-      qty: Math.round(safeGrams),
-      unit: 'g',
-      cal: Math.round(safeNumber(matchedFood.cal) * factor),
-      p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
-      c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
-      f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
-    };
-  });
-
-  const validItems = items.length > 0 ? items : [
-    {
-      food: {
-        name: option.name,
-        cal: safeNumber(option.cal),
-        p: 0,
-        c: 0,
-        f: 0,
-        category: 'Plano',
-      } as FoodItem,
-      qty: 1,
-      unit: 'un',
-      cal: Math.round(safeNumber(option.cal)),
-      p: 0,
-      c: 0,
-      f: 0,
-    },
-  ];
-
-  const totals = validItems.reduce(
-    (acc, item) => ({
-      cal: acc.cal + safeNumber(item.cal),
-      p: acc.p + safeNumber(item.p),
-      c: acc.c + safeNumber(item.c),
-      f: acc.f + safeNumber(item.f),
-    }),
-    { cal: 0, p: 0, c: 0, f: 0 }
-  );
-
-  const now = new Date();
-
-  addMeal({
-    type: cfg.key,
-    time: now.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-    items: validItems,
-    cal: Math.round(totals.cal || safeNumber(option.cal)),
-    p: Math.round(totals.p),
-    c: Math.round(totals.c),
-    f: Math.round(totals.f),
-  });
-}}
-                 className="inline-flex items-center justify-center rounded-full border border-green-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 active:scale-95 transition-all"
-                >
-                  Adicionar
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => addCurrentPlanOptionToDay(cfg.key)}
+                    className="flex-1 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-green-600 active:scale-95 transition-all"
+                  >
+                    Adicionar
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -5112,7 +5182,10 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
               </div>
 
               <div>
-                <h3 className="font-bold text-gray-900">Atividades de hoje</h3>
+                <h3 className="font-bold text-gray-900">
+                  Atividades de hoje
+                </h3>
+
                 <p className="text-[10px] text-gray-500 font-bold uppercase">
                   Gasto estimado
                 </p>
@@ -5120,6 +5193,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             </div>
 
             <button
+              type="button"
               onClick={() => setShowWorkoutModal(true)}
               className="bg-orange-500 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-100 active:scale-95 transition-all"
             >
@@ -5139,12 +5213,14 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                       <p className="text-sm font-black text-gray-800">
                         {WORKOUT_TYPES.find((wt: any) => wt.key === w.type)?.label}
                       </p>
+
                       <p className="text-[10px] text-gray-500 font-bold uppercase">
                         {w.duration > 0 ? `${w.duration} min` : 'Manual'} · {w.burned} calorias
                       </p>
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => deleteWorkout(w.id)}
                       className="p-2 text-gray-300 hover:text-red-500 transition-colors"
                     >
@@ -5163,6 +5239,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                   <span className="text-2xl font-black text-orange-600">
                     {burned}
                   </span>
+
                   <span className="text-[10px] font-bold text-orange-400 uppercase">
                     calorias
                   </span>
@@ -5196,9 +5273,11 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
               className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar"
             >
               <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
+
               <h2 className="text-3xl font-black text-gray-900 mb-2">
                 Novo Exercício
               </h2>
+
               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">
                 Adicione um ou mais realizados hoje
               </p>
@@ -5218,6 +5297,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
     </div>
   );
 }
+
 function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void; onSave: (w: Workout) => void; estimateBurned: any }) {
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [type, setType] = useState<WorkoutType>('musculacao');
@@ -6068,19 +6148,6 @@ const handleAddBlock = () => {
     Trocar opção
   </button>
 
-  <button
-  type="button"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    addPlanOptionToday(cfg.key, option);
-  }}
-  className="flex-[1.2] inline-flex justify-center items-center gap-2 px-4 py-3 bg-green-50 text-green-600 hover:bg-green-100 border border-green-100 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
->
-  <Plus size={14} />
-  Registrar Hoje
-</button>
 </div>
               </div>
 
