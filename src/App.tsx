@@ -4768,10 +4768,12 @@ function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void;
     </div>
   );
 }
+
 function RecipeLibrary() {
   const { userProfile, addRecipeToPlan } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<FitnessRecipe | null>(null);
+  const [hiddenRecipeImages, setHiddenRecipeImages] = useState<Record<string, boolean>>({});
 
   const recipeIsAllowed = (recipe: FitnessRecipe) => {
     if (!userProfile) return true;
@@ -4795,6 +4797,23 @@ function RecipeLibrary() {
 
   const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed);
   const configs = userProfile ? MEAL_CONFIGS[userProfile.mealCount] : MEAL_CONFIGS[4];
+
+  // Mostra imagem só nas receitas que estão confiáveis por enquanto.
+  const curatedImageIds = new Set([
+    'aveia-gelada-banana',
+    'panqueca-banana-aveia',
+    'wrap-frango',
+    'sanduiche-frango',
+    'omelete-queijo-tomate',
+    'bowl-frango-quinoa',
+    'smoothie-morango-iogurte',
+  ]);
+
+  const handleAddRecipeToPlan = (recipe: FitnessRecipe, mealKey: string) => {
+    addRecipeToPlan(recipe, mealKey as any);
+    setSelectedRecipe(null);
+    setIsOpen(false);
+  };
 
   return (
     <>
@@ -4869,84 +4888,106 @@ function RecipeLibrary() {
               </div>
 
               <div className="space-y-4">
-                {visibleRecipes.map((recipe) => (
-                  <div
-                    key={recipe.id}
-                    className="overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
-                  >
-                    <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white shadow-sm">
-                          <Utensils size={24} className="text-green-600" />
+                {visibleRecipes.map((recipe) => {
+                  const canShowImage =
+                    !!recipe.image &&
+                    curatedImageIds.has(recipe.id) &&
+                    !hiddenRecipeImages[recipe.id];
+
+                  return (
+                    <div
+                      key={recipe.id}
+                      className="overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
+                    >
+                      <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
+                        {canShowImage ? (
+                          <img
+                            src={recipe.image}
+                            alt={recipe.friendlyTitle}
+                            className="relative z-10 h-full w-full object-cover"
+                            onError={() => {
+                              setHiddenRecipeImages((prev) => ({
+                                ...prev,
+                                [recipe.id]: true,
+                              }));
+                            }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white shadow-sm">
+                              <Utensils size={24} className="text-green-600" />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+
+                        <div className="absolute bottom-4 left-4 right-4 z-30">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
+                            {recipe.cal} kcal
+                          </p>
+
+                          <h4 className="mt-1 text-xl font-black leading-tight text-white">
+                            {recipe.friendlyTitle}
+                          </h4>
                         </div>
                       </div>
 
-                      {recipe.image ? (
-                        <img
-                          src={recipe.image}
-                          alt={recipe.friendlyTitle}
-                          className="relative z-10 h-full w-full object-cover"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : null}
-
-                      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
-
-                      <div className="absolute bottom-4 left-4 right-4 z-30">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
-                          {recipe.cal} kcal
+                      <div className="p-4">
+                        <p className="text-xs font-bold leading-relaxed text-gray-500">
+                          {recipe.description}
                         </p>
 
-                        <h4 className="mt-1 text-xl font-black leading-tight text-white">
-                          {recipe.friendlyTitle}
-                        </h4>
+                        <div className="mt-4 grid grid-cols-3 gap-2">
+                          <div className="rounded-2xl bg-blue-50 px-3 py-2">
+                            <p className="text-[9px] font-black uppercase text-blue-500">
+                              Prot.
+                            </p>
+                            <p className="mt-1 text-sm font-black text-blue-700">
+                              {recipe.p}g
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl bg-green-50 px-3 py-2">
+                            <p className="text-[9px] font-black uppercase text-green-500">
+                              Carbo
+                            </p>
+                            <p className="mt-1 text-sm font-black text-green-700">
+                              {recipe.c}g
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl bg-orange-50 px-3 py-2">
+                            <p className="text-[9px] font-black uppercase text-orange-500">
+                              Gord.
+                            </p>
+                            <p className="mt-1 text-sm font-black text-orange-700">
+                              {recipe.f}g
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRecipe(recipe)}
+                            className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-gray-600"
+                          >
+                            Ver preparo
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRecipe(recipe)}
+                            className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
+                          >
+                            Escolher refeição
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="p-4">
-                      <p className="text-xs font-bold leading-relaxed text-gray-500">
-                        {recipe.description}
-                      </p>
-
-                      <div className="mt-4 grid grid-cols-3 gap-2">
-                        <div className="rounded-2xl bg-blue-50 px-3 py-2">
-                          <p className="text-[9px] font-black uppercase text-blue-500">Prot.</p>
-                          <p className="mt-1 text-sm font-black text-blue-700">{recipe.p}g</p>
-                        </div>
-
-                        <div className="rounded-2xl bg-green-50 px-3 py-2">
-                          <p className="text-[9px] font-black uppercase text-green-500">Carbo</p>
-                          <p className="mt-1 text-sm font-black text-green-700">{recipe.c}g</p>
-                        </div>
-
-                        <div className="rounded-2xl bg-orange-50 px-3 py-2">
-                          <p className="text-[9px] font-black uppercase text-orange-500">Gord.</p>
-                          <p className="mt-1 text-sm font-black text-orange-700">{recipe.f}g</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedRecipe(recipe)}
-                          className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-gray-600"
-                        >
-                          Ver preparo
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => addRecipeToPlan(recipe, configs[0].key)}
-                          className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
-                        >
-                          Adicionar agora
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </motion.div>
@@ -4963,20 +5004,25 @@ function RecipeLibrary() {
           >
             <div className="mx-auto max-w-md overflow-hidden rounded-[36px] bg-white shadow-2xl">
               <div className="relative h-56 bg-gradient-to-br from-green-50 to-emerald-100">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Utensils size={34} className="text-green-600" />
-                </div>
-
-                {selectedRecipe.image ? (
+                {selectedRecipe.image &&
+                curatedImageIds.has(selectedRecipe.id) &&
+                !hiddenRecipeImages[selectedRecipe.id] ? (
                   <img
                     src={selectedRecipe.image}
                     alt={selectedRecipe.friendlyTitle}
                     className="relative z-10 h-full w-full object-cover"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none';
+                    onError={() => {
+                      setHiddenRecipeImages((prev) => ({
+                        ...prev,
+                        [selectedRecipe.id]: true,
+                      }));
                     }}
                   />
-                ) : null}
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Utensils size={34} className="text-green-600" />
+                  </div>
+                )}
 
                 <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
@@ -5073,7 +5119,7 @@ function RecipeLibrary() {
                     <button
                       key={`${selectedRecipe.id}-${config.key}`}
                       type="button"
-                      onClick={() => addRecipeToPlan(selectedRecipe, config.key)}
+                      onClick={() => handleAddRecipeToPlan(selectedRecipe, config.key)}
                       className="rounded-2xl border border-green-100 bg-green-50 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-green-700"
                     >
                       Adicionar no {config.label}
@@ -5088,6 +5134,7 @@ function RecipeLibrary() {
     </>
   );
 }
+
 function PlanoScreen() {
   const { userProfile, mealPlan, generateNewPlan, swapMealItem, updateProfile, handleProfileUpdate } = useApp();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -7717,6 +7764,7 @@ function RefeicoesListScreen({
     </div>
   );
 }
+
 function CirculoScreenFoodstagram() {
   const { userProfile, meals, workouts, calorieGoal, getTotals } = useApp();
 
@@ -7859,9 +7907,14 @@ function CirculoScreenFoodstagram() {
             </p>
           </div>
 
-          <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-2xl">
+          <button
+            type="button"
+            onClick={() => setSelectedMember(members[0])}
+            className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
+            aria-label="Abrir meu resumo"
+          >
             <Users size={24} />
-          </div>
+          </button>
         </div>
 
         <div className="mt-6 bg-white/15 border border-white/10 rounded-[28px] p-4 backdrop-blur-md flex items-center gap-3">
@@ -7890,7 +7943,7 @@ function CirculoScreenFoodstagram() {
 
             <button
               type="button"
-              onClick={() => setSelectedMember(members[1] || members[0])}
+              onClick={() => setSelectedMember(members[0])}
               className="px-3 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
             >
               Ver dia
@@ -7981,11 +8034,11 @@ function CirculoScreenFoodstagram() {
                   ) : (
                     <div className="text-center px-6">
                       <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
-                       {post.type === 'workout' ? (
-  <Activity size={38} className="text-green-600" />
-) : (
-  <Camera size={38} className="text-green-600" />
-)}
+                        {post.type === 'workout' ? (
+                          <Activity size={38} className="text-green-600" />
+                        ) : (
+                          <Camera size={38} className="text-green-600" />
+                        )}
                       </div>
 
                       <p className="text-sm font-black text-green-700">
@@ -8060,6 +8113,10 @@ function CirculoScreenFoodstagram() {
                   </div>
 
                   <div>
+                    <p className="text-xs font-bold text-green-600">
+                      Resumo do dia
+                    </p>
+
                     <p className="text-lg font-black text-gray-900">
                       {selectedMember.name}
                     </p>
@@ -8125,6 +8182,7 @@ function CirculoScreenFoodstagram() {
     </div>
   );
 }
+
 function AddMealScreen({
   onBack,
 }: {
