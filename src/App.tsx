@@ -10,7 +10,7 @@ import {
   Info, Minus, ChevronDown, ChevronUp, Search, X, Check, Flame, Trophy,
   Calendar, MessageSquare, Rocket, Star, ThumbsUp as ThumbsUpIcon,
   Book, PlusCircle, Users, User, LayoutGrid, Shuffle, Sliders, Settings, AlertCircle, ShieldCheck,
-  Smartphone, Share, ChevronRight, Sparkles, UserPlus, Share2, Camera
+  Smartphone, Share, ChevronRight, Sparkles, UserPlus, Share2, Camera,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileFrame } from './components/MobileFrame';
@@ -8710,176 +8710,147 @@ function RefeicoesListScreen({
     </div>
   );
 }
+const getStreakStyle = (days: number) => {
+  if (days < 3) {
+    return {
+      color: 'text-orange-300',
+      bg: 'bg-orange-50',
+      ring: 'ring-orange-200/40',
+      icon: Flame,
+      title: 'Aquecendo os motores',
+      subtitle: 'O círculo está começando a ganhar ritmo.',
+    };
+  }
 
+  if (days < 7) {
+    return {
+      color: 'text-orange-500',
+      bg: 'bg-orange-100',
+      ring: 'ring-orange-300/50',
+      icon: Flame,
+      title: 'Ganhando ritmo!',
+      subtitle: 'Vocês estão mantendo a consistência juntos.',
+    };
+  }
+
+  if (days < 15) {
+    return {
+      color: 'text-red-500',
+      bg: 'bg-red-100',
+      ring: 'ring-red-300/50',
+      icon: Flame,
+      title: 'Círculo em chamas!',
+      subtitle: 'A sequência do grupo está forte.',
+    };
+  }
+
+  return {
+    color: 'text-indigo-500',
+    bg: 'bg-indigo-100',
+    ring: 'ring-indigo-300/50',
+    icon: Zap,
+    title: 'Intocáveis!',
+    subtitle: 'O círculo virou referência de disciplina.',
+  };
+};
 function CirculoScreenFoodstagram() {
-  const { userProfile, meals, workouts, calorieGoal, getTotals } = useApp();
+  const {
+    meals,
+    workouts,
+    getTotals,
+    calorieGoal,
+  } = useApp();
 
-  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
-const [selectedMember, setSelectedMember] = useState<any | null>(null);
-const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
-const [showInviteModal, setShowInviteModal] = useState(false);
-const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
-
-  const inviteCode = 'FC-9921';
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
 
   const totals = getTotals();
-  const consumed = Math.round(safeNumber(totals.cal));
-  const goal = Math.round(safeNumber(calorieGoal, 1800));
+  const burned = workouts.reduce(
+    (acc: number, workout: any) => acc + safeNumber(workout.burned),
+    0
+  );
 
-  const burned = Array.isArray(workouts)
-    ? workouts.reduce((sum: number, workout: any) => sum + safeNumber(workout.burned), 0)
-    : 0;
+  const streakDays = 8;
 
   const members = [
     {
       id: 'me',
-      name: userProfile?.name || 'Você',
-      avatar: '👤',
-      status: 'Online',
-      consumed,
-      goal,
-      burned: Math.round(burned),
+      name: 'Você',
+      avatar: '🧑',
+      status: meals.length > 0 ? 'Registrou hoje' : 'Ainda sem registro',
+      goal: calorieGoal,
+      consumed: totals.cal,
+      burned,
     },
     {
       id: 'partner',
-      name: 'Partner ❤️',
-      avatar: '👩',
-      status: 'Ativo há 5 min',
-      consumed: 1240,
-      goal: 2040,
-      burned: 280,
+      name: 'Partner 💖',
+      avatar: '🦁',
+      status: 'Meta em andamento',
+      goal: 1800,
+      consumed: 1320,
+      burned: 260,
     },
     {
       id: 'ana',
       name: 'Ana',
       avatar: 'A',
-      status: 'Ativa há 1h',
-      consumed: 1580,
-      goal: 1900,
+      status: 'Registrou almoço',
+      goal: 1650,
+      consumed: 980,
       burned: 180,
     },
     {
       id: 'lucas',
       name: 'Lucas',
       avatar: 'L',
-      status: 'Ativo hoje',
-      consumed: 1720,
+      status: 'Treino feito',
       goal: 2100,
-      burned: 310,
+      consumed: 1450,
+      burned: 420,
     },
   ];
 
-  const mealLabel = (type: string) => {
-    const configs = [
-      ...(MEAL_CONFIGS[3] || []),
-      ...(MEAL_CONFIGS[4] || []),
-      ...(MEAL_CONFIGS[5] || []),
-      ...(MEAL_CONFIGS[6] || []),
-    ];
-
-    return configs.find((cfg) => cfg.key === type)?.label || 'Refeição';
-  };
-
-  const localMealPosts = Array.isArray(meals)
-    ? meals.map((meal: any) => ({
-        id: `meal-${meal.id}`,
-        author: userProfile?.name || 'Você',
-        avatar: '👤',
-        title: meal.items?.[0]?.food?.name || `${mealLabel(meal.type)} registrado`,
-        subtitle: mealLabel(meal.type),
-        calories: Math.round(safeNumber(meal.cal || meal.calories)),
-        time: meal.time || 'Hoje',
-        image: '',
-        type: 'meal',
-      }))
-    : [];
-
-  const demoPosts = [
+  const posts = [
     {
-      id: 'partner-breakfast',
-      author: 'Partner ❤️',
-      avatar: '👩',
-      title: 'Café da manhã registrado',
-      subtitle: 'Começou o dia com consistência',
-      calories: 320,
-      time: '08:15',
-      image: '/recipes/panqueca-banana-aveia.jpg',
-      type: 'meal',
+      id: 'me-today',
+      member: 'Você',
+      avatar: '🧑',
+      time: new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      type: meals.length > 0 ? 'meal' : 'empty',
+      title: meals.length > 0 ? meals[0].items?.[0]?.food?.name || 'Registro do dia' : 'Registro do dia',
+      subtitle: meals.length > 0 ? `${meals[0].type || 'Refeição'} registrada` : 'Sem foto publicada',
+      calories: meals.length > 0 ? meals[0].cal : totals.cal,
     },
     {
-      id: 'partner-lunch',
-      author: 'Partner ❤️',
-      avatar: '👩',
-      title: 'Arroz, feijão e frango',
-      subtitle: 'Almoço registrado',
-      calories: 559,
-      time: '12:30',
-      image: '',
+      id: 'partner-today',
+      member: 'Partner 💖',
+      avatar: '🦁',
+      time: '14:10',
       type: 'meal',
-    },
-    {
-      id: 'partner-workout',
-      author: 'Partner ❤️',
-      avatar: '👩',
-      title: 'Musculação concluída',
-      subtitle: '45 min de treino',
-      calories: 280,
-      time: '10:40',
-      image: '',
-      type: 'workout',
+      title: 'Almoço registrado',
+      subtitle: 'Seguindo o plano do dia',
+      calories: 520,
     },
   ];
-
-  const posts = [...localMealPosts, ...demoPosts];
-
-  const toggleLike = (postId: string) => {
-    setLikedPosts((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
-  };
-
-  const copyInviteCode = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteCode);
-      setInviteCopied(true);
-
-      setTimeout(() => {
-        setInviteCopied(false);
-      }, 1800);
-    } catch {
-      setInviteCopied(true);
-
-      setTimeout(() => {
-        setInviteCopied(false);
-      }, 1800);
-    }
-  };
-
-  const shareInvite = async () => {
-    const text = `Venha participar do meu Círculo no FitCircle! Código: ${inviteCode}`;
-
-    if (navigator.share) {
-      await navigator.share({
-        title: 'FitCircle',
-        text,
-      });
-      return;
-    }
-
-    await copyInviteCode();
-  };
 
   return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
-      <div className="bg-[#16A34A] pt-12 px-6 pb-8 rounded-b-[42px] text-white shadow-xl">
-        <div className="flex items-start justify-between gap-4">
+    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-28 overflow-x-hidden">
+      <div className="relative bg-green-600 px-6 pt-12 pb-12 rounded-b-[40px] text-white overflow-hidden">
+        <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-white/10" />
+        <div className="absolute -left-16 bottom-0 w-44 h-44 rounded-full bg-black/10" />
+
+        <div className="relative z-10 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold text-white/75">
+            <p className="text-[10px] font-black text-white/75 uppercase tracking-widest">
               Círculo
             </p>
 
-            <h1 className="text-2xl font-black mt-1">
+            <h1 className="mt-2 text-3xl font-black leading-tight">
               Círculo de apoio
             </h1>
           </div>
@@ -8887,98 +8858,116 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
-            className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-95 transition-all"
-            aria-label="Convidar para o círculo"
+            className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-2xl active:scale-95 transition-all"
           >
-            <UserPlus size={20} className="text-white" />
+            👥
           </button>
         </div>
 
-        <div className="mt-6 bg-white/15 border border-white/10 rounded-[28px] p-4 backdrop-blur-md flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-white text-orange-500 flex items-center justify-center shadow-lg text-2xl">
-            🔥
-          </div>
+        <div className="relative z-10 mt-8 bg-white/10 backdrop-blur-md rounded-[28px] p-4 border border-white/20 shadow-inner">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-16 h-16 rounded-[24px] flex items-center justify-center shadow-inner bg-orange-100 ring-4 ring-orange-300/40">
+                <span className="text-3xl">🔥</span>
+              </div>
 
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
-              Ofensiva compartilhada
-            </p>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">
+                  Ofensiva do Círculo
+                </p>
 
-            <p className="text-sm font-black leading-snug mt-1">
-              Vocês bateram a meta juntos por 3 dias seguidos!
-            </p>
+                <p className="text-base font-black text-white tracking-tight leading-tight">
+                  Círculo em chamas!
+                </p>
+
+                <p className="text-[10px] font-bold text-white/65 leading-snug mt-1">
+                  Vocês estão mantendo a consistência juntos.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <p className="text-4xl font-black text-white leading-none">
+                {streakDays}
+              </p>
+
+              <p className="text-[9px] font-black text-white/65 uppercase tracking-widest mt-1">
+                dias
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="px-5 -mt-4 relative z-10">
-        <div className="bg-white rounded-[30px] border border-gray-100 shadow-xl shadow-gray-100/70 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
-              Seu círculo
-            </p>
+      <div className="-mt-8 px-5 relative z-20 space-y-8">
+        <div className="bg-white rounded-[34px] p-5 shadow-xl shadow-gray-200/60 border border-gray-100">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                Seu círculo
+              </p>
+
+              <h2 className="mt-1 text-xl font-black text-gray-900">
+                Grupo atual
+              </h2>
+            </div>
 
             <button
               type="button"
-              onClick={() => setSelectedMember(members[0])}
-              className="px-3 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+              onClick={() => setShowInviteModal(true)}
+              className="px-4 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
             >
-              Ver dia
+              Convidar
             </button>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-            {members.map((member) => (
+          <div className="flex justify-between gap-3">
+            {members.map(member => (
               <button
                 key={member.id}
                 type="button"
                 onClick={() => setSelectedMember(member)}
-                className="min-w-[68px] flex flex-col items-center gap-2 active:scale-95 transition-all"
+                className="flex-1 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
               >
-                <div className="w-14 h-14 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center text-xl font-black text-green-700 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl font-black text-green-700 overflow-hidden">
                   {member.avatar}
                 </div>
 
-                <span className="text-[10px] font-black text-gray-700 truncate max-w-[66px]">
+                <p className="w-full truncate text-center text-[10px] font-black text-gray-700">
                   {member.name}
-                </span>
+                </p>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="mt-5 space-y-5">
-          <div>
-            <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
-              Atualizações
-            </p>
+        <div>
+          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">
+            Atualizações
+          </p>
 
-            <h2 className="text-xl font-black text-gray-900">
-              O que rolou hoje
-            </h2>
-          </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-5">
+            O que rolou hoje
+          </h2>
 
-          {posts.map((post) => {
-            const liked = !!likedPosts[post.id];
-            const shouldShowImage = Boolean(post.image) && !hiddenImages[post.id];
-
-            return (
+          <div className="space-y-4">
+            {posts.map(post => (
               <div
                 key={post.id}
-                className="bg-white rounded-[34px] border border-gray-100 shadow-xl shadow-gray-100/70 overflow-hidden"
+                className="bg-white rounded-[34px] overflow-hidden border border-gray-100 shadow-sm"
               >
                 <div className="p-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-lg shrink-0">
+                    <div className="w-11 h-11 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-lg font-black text-green-700 shrink-0">
                       {post.avatar}
                     </div>
 
                     <div className="min-w-0">
                       <p className="text-sm font-black text-gray-900 truncate">
-                        {post.author}
+                        {post.member}
                       </p>
 
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                      <p className="text-[10px] font-bold text-gray-400">
                         {post.time}
                       </p>
                     </div>
@@ -8986,50 +8975,29 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
 
                   <button
                     type="button"
-                    onClick={() => toggleLike(post.id)}
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center border transition-all active:scale-90 text-xl ${
-                      liked
-                        ? 'bg-red-50 border-red-100 text-red-500'
-                        : 'bg-gray-50 border-gray-100 text-gray-400'
-                    }`}
-                    aria-label="Curtir"
+                    className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center active:scale-95 transition-all"
                   >
-                    {liked ? '❤️' : '🤍'}
+                    💜
                   </button>
                 </div>
 
-                <div className="mx-4 h-52 rounded-[28px] overflow-hidden bg-green-50 border border-green-100 flex items-center justify-center">
-                  {shouldShowImage ? (
-                    <img
-                      src={post.image}
-                      alt={post.title}
-                      className="w-full h-full object-cover"
-                      onError={() => {
-                        setHiddenImages((prev) => ({ ...prev, [post.id]: true }));
-                      }}
-                    />
-                  ) : (
-                    <div className="text-center px-6">
-                      <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
-                        {post.type === 'workout' ? (
-                          <Activity size={38} className="text-green-600" />
-                        ) : (
-                          <Camera size={38} className="text-green-600" />
-                        )}
-                      </div>
-
-                      <p className="text-sm font-black text-green-700">
-                        {post.type === 'workout' ? 'Treino registrado' : 'Registro do dia'}
-                      </p>
-
-                      <p className="mt-1 text-[11px] font-bold text-green-600">
-                        {post.type === 'workout' ? 'Movimento registrado' : 'Sem foto publicada'}
-                      </p>
+                <div className="mx-4 mb-4 rounded-[28px] bg-green-50 border border-green-100 min-h-[150px] flex items-center justify-center text-center p-6">
+                  <div>
+                    <div className="mx-auto mb-4 w-16 h-16 rounded-[24px] bg-white shadow-sm flex items-center justify-center text-3xl">
+                      {post.type === 'workout' ? '🏋️' : '📷'}
                     </div>
-                  )}
+
+                    <p className="text-sm font-black text-green-700">
+                      {post.type === 'workout' ? 'Treino registrado' : 'Registro do dia'}
+                    </p>
+
+                    <p className="mt-1 text-[11px] font-bold text-green-600">
+                      {post.type === 'workout' ? 'Movimento registrado' : 'Sem foto publicada'}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="p-4">
+                <div className="p-4 pt-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-lg font-black text-gray-900 leading-tight">
@@ -9053,121 +9021,121 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
                   </div>
                 </div>
               </div>
-            );
-          })}
+            ))}
 
-          {posts.length === 0 && (
-            <div className="bg-white rounded-[34px] p-8 border border-gray-100 shadow-sm text-center">
-              <p className="text-sm font-bold text-gray-400 leading-relaxed">
-                Nenhuma atividade recente ainda.
-              </p>
-            </div>
-          )}
+            {posts.length === 0 && (
+              <div className="bg-white rounded-[34px] p-8 border border-gray-100 shadow-sm text-center">
+                <p className="text-sm font-bold text-gray-400 leading-relaxed">
+                  Nenhuma atividade recente ainda.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-<AnimatePresence>
-  {showInviteModal && (
-    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={() => setShowInviteModal(false)}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-      />
+      <AnimatePresence>
+        {showInviteModal && (
+          <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInviteModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
 
-      <motion.div
-        initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }}
-        className="relative z-10 w-full max-w-sm overflow-hidden rounded-[36px] bg-white p-6 shadow-2xl"
-      >
-        <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50 rounded-full -mr-20 -mt-20 opacity-50" />
-
-        <div className="relative z-10 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-gray-900">
-              Convidar amigos
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowInviteModal(false)}
-            className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors shadow-sm"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="space-y-6 relative z-10 mt-5">
-          <p className="text-sm font-bold text-gray-500 leading-relaxed text-center px-4">
-            Compartilhe seu link exclusivo. Quem clicar poderá entrar no seu círculo.
-          </p>
-
-          <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-2xl p-2 pl-4">
-            <span className="text-sm font-bold text-gray-600 truncate mr-2 select-all">
-              fitcircle.app/c/FC-9921
-            </span>
-
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText('https://fitcircle.app/c/FC-9921');
-                  setIncentiveFeedback('Link copiado!');
-                  setTimeout(() => setIncentiveFeedback(null), 2000);
-                } catch (error) {
-                  setIncentiveFeedback('Copie: fitcircle.app/c/FC-9921');
-                  setTimeout(() => setIncentiveFeedback(null), 2500);
-                }
-              }}
-              className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-sm"
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="relative z-10 w-full max-w-sm overflow-hidden rounded-[36px] bg-white p-6 shadow-2xl"
             >
-              Copiar
-            </button>
+              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50 rounded-full -mr-20 -mt-20 opacity-50" />
+
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight text-gray-900">
+                    Convidar amigos
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors shadow-sm"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-6 relative z-10 mt-5">
+                <p className="text-sm font-bold text-gray-500 leading-relaxed text-center px-4">
+                  Compartilhe seu link exclusivo. Quem clicar poderá entrar no seu círculo.
+                </p>
+
+                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-2xl p-2 pl-4">
+                  <span className="text-sm font-bold text-gray-600 truncate mr-2 select-all">
+                    fitcircle.app/c/FC-9921
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText('https://fitcircle.app/c/FC-9921');
+                        setIncentiveFeedback('Link copiado!');
+                        setTimeout(() => setIncentiveFeedback(null), 2000);
+                      } catch (error) {
+                        setIncentiveFeedback('Copie: fitcircle.app/c/FC-9921');
+                        setTimeout(() => setIncentiveFeedback(null), 2500);
+                      }
+                    }}
+                    className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-sm"
+                  >
+                    Copiar
+                  </button>
+                </div>
+
+                {incentiveFeedback && (
+                  <div className="rounded-2xl bg-green-50 border border-green-100 px-4 py-3 text-center">
+                    <p className="text-xs font-black text-green-600 uppercase tracking-widest">
+                      {incentiveFeedback}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const shareData = {
+                      title: 'Convite FitCircle',
+                      text: 'Vem treinar comigo no FitCircle! Entre no meu círculo:',
+                      url: 'https://fitcircle.app/c/FC-9921',
+                    };
+
+                    try {
+                      if (navigator.share) {
+                        await navigator.share(shareData);
+                      } else {
+                        await navigator.clipboard.writeText(shareData.url);
+                        setIncentiveFeedback('Link copiado!');
+                        setTimeout(() => setIncentiveFeedback(null), 2000);
+                      }
+                    } catch (error) {
+                      setIncentiveFeedback('Compartilhamento cancelado');
+                      setTimeout(() => setIncentiveFeedback(null), 2000);
+                    }
+                  }}
+                  className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-200/50"
+                >
+                  Compartilhar link
+                </button>
+              </div>
+            </motion.div>
           </div>
-
-          {incentiveFeedback && (
-            <div className="rounded-2xl bg-green-50 border border-green-100 px-4 py-3 text-center">
-              <p className="text-xs font-black text-green-600 uppercase tracking-widest">
-                {incentiveFeedback}
-              </p>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={async () => {
-              const shareData = {
-                title: 'Convite FitCircle',
-                text: 'Vem treinar comigo no FitCircle! Entre no meu círculo:',
-                url: 'https://fitcircle.app/c/FC-9921',
-              };
-
-              try {
-                if (navigator.share) {
-                  await navigator.share(shareData);
-                } else {
-                  await navigator.clipboard.writeText(shareData.url);
-                  setIncentiveFeedback('Link copiado!');
-                  setTimeout(() => setIncentiveFeedback(null), 2000);
-                }
-              } catch (error) {
-                setIncentiveFeedback('Compartilhamento cancelado');
-                setTimeout(() => setIncentiveFeedback(null), 2000);
-              }
-            }}
-            className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-200/50"
-          >
-            Compartilhar link
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  )}
-</AnimatePresence>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedMember && (
@@ -9255,845 +9223,6 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
               >
                 Fechar
               </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function AddMealScreen({
-  onBack,
-}: {
-  onBack: () => void;
-}) {
-  const {
-    pendingMealType,
-    pendingEditMealId,
-    setPendingMealType,
-    setPendingEditMealId,
-    addMeal,
-    updateMeal,
-    deleteMeal,
-    mealPlan,
-    meals,
-  } = useApp();
-
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [manualItems, setManualItems] = useState<MealEntry[]>([]);
-
-  const editingMeal = pendingEditMealId
-    ? meals.find((meal: any) => meal.id === pendingEditMealId)
-    : null;
-
-  const currentMealType = editingMeal?.type || pendingMealType || 'cafe';
-  const planOptions = mealPlan[currentMealType] || [];
-
-  useEffect(() => {
-    if (editingMeal?.items?.length) {
-      setManualItems(editingMeal.items);
-    }
-  }, [pendingEditMealId]);
-
-  const getMealTitle = () => {
-    const normalized = String(currentMealType || '').toLowerCase();
-
-    if (normalized === 'cafe') return 'Café da manhã';
-    if (normalized === 'almoco') return 'Almoço';
-    if (normalized === 'jantar') return 'Jantar';
-    if (normalized === 'lanche') return 'Lanche da tarde';
-    if (normalized === 'lanchemanha') return 'Lanche da manhã';
-    if (normalized === 'ceia') return 'Ceia';
-
-    return 'Refeição';
-  };
-
-  const closeAndBack = () => {
-    setPendingMealType(null);
-    setPendingEditMealId(null);
-    setShowManualModal(false);
-    setManualItems([]);
-    onBack();
-  };
-
-  const getFoodFromLine = (line: string) => {
-    return [...FOOD_DATABASE]
-      .sort((a, b) => b.name.length - a.name.length)
-      .find(food =>
-        normalizePlanText(line).includes(normalizePlanText(food.name))
-      );
-  };
-
-  const buildItemsFromPlanOption = (option: any): MealEntry[] => {
-    const lines = sanitizeOptionQtyText(option?.qty || '')
-      .split(' + ')
-      .map(line => line.trim())
-      .filter(Boolean);
-
-    const items = lines.map((line) => {
-      const matchedFood = getFoodFromLine(line);
-
-      if (!matchedFood) {
-        return {
-          food: {
-            name: line,
-            cal: 0,
-            p: 0,
-            c: 0,
-            f: 0,
-            category: 'Plano',
-          } as FoodItem,
-          qty: 1,
-          unit: 'un',
-          cal: 0,
-          p: 0,
-          c: 0,
-          f: 0,
-        };
-      }
-
-      const grams = getApproxGramsFromPlanLine(line, matchedFood);
-      const safeGrams = grams > 0 ? grams : 100;
-      const factor = safeGrams / 100;
-
-      return {
-        food: matchedFood,
-        qty: Math.round(safeGrams),
-        unit: 'g',
-        cal: Math.round(safeNumber(matchedFood.cal) * factor),
-        p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
-        c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
-        f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
-      };
-    });
-
-    return items;
-  };
-
-  const getItemsTotals = (items: MealEntry[]) => {
-    const totals = items.reduce(
-      (acc, item) => ({
-        cal: acc.cal + safeNumber(item.cal),
-        p: acc.p + safeNumber(item.p),
-        c: acc.c + safeNumber(item.c),
-        f: acc.f + safeNumber(item.f),
-      }),
-      { cal: 0, p: 0, c: 0, f: 0 }
-    );
-
-    return {
-      cal: Math.round(totals.cal),
-      p: Math.round(totals.p),
-      c: Math.round(totals.c),
-      f: Math.round(totals.f),
-    };
-  };
-
-  const getPlanOptionTotals = (option: any) => {
-    const items = buildItemsFromPlanOption(option);
-    const totals = getItemsTotals(items);
-
-    return {
-      items,
-      cal: totals.cal || Math.round(safeNumber(option?.cal)),
-      p: totals.p,
-      c: totals.c,
-      f: totals.f,
-    };
-  };
-
-  const cleanFoodName = (value: string) => {
-    return String(value || '')
-      .replace(/\s+\d+([,.]\d+)?\s*(g|ml|unidade|unidades|un|fatia|fatias|pote|potes|colher|colheres|colher de sopa|colheres de sopa|à vontade)/gi, '')
-      .replace(/\s+à vontade/gi, '')
-      .trim();
-  };
-
-  const getHumanizedPlanTitle = (option: any) => {
-    const rawTitle = String(option?.name || '').trim();
-    const qtyText = sanitizeOptionQtyText(option?.qty || '');
-
-    const text = normalizePlanText(`${rawTitle} ${qtyText}`);
-
-    const hasFrango = text.includes('frango');
-    const hasPatinho = text.includes('patinho') || text.includes('carne moida') || text.includes('carne moída');
-    const hasTofu = text.includes('tofu');
-    const hasPeixe = text.includes('tilapia') || text.includes('tilápia') || text.includes('peixe') || text.includes('atum');
-    const hasOvo = text.includes('ovo');
-    const hasLentilha = text.includes('lentilha');
-    const hasGraoBico = text.includes('grao-de-bico') || text.includes('grão-de-bico');
-
-    const hasArroz = text.includes('arroz');
-    const hasArrozIntegral = text.includes('arroz integral');
-    const arrozLabel = hasArrozIntegral ? 'arroz integral' : 'arroz';
-
-    const hasFeijao = text.includes('feijao') || text.includes('feijão');
-    const hasLegumes = text.includes('legumes');
-    const hasSalada = text.includes('salada');
-    const hasBatata = text.includes('batata');
-    const hasMacarrao = text.includes('macarrao') || text.includes('macarrão');
-    const hasMandioca = text.includes('mandioca');
-    const hasInhame = text.includes('inhame');
-
-    if (currentMealType === 'almoco' || currentMealType === 'jantar') {
-      if (hasFrango && hasArroz && hasFeijao) return `Frango com ${arrozLabel}, feijão e salada`;
-      if (hasPatinho && hasArroz && hasFeijao) return `Carne moída com ${arrozLabel} e feijão`;
-      if (hasTofu && hasArroz && hasFeijao) return `Tofu com ${arrozLabel}, feijão e salada`;
-      if (hasPeixe && hasBatata) return 'Peixe com batata e legumes';
-      if (hasFrango && hasBatata) return 'Frango com batata e salada';
-      if (hasPatinho && hasMacarrao) return 'Macarrão com carne moída';
-      if (hasFrango && hasMandioca) return 'Frango com mandioca e salada';
-      if (hasPatinho && hasInhame) return 'Carne magra com inhame';
-      if (hasLentilha && hasBatata) return 'Lentilha com batata e salada';
-      if (hasGraoBico) return 'Grão-de-bico com legumes';
-      if (hasOvo && hasSalada) return 'Omelete com salada';
-      if (hasLegumes && hasFrango) return 'Frango com legumes';
-      if (hasLegumes && hasPatinho) return 'Carne moída com legumes';
-    }
-
-    if (currentMealType === 'cafe') {
-      if (text.includes('tapioca') && text.includes('banana')) return 'Tapioca com banana';
-      if (text.includes('pao') || text.includes('pão')) {
-        if (hasOvo) return 'Pão integral com ovos';
-        if (text.includes('queijo')) return 'Pão integral com queijo';
-        if (text.includes('requeijao') || text.includes('requeijão')) return 'Pão integral com requeijão';
-      }
-      if (text.includes('iogurte') && text.includes('aveia')) return 'Iogurte com aveia e fruta';
-      if (text.includes('panqueca')) return 'Panqueca de banana com aveia';
-      if (text.includes('aveia') && text.includes('banana')) return 'Aveia com banana';
-    }
-
-    if (currentMealType.includes('lanche') || currentMealType === 'ceia') {
-      if (text.includes('sanduiche') || text.includes('sanduíche')) {
-        if (hasFrango) return 'Sanduíche de frango';
-        if (text.includes('atum')) return 'Sanduíche de atum';
-      }
-      if (text.includes('iogurte') && text.includes('whey')) return 'Iogurte com whey e fruta';
-      if (text.includes('iogurte')) return 'Iogurte com fruta';
-      if (text.includes('queijo')) return 'Queijo minas com fruta';
-      if (text.includes('banana') && text.includes('aveia')) return 'Banana com aveia';
-      if (text.includes('batata-doce') && hasFrango) return 'Batata-doce com frango';
-    }
-
-    if (rawTitle) return rawTitle;
-
-    const firstLine = qtyText.split(' + ')[0] || 'Opção do plano';
-    return cleanFoodName(firstLine);
-  };
-
-  const getOptionDescription = (option: any) => {
-    const lines = sanitizeOptionQtyText(option?.qty || '')
-      .split(' + ')
-      .map(line => line.trim())
-      .filter(Boolean);
-
-    if (lines.length === 0) return 'Itens do seu plano alimentar.';
-
-    return lines
-      .slice(0, 4)
-      .map(line => {
-        const food = getFoodFromLine(line);
-        return food?.name || cleanFoodName(line);
-      })
-      .join(' + ');
-  };
-
-  const saveMealWithItems = (items: MealEntry[]) => {
-    if (items.length === 0) return;
-
-    const totals = getItemsTotals(items);
-    const now = new Date();
-
-    const newMeal = {
-      type: currentMealType,
-      time: now.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      items,
-      cal: totals.cal,
-      p: totals.p,
-      c: totals.c,
-      f: totals.f,
-    };
-
-    if (pendingEditMealId) {
-      updateMeal(pendingEditMealId, newMeal);
-    } else {
-      addMeal(newMeal);
-    }
-
-    closeAndBack();
-  };
-
-  const handleManualAdd = (entry: MealEntry) => {
-    setManualItems(prev => [...prev, entry]);
-  };
-
-  const removeManualItem = (indexToRemove: number) => {
-    setManualItems(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
-
-  const confirmDeleteMeal = () => {
-    if (!pendingEditMealId) return;
-
-    const confirmed = window.confirm('Excluir esta refeição? Essa ação não pode ser desfeita.');
-
-    if (!confirmed) return;
-
-    deleteMeal(pendingEditMealId);
-    closeAndBack();
-  };
-
-  const addPlanOption = (option: any) => {
-    const parsed = getPlanOptionTotals(option);
-
-    if (parsed.items.length === 0) {
-      saveMealWithItems([
-        {
-          food: {
-            name: option.name || 'Opção do plano',
-            cal: safeNumber(option.cal),
-            p: 0,
-            c: 0,
-            f: 0,
-            category: 'Plano',
-          } as FoodItem,
-          qty: 1,
-          unit: 'un',
-          cal: Math.round(safeNumber(option.cal)),
-          p: 0,
-          c: 0,
-          f: 0,
-        },
-      ]);
-      return;
-    }
-
-    saveMealWithItems(parsed.items);
-  };
-
-  const manualTotals = getItemsTotals(manualItems);
-
-  return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
-      <div className="bg-white pt-12 px-6 pb-6 border-b border-gray-100 flex items-center gap-4 sticky top-0 z-30">
-        <button
-          type="button"
-          onClick={closeAndBack}
-          className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
-        >
-          <X size={18} className="text-gray-500" />
-        </button>
-
-        <div>
-          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-            Hoje
-          </p>
-
-          <h1 className="text-xl font-black text-gray-900">
-            {pendingEditMealId ? `Editar ${getMealTitle()}` : 'Registrar refeição'}
-          </h1>
-
-          <p className="mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            {getMealTitle()}
-          </p>
-        </div>
-      </div>
-
-      {!pendingEditMealId && (
-        <div className="px-5 mt-5">
-          <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
-            <div className="mb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
-                Sugestões do seu plano
-              </p>
-
-              <p className="mt-1 text-xs font-bold text-green-700/70">
-                Toque no botão verde para registrar a opção escolhida.
-              </p>
-            </div>
-
-            {planOptions.length > 0 ? (
-              <div className="space-y-3">
-                {planOptions.slice(0, 3).map((option: any, index: number) => {
-                  const parsed = getPlanOptionTotals(option);
-                  const title = getHumanizedPlanTitle(option);
-                  const description = getOptionDescription(option);
-
-                  return (
-                    <div
-                      key={`${option.name}-${index}`}
-                      className="rounded-[26px] bg-white p-4 border border-gray-100 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-gray-900 leading-tight">
-                            {title}
-                          </p>
-
-                          <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400 line-clamp-2">
-                            {description}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <span className="rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
-                            {parsed.cal} cal
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() => addPlanOption(option)}
-                            className="w-10 h-10 shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-100 active:scale-90 transition-all"
-                            aria-label={`Registrar ${title}`}
-                          >
-                            <Plus size={20} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        <div className="rounded-2xl bg-blue-50 px-3 py-2">
-                          <p className="text-[8px] font-black uppercase text-blue-500">
-                            Prot.
-                          </p>
-                          <p className="text-xs font-black text-blue-700">
-                            {parsed.p}g
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl bg-green-50 px-3 py-2">
-                          <p className="text-[8px] font-black uppercase text-green-500">
-                            Carbo
-                          </p>
-                          <p className="text-xs font-black text-green-700">
-                            {parsed.c}g
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl bg-orange-50 px-3 py-2">
-                          <p className="text-[8px] font-black uppercase text-orange-500">
-                            Gord.
-                          </p>
-                          <p className="text-xs font-black text-orange-700">
-                            {parsed.f}g
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-[24px] bg-white p-5 text-center">
-                <p className="text-sm font-black text-gray-900">
-                  Nenhuma sugestão disponível
-                </p>
-
-                <p className="mt-1 text-xs font-bold text-gray-400">
-                  Use a opção de alimento avulso abaixo.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="px-5 mt-5">
-        <div className="rounded-[30px] border border-gray-100 bg-white p-4 shadow-sm">
-          <button
-            type="button"
-            onClick={() => setShowManualModal(true)}
-            className="w-full rounded-[24px] bg-gray-50 p-4 text-left active:scale-[0.99] transition-all"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-green-600 shadow-sm">
-                <Plus size={22} />
-              </div>
-
-              <div>
-                <p className="text-sm font-black text-gray-900">
-                  Adicionar alimento avulso
-                </p>
-
-                <p className="mt-1 text-xs font-bold text-gray-400">
-                  Monte sua refeição item por item.
-                </p>
-              </div>
-            </div>
-          </button>
-
-          {manualItems.length > 0 && (
-            <div className="mt-4 space-y-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Itens adicionados
-              </p>
-
-              {manualItems.map((item, index) => (
-                <div
-                  key={`${item.food.name}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-black text-gray-800 truncate">
-                      {item.food.name}
-                    </p>
-
-                    <p className="text-[10px] font-bold text-gray-400">
-                      {item.qty} {item.unit === 'g' ? 'g' : item.food.un || 'un'} ·{' '}
-                      {Math.round(safeNumber(item.cal))} cal
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeManualItem(index)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-gray-400"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-
-              <div className="rounded-2xl bg-green-50 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-black text-green-800">
-                    Total da refeição
-                  </p>
-
-                  <p className="text-lg font-black text-green-700">
-                    {manualTotals.cal} cal
-                  </p>
-                </div>
-
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                    <p className="text-[8px] font-black uppercase text-blue-500">
-                      Prot.
-                    </p>
-                    <p className="text-xs font-black text-blue-700">
-                      {manualTotals.p}g
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                    <p className="text-[8px] font-black uppercase text-green-500">
-                      Carbo
-                    </p>
-                    <p className="text-xs font-black text-green-700">
-                      {manualTotals.c}g
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                    <p className="text-[8px] font-black uppercase text-orange-500">
-                      Gord.
-                    </p>
-                    <p className="text-xs font-black text-orange-700">
-                      {manualTotals.f}g
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => saveMealWithItems(manualItems)}
-                  className="mt-4 w-full rounded-2xl bg-green-500 py-4 text-[10px] font-black uppercase tracking-widest text-white active:scale-95 transition-all"
-                >
-                  {pendingEditMealId ? 'Salvar alterações' : 'Salvar refeição'}
-                </button>
-
-                {pendingEditMealId && (
-                  <button
-                    type="button"
-                    onClick={confirmDeleteMeal}
-                    className="mt-3 w-full rounded-2xl bg-red-50 py-4 text-[10px] font-black uppercase tracking-widest text-red-500 active:scale-95 transition-all"
-                  >
-                    Excluir refeição
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AddFoodModal
-        isOpen={showManualModal}
-        onClose={() => setShowManualModal(false)}
-        onAdd={handleManualAdd}
-      />
-    </div>
-  );
-}
-function Navigation() {
-  const {
-    isLoggedIn,
-    onboarded,
-    completeScreening,
-    setPendingEditMealId,
-    setPendingMealType,
-    addWorkout,
-    estimateBurned,
-  } = useApp();
-
-  const [screen, setScreen] = useState<'hoje' | 'plano' | 'registrar' | 'circulo' | 'perfil' | 'lista'>('hoje');
-  const [onboardingSub, setOnboardingSub] = useState<'welcome' | 'auth' | 'triagem'>('welcome');
-  const [tempProfile, setTempProfile] = useState<UserProfile | null>(null);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
-
-  useEffect(() => {
-    const handleNavigate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ screen?: any }>;
-
-      if (customEvent.detail?.screen) {
-        setScreen(customEvent.detail.screen);
-      }
-    };
-
-    window.addEventListener('fitcircle:navigate', handleNavigate);
-
-    return () => {
-      window.removeEventListener('fitcircle:navigate', handleNavigate);
-    };
-  }, []);
-
-  useEffect(() => {
-    const main = document.querySelector('main');
-    if (main) main.scrollTop = 0;
-  }, [screen, onboardingSub, isLoggedIn, onboarded, tempProfile]);
-
-  const navItems = [
-    { icon: Sun, label: 'Hoje', key: 'hoje' },
-    { icon: Book, label: 'Plano', key: 'plano' },
-    { icon: Plus, label: 'Add', key: 'registrar', central: true },
-    { icon: Users, label: 'Círculo', key: 'circulo' },
-    { icon: User, label: 'Perfil', key: 'perfil' },
-  ];
-
-  const handleQuickAdd = (type: 'meal' | 'workout') => {
-    setShowQuickAdd(false);
-
-    if (type === 'meal') {
-      setScreen('lista');
-      return;
-    }
-
-    setShowWorkoutModal(true);
-  };
-
-  if (!isLoggedIn) {
-    if (onboardingSub === 'welcome') {
-      return <WelcomeScreen onNext={() => setOnboardingSub('auth')} />;
-    }
-
-    return (
-      <AuthScreen
-        onLogin={() => setOnboardingSub('triagem')}
-        onSignup={() => setOnboardingSub('triagem')}
-      />
-    );
-  }
-
-  if (!onboarded) {
-    if (!tempProfile) {
-      return <TriagemScreen onComplete={(p) => setTempProfile(p)} />;
-    }
-
-    return (
-      <PlanBuilderScreen
-        profile={tempProfile}
-        onComplete={(final) => completeScreening(final)}
-      />
-    );
-  }
-
-  return (
-    <div className="relative flex flex-col h-full min-h-0 overflow-hidden bg-gray-50">
-      <main className="flex-1 min-h-0 overflow-y-auto w-full no-scrollbar scroll-smooth pb-20">
-        {screen === 'hoje' && (
-          <HojeScreen
-            onGoToList={() => setScreen('lista')}
-            onNavigate={setScreen}
-          />
-        )}
-
-        {screen === 'lista' && (
-          <RefeicoesListScreen
-            onBack={() => setScreen('hoje')}
-            onEdit={(id) => {
-              setPendingEditMealId(id);
-              setScreen('registrar');
-            }}
-            onAdd={(type) => {
-              setPendingMealType(type);
-              setScreen('registrar');
-            }}
-          />
-        )}
-
-        {screen === 'plano' && <PlanoScreen />}
-        {screen === 'circulo' && <CirculoScreenFoodstagram />}
-        {screen === 'perfil' && <PerfilScreen />}
-
-        {screen === 'registrar' && (
-          <AddMealScreen onBack={() => setScreen('hoje')} />
-        )}
-      </main>
-
-      <div className="fixed bottom-0 w-full max-w-md mx-auto h-24 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = screen === item.key;
-
-          if (item.central) {
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setShowQuickAdd(true)}
-                className="relative -top-5 w-16 h-16 rounded-[28px] bg-green-500 text-white flex items-center justify-center shadow-xl shadow-green-200 border-4 border-white active:scale-95 transition-all"
-              >
-                <Plus size={32} />
-              </button>
-            );
-          }
-
-          return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setScreen(item.key as any)}
-              className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${
-                active ? 'text-green-600' : 'text-gray-400'
-              }`}
-            >
-              <Icon size={21} />
-              <span className="text-[9px] font-black uppercase">
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <AnimatePresence>
-        {showQuickAdd && (
-          <div className="fixed inset-0 z-[80] flex items-end justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowQuickAdd(false)}
-              className="absolute inset-0 bg-black/45 backdrop-blur-sm"
-            />
-
-            <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              className="relative z-10 w-full max-w-sm rounded-[34px] bg-white p-5 shadow-2xl mb-24"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-                    Adicionar
-                  </p>
-
-                  <h2 className="text-xl font-black text-gray-900">
-                    O que você quer registrar?
-                  </h2>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowQuickAdd(false)}
-                  className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-500"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleQuickAdd('meal')}
-                  className="rounded-[26px] border border-green-100 bg-green-50 p-5 text-left active:scale-95 transition-all"
-                >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-green-600 shadow-sm">
-                    <Utensils size={24} />
-                  </div>
-
-                  <p className="text-sm font-black text-gray-900">
-                    Refeição
-                  </p>
-
-                  <p className="mt-1 text-[10px] font-bold text-gray-400 leading-relaxed">
-                    Registrar comida do dia
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickAdd('workout')}
-                  className="rounded-[26px] border border-orange-100 bg-orange-50 p-5 text-left active:scale-95 transition-all"
-                >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-orange-600 shadow-sm">
-                    <Dumbbell size={24} />
-                  </div>
-
-                  <p className="text-sm font-black text-gray-900">
-                    Treino
-                  </p>
-
-                  <p className="mt-1 text-[10px] font-bold text-gray-400 leading-relaxed">
-                    Registrar atividade física
-                  </p>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showWorkoutModal && (
-          <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowWorkoutModal(false)}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            />
-
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar"
-            >
-              <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
-
-              <h2 className="text-3xl font-black text-gray-900 mb-2">
-                Novo Exercício
-              </h2>
-
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">
-                Adicione um ou mais realizados hoje
-              </p>
-
-              <WorkoutForm
-                onClose={() => setShowWorkoutModal(false)}
-                onSave={(w) => {
-                  addWorkout(w);
-                  setShowWorkoutModal(false);
-                }}
-                estimateBurned={estimateBurned}
-              />
             </motion.div>
           </div>
         )}
