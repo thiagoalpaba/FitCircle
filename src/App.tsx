@@ -1,29 +1,89 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Coffee, Sun, Moon, Apple, CloudMoon, Footprints, Gauge, Dumbbell, 
-  Bike, Shield, Activity, Smile, Utensils, IceCream, Heart, Zap, Plus, 
-  Info, Minus, ChevronDown, ChevronUp, Search, X, Check, Flame, Trophy,
-  Calendar, MessageSquare, Rocket, Star, ThumbsUp as ThumbsUpIcon,
-  Book, PlusCircle, Users, User, LayoutGrid, Shuffle, Sliders, Settings, AlertCircle, ShieldCheck,
-  Smartphone, Share, ChevronRight, Sparkles, UserPlus, Share2, Camera,
+
+import {
+  Coffee,
+  Sun,
+  Moon,
+  Apple,
+  CloudMoon,
+  Footprints,
+  Gauge,
+  Dumbbell,
+  Bike,
+  Shield,
+  Activity,
+  Smile,
+  Utensils,
+  IceCream,
+  Heart,
+  Zap,
+  Plus,
+  Info,
+  Minus,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  X,
+  Check,
+  Flame,
+  Trophy,
+  Calendar,
+  MessageSquare,
+  Rocket,
+  Star,
+  ThumbsUp as ThumbsUpIcon,
+  Book,
+  PlusCircle,
+  Users,
+  User,
+  LayoutGrid,
+  Shuffle,
+  Sliders,
+  Settings,
+  AlertCircle,
+  ShieldCheck,
+  Smartphone,
+  Share,
+  ChevronRight,
+  Sparkles,
+  UserPlus,
+  Share2,
+  Camera,
+  LogOut,
+  AlertTriangle,
 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileFrame } from './components/MobileFrame';
+
 import { MEAL_CONFIGS, type MealConfig, type MealCount } from './data/mealConfigs';
-import { BASE_CALS, INT_MULT, INTENSITIES, WORKOUT_TYPES, type Intensity, type WorkoutType } from './data/workouts';
+import {
+  BASE_CALS,
+  INT_MULT,
+  INTENSITIES,
+  WORKOUT_TYPES,
+  type Intensity,
+  type WorkoutType,
+} from './data/workouts';
+
 import { CATEGORIES, FOOD_DATABASE, FOODS, type FoodItem } from './data/foods';
 import { formatKcal, formatMacro, safeNumber, scrollToTop } from './utils/formatters';
+
 import { CHECKIN_OPTIONS, QUICK_MSGS, SUBSTITUTIONS } from './data/social';
+
 import { ProgressBar } from './components/ProgressBar';
 import { Logo } from './components/Logo';
 import { C } from './data/theme';
+
 import type { AppCtx, Meal, MealEntry, UserProfile, Workout } from './types';
+
 import { INIT_MEALS } from './data/demo';
+
 import {
   PORTION_LIMITS,
   MAIN_MEAL_PROTEINS,
@@ -35,32 +95,33 @@ import {
   applySmartBadges,
   removeDuplicateMealOptions,
 } from './data/mealRules';
+
 import { resolveFoodName } from './data/foodAliases';
 import { FITNESS_RECIPES, type FitnessRecipe } from './data/recipes';
-// ─── TYPES ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ TYPES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
-  'Pão integral': { max: 2, unit: 'fatia' },
-  'Pão francês': { max: 1, unit: 'unidade' },
+  'PÃ£o integral': { max: 2, unit: 'fatia' },
+  'PÃ£o francÃªs': { max: 1, unit: 'unidade' },
   'Tapioca (goma)': { max: 50, unit: 'g' },
   'Aveia em flocos': { max: 40, unit: 'g' },
   'Ovo de galinha': { max: 3, unit: 'unidade' },
   'Clara de ovo': { max: 4, unit: 'unidade' },
   'Manteiga': { max: 10, unit: 'g' },
-  'Requeijão light': { max: 40, unit: 'g' },
+  'RequeijÃ£o light': { max: 40, unit: 'g' },
   'Queijo minas frescal': { max: 60, unit: 'g' },
   'Arroz branco cozido': { max: 150, unit: 'g' },
   'Arroz integral cozido': { max: 150, unit: 'g' },
-  'Feijão preto cozido': { max: 120, unit: 'g' },
-  'Feijão carioca cozido': { max: 120, unit: 'g' },
-  'Macarrão integral': { max: 180, unit: 'g' },
+  'FeijÃ£o preto cozido': { max: 120, unit: 'g' },
+  'FeijÃ£o carioca cozido': { max: 120, unit: 'g' },
+  'MacarrÃ£o integral': { max: 180, unit: 'g' },
   'Batata inglesa cozida': { max: 250, unit: 'g' },
   'Batata-doce cozida': { max: 250, unit: 'g' },
   'Inhame cozido': { max: 250, unit: 'g' },
   'Mandioca cozida': { max: 220, unit: 'g' },
   'Peito de Frango grelhado': { max: 220, unit: 'g' },
-  'Patinho moído': { max: 220, unit: 'g' },
-  'Tilápia grelhada': { max: 220, unit: 'g' },
+  'Patinho moÃ­do': { max: 220, unit: 'g' },
+  'TilÃ¡pia grelhada': { max: 220, unit: 'g' },
   'Carne magra grelhada': { max: 220, unit: 'g' },
   'Legumes variados': { max: 250, unit: 'g' },
   'Salada verde': { max: 150, unit: 'g' },
@@ -68,11 +129,11 @@ const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
   'Iogurte natural': { max: 170, unit: 'g' },
   'Morango': { max: 150, unit: 'g' },
   'Banana prata': { max: 1, unit: 'unidade' },
-  'Maçã': { max: 1, unit: 'unidade' },
-  'Mamão papaia': { max: 200, unit: 'g' },
+  'MaÃ§Ã£': { max: 1, unit: 'unidade' },
+  'MamÃ£o papaia': { max: 200, unit: 'g' },
   'Iogurte grego': { max: 1, unit: 'pote' },
   'Whey Protein': { max: 30, unit: 'g' },
-  'Melão': { max: 180, unit: 'g' },
+  'MelÃ£o': { max: 180, unit: 'g' },
   'Laranja': { max: 1, unit: 'unidade' },
 };
 
@@ -97,9 +158,9 @@ const getDisplayUnit = (qty: number, unit: string) => {
   if (u.includes('unidade')) return formatUnit(qty, 'unidade', 'unidades');
   if (u.includes('fatia')) return formatUnit(qty, 'fatia', 'fatias');
   if (u.includes('colher de sopa')) return formatUnit(qty, 'colher de sopa', 'colheres de sopa');
-  if (u.includes('colher de chá')) return formatUnit(qty, 'colher de chá', 'colheres de chá');
+  if (u.includes('colher de chÃ¡')) return formatUnit(qty, 'colher de chÃ¡', 'colheres de chÃ¡');
   if (u.includes('colher')) return formatUnit(qty, 'colher', 'colheres');
-  if (u.includes('porção')) return formatUnit(qty, 'porção', 'porções');
+  if (u.includes('porÃ§Ã£o')) return formatUnit(qty, 'porÃ§Ã£o', 'porÃ§Ãµes');
   if (u.includes('pote')) return formatUnit(qty, 'pote', 'potes');
   return `${qty} ${unit}`;
 };
@@ -117,7 +178,7 @@ const normalizePlanText = (value: string) =>
 
 const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
   const match = line.match(
-    /(\d+(?:[.,]\d+)?)\s*(colheres de sopa|colher de sopa|colheres de chá|colher de chá|colheres|colher|xícaras|xícara|xicaras|xicara|copos|copo|doses|dose|porções|porção|porcoes|porcao|potes|pote|fatias|fatia|unidades|unidade|un|gramas|g|ml)/i
+    /(\d+(?:[.,]\d+)?)\s*(colheres de sopa|colher de sopa|colheres de chÃ¡|colher de chÃ¡|colheres|colher|xÃ­caras|xÃ­cara|xicaras|xicara|copos|copo|doses|dose|porÃ§Ãµes|porÃ§Ã£o|porcoes|porcao|potes|pote|fatias|fatia|unidades|unidade|un|gramas|g|ml)/i
   );
 
   if (!match) return 0;
@@ -135,7 +196,7 @@ const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
     return amount * (food.amountPerUn || 15);
   }
 
-  if (unit.includes('colher de chá')) {
+  if (unit.includes('colher de chÃ¡')) {
     return amount * (food.amountPerUn || 5);
   }
 
@@ -147,7 +208,7 @@ const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
     return amount * (food.amountPerUn || 200);
   }
 
-  if (unit.includes('xicara') || unit.includes('xícara')) {
+  if (unit.includes('xicara') || unit.includes('xÃ­cara')) {
     return amount * (food.amountPerUn || 200);
   }
 
@@ -157,9 +218,9 @@ const getApproxGramsFromPlanLine = (line: string, food: FoodItem) => {
 
   if (
     unit.includes('porcao') ||
-    unit.includes('porção') ||
+    unit.includes('porÃ§Ã£o') ||
     unit.includes('porcoes') ||
-    unit.includes('porções')
+    unit.includes('porÃ§Ãµes')
   ) {
     return amount * (food.amountPerUn || 100);
   }
@@ -240,29 +301,29 @@ const getPlanOptionSignature = (option: any) => {
 };
 const RECIPE_LIBRARY = {
   cafe: [
-    { title: 'Pão francês com manteiga', items: ['Pão francês', 'Manteiga'] },
-    { title: 'Pão francês com manteiga e ovos', items: ['Pão francês', 'Manteiga', 'Ovo de galinha'] },
-    { title: 'Pão integral com manteiga', items: ['Pão integral', 'Manteiga'] },
-    { title: 'Pão integral com requeijão e ovos', items: ['Pão integral', 'Requeijão light', 'Ovo de galinha'] },
-    { title: 'Pão integral com queijo minas e fruta', items: ['Pão integral', 'Queijo minas frescal', 'Frutas'] },
+    { title: 'PÃ£o francÃªs com manteiga', items: ['PÃ£o francÃªs', 'Manteiga'] },
+    { title: 'PÃ£o francÃªs com manteiga e ovos', items: ['PÃ£o francÃªs', 'Manteiga', 'Ovo de galinha'] },
+    { title: 'PÃ£o integral com manteiga', items: ['PÃ£o integral', 'Manteiga'] },
+    { title: 'PÃ£o integral com requeijÃ£o e ovos', items: ['PÃ£o integral', 'RequeijÃ£o light', 'Ovo de galinha'] },
+    { title: 'PÃ£o integral com queijo minas e fruta', items: ['PÃ£o integral', 'Queijo minas frescal', 'Frutas'] },
     { title: 'Tapioca com queijo e fruta', items: ['Tapioca (goma)', 'Queijo minas frescal', 'Frutas'] },
     { title: 'Iogurte com aveia e morango', items: ['Iogurte natural', 'Aveia em flocos', 'Morango'] },
     { title: 'Panqueca de banana com aveia', items: ['Banana prata', 'Aveia em flocos', 'Ovo de galinha'] },
-    { title: 'Fruta com aveia e mel', items: ['Mamão papaia', 'Aveia em flocos', 'Mel'] },
+    { title: 'Fruta com aveia e mel', items: ['MamÃ£o papaia', 'Aveia em flocos', 'Mel'] },
     { title: 'Tapioca com ovos', items: ['Tapioca (goma)', 'Ovo de galinha'] },
-    { title: 'Pão integral com ovos', items: ['Pão integral', 'Ovo de galinha'] },
+    { title: 'PÃ£o integral com ovos', items: ['PÃ£o integral', 'Ovo de galinha'] },
   ],
   main: [
-    { title: 'Arroz, feijão preto e frango', items: ['Arroz branco cozido', 'Feijão preto cozido', 'Peito de Frango grelhado', 'Salada verde'] },
-    { title: 'Macarrão com carne moída e legumes', items: ['Macarrão integral', 'Patinho moído', 'Legumes variados'] },
-    { title: 'Arroz, feijão e carne moída', items: ['Arroz branco cozido', 'Feijão preto cozido', 'Patinho moído', 'Salada verde'] },
+    { title: 'Arroz, feijÃ£o preto e frango', items: ['Arroz branco cozido', 'FeijÃ£o preto cozido', 'Peito de Frango grelhado', 'Salada verde'] },
+    { title: 'MacarrÃ£o com carne moÃ­da e legumes', items: ['MacarrÃ£o integral', 'Patinho moÃ­do', 'Legumes variados'] },
+    { title: 'Arroz, feijÃ£o e carne moÃ­da', items: ['Arroz branco cozido', 'FeijÃ£o preto cozido', 'Patinho moÃ­do', 'Salada verde'] },
     { title: 'Batata com frango e salada', items: ['Batata inglesa cozida', 'Peito de Frango grelhado', 'Salada verde'] },
-    { title: 'Peixe com batata e legumes', items: ['Tilápia grelhada', 'Batata inglesa cozida', 'Legumes variados'] },
-    { title: 'Arroz com feijão, frango e legumes', items: ['Arroz integral cozido', 'Feijão preto cozido', 'Peito de Frango grelhado', 'Legumes variados'] },
+    { title: 'Peixe com batata e legumes', items: ['TilÃ¡pia grelhada', 'Batata inglesa cozida', 'Legumes variados'] },
+    { title: 'Arroz com feijÃ£o, frango e legumes', items: ['Arroz integral cozido', 'FeijÃ£o preto cozido', 'Peito de Frango grelhado', 'Legumes variados'] },
   ],
   snacks: [
-    { title: 'Sanduíche de frango', items: ['Pão integral', 'Peito de Frango grelhado', 'Requeijão light'] },
-    { title: 'Sanduíche de atum', items: ['Pão integral', 'Atum em lata (água)', 'Requeijão light'] },
+    { title: 'SanduÃ­che de frango', items: ['PÃ£o integral', 'Peito de Frango grelhado', 'RequeijÃ£o light'] },
+    { title: 'SanduÃ­che de atum', items: ['PÃ£o integral', 'Atum em lata (Ã¡gua)', 'RequeijÃ£o light'] },
     { title: 'Iogurte com fruta e aveia', items: ['Iogurte natural', 'Frutas', 'Aveia em flocos'] },
     { title: 'Pipoca com frango desfiado', items: ['Pipoca (milho p/ estourar)', 'Peito de Frango grelhado'] },
     { title: 'Fruta com iogurte', items: ['Frutas', 'Iogurte natural'] },
@@ -272,42 +333,42 @@ const RECIPE_LIBRARY = {
     { title: 'Banana com mel e aveia', items: ['Banana prata', 'Aveia em flocos', 'Mel'] },
   ],
   jantar: [
-    { title: 'Arroz, feijão preto, frango e salada', items: ['Arroz branco cozido', 'Feijão preto cozido', 'Peito de Frango grelhado', 'Salada verde'] },
+    { title: 'Arroz, feijÃ£o preto, frango e salada', items: ['Arroz branco cozido', 'FeijÃ£o preto cozido', 'Peito de Frango grelhado', 'Salada verde'] },
     { title: 'Inhame, carne magra e legumes', items: ['Inhame cozido', 'Carne magra grelhada', 'Legumes variados'] },
     { title: 'Omelete com salada e batata', items: ['Ovo de galinha', 'Salada verde', 'Batata inglesa cozida'] },
-    { title: 'Peixe com batata e legumes', items: ['Tilápia grelhada', 'Batata inglesa cozida', 'Legumes variados'] },
+    { title: 'Peixe com batata e legumes', items: ['TilÃ¡pia grelhada', 'Batata inglesa cozida', 'Legumes variados'] },
     { title: 'Frango com mandioca e salada', items: ['Peito de Frango grelhado', 'Mandioca cozida', 'Salada verde'] },
-    { title: 'Patinho com arroz e legumes', items: ['Patinho moído', 'Arroz branco cozido', 'Legumes variados'] },
+    { title: 'Patinho com arroz e legumes', items: ['Patinho moÃ­do', 'Arroz branco cozido', 'Legumes variados'] },
     
     // Veg/Vegan options
-    { title: 'Arroz, feijão e tofu grelhado', items: ['Arroz integral cozido', 'Feijão preto cozido', 'Tofu grelhado', 'Salada verde'] },
+    { title: 'Arroz, feijÃ£o e tofu grelhado', items: ['Arroz integral cozido', 'FeijÃ£o preto cozido', 'Tofu grelhado', 'Salada verde'] },
     { title: 'Batata com lentilha e salada', items: ['Batata inglesa cozida', 'Lentilha cozida', 'Salada verde'] },
-    { title: 'Cuscuz com grão-de-bico e legumes', items: ['Cuscuz de milho cozido', 'Grão-de-bico cozido', 'Legumes variados'] },
+    { title: 'Cuscuz com grÃ£o-de-bico e legumes', items: ['Cuscuz de milho cozido', 'GrÃ£o-de-bico cozido', 'Legumes variados'] },
   ]
 };
 
-// ─── FOOD DATABASE ────────────────────────────────────────────────────────────
+// â”€â”€â”€ FOOD DATABASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 
 const MEAL_TEMPLATES = {
   cafe: [
-    { type: 'Café da manhã', pct: 0.6, name: 'Base' },
-    { type: 'Proteína Leve', pct: 0.3, name: 'Acompanhamento' },
+    { type: 'CafÃ© da manhÃ£', pct: 0.6, name: 'Base' },
+    { type: 'ProteÃ­na Leve', pct: 0.3, name: 'Acompanhamento' },
     { type: 'Frutas', pct: 0.1, name: 'Fruta' }
   ],
   main: [
     { type: 'Carboidratos principais', pct: 0.4, name: 'Principal' },
-    { type: 'Proteína Principal', pct: 0.4, name: 'Proteína' },
+    { type: 'ProteÃ­na Principal', pct: 0.4, name: 'ProteÃ­na' },
     { type: 'Leguminosa', pct: 0.1, name: 'Leguminosa' },
     { type: 'Vegetais', pct: 0.1, name: 'Salada/Legumes' }
   ],
   snacks: [
-    { type: 'Proteína Leve', pct: 0.5, name: 'Proteína/Laticínio' },
-    { type: 'Carboidratos do café', pct: 0.5, name: 'Carbo/Fruta' }
+    { type: 'ProteÃ­na Leve', pct: 0.5, name: 'ProteÃ­na/LaticÃ­nio' },
+    { type: 'Carboidratos do cafÃ©', pct: 0.5, name: 'Carbo/Fruta' }
   ],
   jantar: [
-    { type: 'Proteína Principal', pct: 0.5, name: 'Proteína' },
+    { type: 'ProteÃ­na Principal', pct: 0.5, name: 'ProteÃ­na' },
     { type: 'Carboidratos principais', pct: 0.3, name: 'Carbo' },
     { type: 'Vegetais', pct: 0.2, name: 'Salada/Legumes' }
   ]
@@ -317,28 +378,28 @@ const ALIASES: Record<string, string> = {
   'cuzcuz': 'Cuscuz de milho',
   'cuscuz': 'Cuscuz de milho',
   'cuscuz milho': 'Cuscuz de milho',
-  'pao': 'Pão francês',
-  'pao frances': 'Pão francês',
-  'pao integrl': 'Pão integral',
-  'pao integral': 'Pão integral',
+  'pao': 'PÃ£o francÃªs',
+  'pao frances': 'PÃ£o francÃªs',
+  'pao integrl': 'PÃ£o integral',
+  'pao integral': 'PÃ£o integral',
   'mantega': 'Manteiga',
   'manteiga': 'Manteiga',
-  'requeijao': 'Requeijão light',
-  'requeijao light': 'Requeijão light',
+  'requeijao': 'RequeijÃ£o light',
+  'requeijao light': 'RequeijÃ£o light',
   'queijo': 'Queijo minas frescal',
   'queijo minas': 'Queijo minas frescal',
   'frango': 'Peito de Frango grelhado',
   'frango grelhado': 'Peito de Frango grelhado',
-  'carne moida': 'Patinho moído',
-  'patinho': 'Patinho moído',
+  'carne moida': 'Patinho moÃ­do',
+  'patinho': 'Patinho moÃ­do',
   'batata doce': 'Batata-doce cozida',
   'batata-doce': 'Batata-doce cozida',
-  'macarrao': 'Macarrão integral',
-  'macarrao integral': 'Macarrão integral',
+  'macarrao': 'MacarrÃ£o integral',
+  'macarrao integral': 'MacarrÃ£o integral',
   'arroz': 'Arroz branco cozido',
-  'feijao': 'Feijão preto cozido',
-  'feijão preto': 'Feijão preto cozido',
-  'feijao preto': 'Feijão preto cozido',
+  'feijao': 'FeijÃ£o preto cozido',
+  'feijÃ£o preto': 'FeijÃ£o preto cozido',
+  'feijao preto': 'FeijÃ£o preto cozido',
   'ovo': 'Ovo de galinha',
   'ovos': 'Ovo de galinha',
   'tapioca': 'Tapioca (goma)',
@@ -361,40 +422,40 @@ const findFuzzyMatch = (input: string) => {
 };
 
 
-// ─── CIRCULO CONSTANTS ────────────────────────────────────────────────────────
+// â”€â”€â”€ CIRCULO CONSTANTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 const DAILY_TIPS = [
-  "Priorize proteína nas refeições principais.",
-  "Deixe frutas fáceis de pegar.",
-  "Água ajuda a controlar beliscos por impulso.",
+  "Priorize proteÃ­na nas refeiÃ§Ãµes principais.",
+  "Deixe frutas fÃ¡ceis de pegar.",
+  "Ãgua ajuda a controlar beliscos por impulso.",
   "Planeje o lanche antes da fome apertar.",
   "Comer devagar ajuda na saciedade.",
   "Vegetais aumentam volume com poucas calorias.",
   "Evite chegar ao jantar com muita fome.",
-  "Um dia fora da rotina não estraga o progresso.",
-  "Repetir refeições simples facilita a constância.",
+  "Um dia fora da rotina nÃ£o estraga o progresso.",
+  "Repetir refeiÃ§Ãµes simples facilita a constÃ¢ncia.",
   "Sono ruim pode aumentar a fome no dia seguinte.",
-  "Comece pelo básico bem feito.",
-  "Tenha uma opção rápida para emergências.",
-  "Não precisa perfeição; precisa consistência.",
-  "Proteína no café pode ajudar na saciedade.",
+  "Comece pelo bÃ¡sico bem feito.",
+  "Tenha uma opÃ§Ã£o rÃ¡pida para emergÃªncias.",
+  "NÃ£o precisa perfeiÃ§Ã£o; precisa consistÃªncia.",
+  "ProteÃ­na no cafÃ© pode ajudar na saciedade.",
   "Escolha um lanche planejado para evitar beliscos.",
-  "Café sem açúcar quase não altera suas calorias.",
-  "Acompanhe tendências, não apenas um dia isolado.",
-  "Um treino não precisa liberar exageros.",
-  "Ajuste amanhã, sem culpa.",
-  "O que você consegue repetir vale mais que o perfeito.",
-  "Proteínas e fibras são as chaves da saciedade.",
-  "Não beba suas calorias com frequência.",
-  "Foco na qualidade dos alimentos, não só números.",
-  "O peso oscila; foque na sua aderência.",
-  "Caminhar 10 min após comer ajuda a digestão.",
-  "Frutas cítricas ajudam na absorção de ferro.",
-  "Prepare o café da manhã na noite anterior.",
-  "Cuidado com 'molhos saudáveis' muito calóricos.",
-  "O equilíbrio é melhor que a restrição severa.",
-  "Descansar também faz parte do seu resultado."
+  "CafÃ© sem aÃ§Ãºcar quase nÃ£o altera suas calorias.",
+  "Acompanhe tendÃªncias, nÃ£o apenas um dia isolado.",
+  "Um treino nÃ£o precisa liberar exageros.",
+  "Ajuste amanhÃ£, sem culpa.",
+  "O que vocÃª consegue repetir vale mais que o perfeito.",
+  "ProteÃ­nas e fibras sÃ£o as chaves da saciedade.",
+  "NÃ£o beba suas calorias com frequÃªncia.",
+  "Foco na qualidade dos alimentos, nÃ£o sÃ³ nÃºmeros.",
+  "O peso oscila; foque na sua aderÃªncia.",
+  "Caminhar 10 min apÃ³s comer ajuda a digestÃ£o.",
+  "Frutas cÃ­tricas ajudam na absorÃ§Ã£o de ferro.",
+  "Prepare o cafÃ© da manhÃ£ na noite anterior.",
+  "Cuidado com 'molhos saudÃ¡veis' muito calÃ³ricos.",
+  "O equilÃ­brio Ã© melhor que a restriÃ§Ã£o severa.",
+  "Descansar tambÃ©m faz parte do seu resultado."
 ];
 
 const getDailyTip = () => {
@@ -410,27 +471,27 @@ const REACTIONS = [
 ];
 
 
-// ─── PLAN DATA ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ PLAN DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PLAN_OPTIONS: Record<string, { name: string; qty: string; cal: number }[]> = {
   cafe: [
     { name: 'Aveia com banana e mel', qty: 'Aveia 60g + banana 1un', cal: 322 },
-    { name: 'Ovos mexidos com pão integral', qty: '3 ovos + 2 fatias pão', cal: 360 },
+    { name: 'Ovos mexidos com pÃ£o integral', qty: '3 ovos + 2 fatias pÃ£o', cal: 360 },
     { name: 'Iogurte grego com granola', qty: 'Iogurte 200g + granola 40g', cal: 340 },
   ],
   lancheManha: [
-    { name: 'Frutas com iogurte', qty: 'Maçã 1un + iogurte 100g', cal: 155 },
+    { name: 'Frutas com iogurte', qty: 'MaÃ§Ã£ 1un + iogurte 100g', cal: 155 },
     { name: 'Torrada com manteiga de amendoim', qty: '2 fatias + 15g', cal: 210 },
     { name: 'Mix de castanhas', qty: 'Castanhas 30g', cal: 170 },
   ],
   almoco: [
-    { name: 'Frango grelhado com arroz e brócolis', qty: 'Frango 150g + arroz 100g + brócolis 80g', cal: 520 },
-    { name: 'Salmão com batata-doce e salada', qty: 'Salmão 120g + batata-doce 120g', cal: 490 },
-    { name: 'Tilápia com feijão e arroz', qty: 'Tilápia 150g + feijão 80g + arroz 80g', cal: 510 },
+    { name: 'Frango grelhado com arroz e brÃ³colis', qty: 'Frango 150g + arroz 100g + brÃ³colis 80g', cal: 520 },
+    { name: 'SalmÃ£o com batata-doce e salada', qty: 'SalmÃ£o 120g + batata-doce 120g', cal: 490 },
+    { name: 'TilÃ¡pia com feijÃ£o e arroz', qty: 'TilÃ¡pia 150g + feijÃ£o 80g + arroz 80g', cal: 510 },
   ],
   lanche: [
     { name: 'Iogurte grego com granola', qty: 'Iogurte 150g + granola 30g', cal: 287 },
-    { name: 'Maçã com manteiga de amendoim', qty: 'Maçã 1un + 20g', cal: 210 },
+    { name: 'MaÃ§Ã£ com manteiga de amendoim', qty: 'MaÃ§Ã£ 1un + 20g', cal: 210 },
     { name: 'Whey com leite', qty: 'Whey 30g + leite desnatado 200ml', cal: 200 },
   ],
   jantar: [
@@ -445,43 +506,43 @@ const PLAN_OPTIONS: Record<string, { name: string; qty: string; cal: number }[]>
   ],
 };
 
-// ─── CONTEXT ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ CONTEXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const Ctx = createContext<AppCtx | null>(null);
 
-// ─── RESTRICTION MAPPING ──────────────────────────────────────────────────────
+// â”€â”€â”€ RESTRICTION MAPPING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RESTRICTION_MAPPING: Record<string, string[]> = {
   'leite': [
     'leite', 'iogurte', 'iogurte natural', 'iogurte desnatado', 'queijo', 'queijo minas', 
-    'queijo cottage', 'cottage', 'requeijão', 'requeijão light', 'manteiga', 'whey'
+    'queijo cottage', 'cottage', 'requeijÃ£o', 'requeijÃ£o light', 'manteiga', 'whey'
   ],
   'lactose': [
     'leite integral', 'leite desnatado', 'queijo minas frescal', 'queijo cottage', 
-    'iogurte natural', 'requeijão light', 'manteiga'
+    'iogurte natural', 'requeijÃ£o light', 'manteiga'
   ],
   'ovo': [
     'ovo', 'ovo de galinha', 'clara', 'clara de ovo', 'omelete', 'crepioca', 'panqueca'
   ],
-  'glúten': [
-    'pão francês', 'pão integral', 'macarrão integral', 'trigo', 'aveia'
+  'glÃºten': [
+    'pÃ£o francÃªs', 'pÃ£o integral', 'macarrÃ£o integral', 'trigo', 'aveia'
   ],
   'peixes': [
-    'peixe', 'tilápia', 'salmão', 'sardinha', 'atum'
+    'peixe', 'tilÃ¡pia', 'salmÃ£o', 'sardinha', 'atum'
   ],
-  'crustáceos': [
-    'camarão', 'caranguejo', 'lagosta', 'frutos do mar'
+  'crustÃ¡ceos': [
+    'camarÃ£o', 'caranguejo', 'lagosta', 'frutos do mar'
   ],
   'frutos do mar': [
-    'camarão', 'caranguejo', 'lagosta', 'frutos do mar', 'peixe', 'tilápia', 'salmão', 'sardinha', 'atum'
+    'camarÃ£o', 'caranguejo', 'lagosta', 'frutos do mar', 'peixe', 'tilÃ¡pia', 'salmÃ£o', 'sardinha', 'atum'
   ],
   'amendoim': [
     'amendoim', 'pasta de amendoim'
   ],
   'castanhas/nozes': [
-    'castanhas', 'nozes', 'amêndoas', 'mix de nuts', 'granola'
+    'castanhas', 'nozes', 'amÃªndoas', 'mix de nuts', 'granola'
   ],
   'soja': [
-    'soja', 'proteína de soja', 'tofu', 'leite de soja'
+    'soja', 'proteÃ­na de soja', 'tofu', 'leite de soja'
   ]
 };
 
@@ -544,9 +605,9 @@ const RESTRICTION_TERMS: Record<string, string[]> = {
 
   gluten: [
     'pao',
-    'pão',
+    'pÃ£o',
     'macarrao',
-    'macarrão',
+    'macarrÃ£o',
     'trigo',
     'wrap',
     'torrada',
@@ -560,14 +621,14 @@ const RESTRICTION_TERMS: Record<string, string[]> = {
   peixes: [
     'peixe',
     'tilapia',
-    'tilápia',
+    'tilÃ¡pia',
     'atum',
     'sardinha',
     'salmao',
-    'salmão',
+    'salmÃ£o',
     'frutos do mar',
     'camarao',
-    'camarão',
+    'camarÃ£o',
   ],
 
   amendoim: [
@@ -579,7 +640,7 @@ const RESTRICTION_TERMS: Record<string, string[]> = {
     'castanhas',
     'nozes',
     'amendoas',
-    'amêndoas',
+    'amÃªndoas',
     'mix de nuts',
     'granola',
   ],
@@ -587,7 +648,7 @@ const RESTRICTION_TERMS: Record<string, string[]> = {
   soja: [
     'soja',
     'proteina de soja',
-    'proteína de soja',
+    'proteÃ­na de soja',
     'tofu',
     'leite de soja',
     'bebida de soja',
@@ -639,11 +700,11 @@ const isFoodRestricted = (foodName: string, userProfile: UserProfile | null) => 
       'peixe',
       'atum',
       'tilapia',
-      'tilápia',
+      'tilÃ¡pia',
       'sobrecoxa',
       'sardinha',
       'camarao',
-      'camarão',
+      'camarÃ£o',
     ];
 
     if (meat.some(term => text.includes(normalizeRestrictionText(term)))) {
@@ -659,11 +720,11 @@ const isFoodRestricted = (foodName: string, userProfile: UserProfile | null) => 
       'peixe',
       'atum',
       'tilapia',
-      'tilápia',
+      'tilÃ¡pia',
       'sobrecoxa',
       'sardinha',
       'camarao',
-      'camarão',
+      'camarÃ£o',
       'ovo',
       'ovos',
       'clara',
@@ -987,7 +1048,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     if (isBadMainProtein(name)) return false;
 
     return (
-      food?.category === 'Proteína Principal' ||
+      food?.category === 'ProteÃ­na Principal' ||
       mainProteinTerms.some(term => name.includes(term))
     );
   };
@@ -1046,16 +1107,16 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
 
   const extraMainRecipes = [
     {
-      title: 'Arroz, feijão e tofu grelhado',
-      items: ['Arroz integral cozido', 'Feijão preto cozido', 'Tofu grelhado', 'Salada verde'],
+      title: 'Arroz, feijÃ£o e tofu grelhado',
+      items: ['Arroz integral cozido', 'FeijÃ£o preto cozido', 'Tofu grelhado', 'Salada verde'],
     },
     {
       title: 'Batata com lentilha e salada',
       items: ['Batata inglesa cozida', 'Lentilha cozida', 'Salada verde'],
     },
     {
-      title: 'Cuscuz com grão-de-bico e legumes',
-      items: ['Cuscuz de milho cozido', 'Grão-de-bico cozido', 'Legumes variados'],
+      title: 'Cuscuz com grÃ£o-de-bico e legumes',
+      items: ['Cuscuz de milho cozido', 'GrÃ£o-de-bico cozido', 'Legumes variados'],
     },
   ];
 
@@ -1165,7 +1226,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
       if (normalized.includes('iogurte grego')) finalQty = Math.min(finalQty, 1);
       if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
       if (normalized.includes('banana')) finalQty = Math.min(finalQty, 1);
-      if (normalized.includes('maca') || normalized.includes('maçã')) finalQty = Math.min(finalQty, 1);
+      if (normalized.includes('maca') || normalized.includes('maÃ§Ã£')) finalQty = Math.min(finalQty, 1);
       if (normalized.includes('whey')) finalQty = Math.min(finalQty, 1);
 
             if (
@@ -1192,9 +1253,9 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     if (normalized.includes('feijao')) finalQty = Math.min(finalQty, 120);
     if (normalized.includes('macarrao')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('iogurte grego')) finalQty = Math.min(finalQty, 170);
-        if (normalized.includes('melao') || normalized.includes('melão')) finalQty = Math.min(finalQty, 180);
+        if (normalized.includes('melao') || normalized.includes('melÃ£o')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('melancia')) finalQty = Math.min(finalQty, 200);
-    if (normalized.includes('mamao') || normalized.includes('mamão')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('mamao') || normalized.includes('mamÃ£o')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('morango')) finalQty = Math.min(finalQty, 150);
     if (normalized.includes('uva')) finalQty = Math.min(finalQty, 120);
     if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
@@ -1224,7 +1285,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     const nonFreeItems = recipe.items.filter((item: string) => !normalizeLocal(item).includes('salada verde'));
     const base = targetCal / Math.max(nonFreeItems.length, 1);
 
-    if (normalizeLocal(category) === normalizeLocal('Proteína Principal')) return targetCal * 0.34;
+    if (normalizeLocal(category) === normalizeLocal('ProteÃ­na Principal')) return targetCal * 0.34;
     if (countsAsRealMainProtein(food) && isMainMeal) return targetCal * 0.30;
 
     if (normalizeLocal(category) === normalizeLocal('Leguminosa')) return targetCal * 0.16;
@@ -1232,13 +1293,13 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
 
     if (isBreakfast) {
       if (normalized.includes('pao') || normalized.includes('tapioca') || normalized.includes('cuscuz')) return targetCal * 0.32;
-      if (normalized.includes('ovo') || normalizeLocal(category) === normalizeLocal('Proteína Leve')) return targetCal * 0.28;
+      if (normalized.includes('ovo') || normalizeLocal(category) === normalizeLocal('ProteÃ­na Leve')) return targetCal * 0.28;
       if (normalizeLocal(category) === normalizeLocal('Gorduras')) return targetCal * 0.08;
       if (normalizeLocal(category) === normalizeLocal('Frutas')) return targetCal * 0.18;
     }
 
     if (isSnack) {
-      if (normalizeLocal(category) === normalizeLocal('Proteína Leve')) return targetCal * 0.45;
+      if (normalizeLocal(category) === normalizeLocal('ProteÃ­na Leve')) return targetCal * 0.45;
       if (normalizeLocal(category) === normalizeLocal('Frutas')) return targetCal * 0.30;
       if (normalized.includes('pao') || normalized.includes('batata') || normalized.includes('aveia')) return targetCal * 0.35;
     }
@@ -1255,7 +1316,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
 
     if (isBreakfast || isSnack) {
       if (n.includes('pao') || n.includes('tapioca') || n.includes('cuscuz') || n.includes('iogurte')) return 1;
-      if (cat === 'Proteína Leve' || n.includes('ovo')) return 2;
+      if (cat === 'ProteÃ­na Leve' || n.includes('ovo')) return 2;
       if (cat === 'Gorduras') return 3;
       if (cat === 'Frutas') return 4;
       if (n.includes('cafe') || n.includes('leite')) return 5;
@@ -1307,7 +1368,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
       if (nameL.includes('salada verde')) {
         components.push({
           name: selected.name,
-          display: `${selected.name} à vontade`,
+          display: `${selected.name} Ã  vontade`,
           cal: 10,
           type: 'vegetais',
           order: 10,
@@ -1321,7 +1382,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
         hasProtein = true;
       }
 
-      if (!isMainMeal && (selected.category === 'Proteína Leve' || nameL.includes('ovo'))) {
+      if (!isMainMeal && (selected.category === 'ProteÃ­na Leve' || nameL.includes('ovo'))) {
         hasProtein = true;
       }
 
@@ -1417,8 +1478,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
       }
 
       return (
-        component.food.category === 'Proteína Principal' ||
-        component.food.category === 'Proteína Leve' ||
+        component.food.category === 'ProteÃ­na Principal' ||
+        component.food.category === 'ProteÃ­na Leve' ||
         normalizeLocal(component.food.name).includes('ovo')
       );
     });
@@ -1447,8 +1508,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     if (isBreakfast) {
       return [
         {
-          name: 'Pão integral com ovos',
-          qty: 'Pão integral 2 fatias + Ovo de galinha 2 unidades',
+          name: 'PÃ£o integral com ovos',
+          qty: 'PÃ£o integral 2 fatias + Ovo de galinha 2 unidades',
           cal: 330,
           badge: 'Completa',
           badgeDesc: '',
@@ -1479,8 +1540,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     if (safeMealKey === 'almoco') {
       return [
         {
-          name: 'Arroz, feijão preto e frango',
-          qty: 'Arroz branco cozido 140g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+          name: 'Arroz, feijÃ£o preto e frango',
+          qty: 'Arroz branco cozido 140g + FeijÃ£o preto cozido 100g + Peito de Frango grelhado 150g + Salada verde Ã  vontade',
           cal: 555,
           badge: 'Completa',
           badgeDesc: '',
@@ -1488,8 +1549,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
           score: 800,
         },
         {
-          name: 'Macarrão com carne moída e legumes',
-          qty: 'Macarrão integral 160g + Patinho moído 140g + Legumes variados 180g',
+          name: 'MacarrÃ£o com carne moÃ­da e legumes',
+          qty: 'MacarrÃ£o integral 160g + Patinho moÃ­do 140g + Legumes variados 180g',
           cal: 610,
           badge: 'Completa',
           badgeDesc: '',
@@ -1498,7 +1559,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
         },
         {
           name: 'Peixe com batata e legumes',
-          qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
+          qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
           cal: 450,
           badge: 'Leve',
           badgeDesc: '',
@@ -1512,7 +1573,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
       return [
         {
           name: 'Frango com mandioca e salada',
-          qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+          qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde Ã  vontade',
           cal: 485,
           badge: 'Completa',
           badgeDesc: '',
@@ -1529,8 +1590,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
           score: 750,
         },
         {
-          name: 'Arroz, feijão e tofu grelhado',
-          qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+          name: 'Arroz, feijÃ£o e tofu grelhado',
+          qty: 'Arroz integral cozido 130g + FeijÃ£o preto cozido 100g + Tofu grelhado 180g + Salada verde Ã  vontade',
           cal: 500,
           badge: 'Completa',
           badgeDesc: '',
@@ -1551,8 +1612,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
         score: 760,
       },
       {
-        name: 'Sanduíche de atum',
-        qty: 'Pão integral 2 fatias + Atum em lata (água) 1 lata + Requeijão light 20g',
+        name: 'SanduÃ­che de atum',
+        qty: 'PÃ£o integral 2 fatias + Atum em lata (Ã¡gua) 1 lata + RequeijÃ£o light 20g',
         cal: 360,
         badge: 'Completa',
         badgeDesc: '',
@@ -1614,8 +1675,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
   if (results.length === 0) {
     const basic = isMainMeal
       ? {
-          name: 'Arroz, feijão e frango',
-          qty: 'Arroz branco cozido 130g + Feijão preto cozido 100g + Peito de Frango grelhado 140g + Salada verde à vontade',
+          name: 'Arroz, feijÃ£o e frango',
+          qty: 'Arroz branco cozido 130g + FeijÃ£o preto cozido 100g + Peito de Frango grelhado 140g + Salada verde Ã  vontade',
           cal: 520,
           badge: 'Completa',
           badgeDesc: '',
@@ -1623,8 +1684,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
           score: 600,
         }
       : {
-          name: 'Pão integral com queijo minas',
-          qty: 'Pão integral 2 fatias + Queijo minas frescal 50g',
+          name: 'PÃ£o integral com queijo minas',
+          qty: 'PÃ£o integral 2 fatias + Queijo minas frescal 50g',
           cal: 300,
           badge: 'Simples',
           badgeDesc: '',
@@ -1639,7 +1700,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     const first = results[0];
 
     if (first && !normalizeLocal(first.qty).includes('cafe')) {
-      first.qty += ' + Café sem açúcar 1 xícara';
+      first.qty += ' + CafÃ© sem aÃ§Ãºcar 1 xÃ­cara';
     }
   }
 
@@ -1647,7 +1708,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
   cafe: [
     {
       name: 'Tapioca com banana e canela',
-      qty: 'Tapioca (goma) 50g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+      qty: 'Tapioca (goma) 50g + Banana prata 1 unidade + Canela em pÃ³ 1 colher de chÃ¡',
       cal: 335,
       badge: 'Completa',
       badgeDesc: '',
@@ -1662,16 +1723,16 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
       score: 690,
     },
     {
-      name: 'Pão integral com pasta de amendoim e fruta',
-      qty: 'Pão integral 2 fatias + Pasta de amendoim 1 colher de sopa + Maçã 1 unidade',
+      name: 'PÃ£o integral com pasta de amendoim e fruta',
+      qty: 'PÃ£o integral 2 fatias + Pasta de amendoim 1 colher de sopa + MaÃ§Ã£ 1 unidade',
       cal: 390,
       badge: 'Completa',
       badgeDesc: '',
       score: 680,
     },
     {
-      name: 'Pão árabe com homus e tomate',
-      qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa + Tomate 80g',
+      name: 'PÃ£o Ã¡rabe com homus e tomate',
+      qty: 'PÃ£o Ã¡rabe 1 unidade + Homus 1 colher de sopa + Tomate 80g',
       cal: 330,
       badge: 'Completa',
       badgeDesc: '',
@@ -1689,8 +1750,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
 
   almoco: [
     {
-      name: 'Arroz, feijão e frango',
-      qty: 'Arroz branco cozido 140g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+      name: 'Arroz, feijÃ£o e frango',
+      qty: 'Arroz branco cozido 140g + FeijÃ£o preto cozido 100g + Peito de Frango grelhado 150g + Salada verde Ã  vontade',
       cal: 555,
       badge: 'Completa',
       badgeDesc: '',
@@ -1698,7 +1759,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Peixe com batata e legumes',
-      qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
+      qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
       cal: 450,
       badge: 'Completa',
       badgeDesc: '',
@@ -1706,15 +1767,15 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Patinho com arroz e legumes',
-      qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 180g',
+      qty: 'Patinho moÃ­do 140g + Arroz branco cozido 120g + Legumes variados 180g',
       cal: 520,
       badge: 'Completa',
       badgeDesc: '',
       score: 680,
     },
     {
-      name: 'Arroz, feijão e tofu grelhado',
-      qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+      name: 'Arroz, feijÃ£o e tofu grelhado',
+      qty: 'Arroz integral cozido 130g + FeijÃ£o preto cozido 100g + Tofu grelhado 180g + Salada verde Ã  vontade',
       cal: 500,
       badge: 'Completa',
       badgeDesc: '',
@@ -1722,7 +1783,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Batata com lentilha e salada',
-      qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde à vontade',
+      qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde Ã  vontade',
       cal: 420,
       badge: 'Completa',
       badgeDesc: '',
@@ -1741,7 +1802,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Frango com mandioca e salada',
-      qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+      qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde Ã  vontade',
       cal: 485,
       badge: 'Completa',
       badgeDesc: '',
@@ -1749,23 +1810,23 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Peixe com batata e legumes',
-      qty: 'Tilápia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 180g',
+      qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 180g',
       cal: 420,
       badge: 'Leve',
       badgeDesc: '',
       score: 680,
     },
     {
-      name: 'Arroz, feijão e tofu grelhado',
-      qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+      name: 'Arroz, feijÃ£o e tofu grelhado',
+      qty: 'Arroz integral cozido 130g + FeijÃ£o preto cozido 100g + Tofu grelhado 180g + Salada verde Ã  vontade',
       cal: 500,
       badge: 'Completa',
       badgeDesc: '',
       score: 670,
     },
     {
-      name: 'Cuscuz com grão-de-bico e legumes',
-      qty: 'Cuscuz de milho cozido 150g + Grão-de-bico cozido 140g + Legumes variados 180g',
+      name: 'Cuscuz com grÃ£o-de-bico e legumes',
+      qty: 'Cuscuz de milho cozido 150g + GrÃ£o-de-bico cozido 140g + Legumes variados 180g',
       cal: 465,
       badge: 'Completa',
       badgeDesc: '',
@@ -1776,7 +1837,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
   lanche: [
     {
       name: 'Pipoca com fruta',
-      qty: 'Pipoca (milho p/ estourar) 30g + Maçã 1 unidade',
+      qty: 'Pipoca (milho p/ estourar) 30g + MaÃ§Ã£ 1 unidade',
       cal: 240,
       badge: 'Simples',
       badgeDesc: '',
@@ -1784,15 +1845,15 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Tapioca com banana e canela',
-      qty: 'Tapioca (goma) 40g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+      qty: 'Tapioca (goma) 40g + Banana prata 1 unidade + Canela em pÃ³ 1 colher de chÃ¡',
       cal: 285,
       badge: 'Completa',
       badgeDesc: '',
       score: 690,
     },
     {
-      name: 'Pão árabe com homus',
-      qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa',
+      name: 'PÃ£o Ã¡rabe com homus',
+      qty: 'PÃ£o Ã¡rabe 1 unidade + Homus 1 colher de sopa',
       cal: 285,
       badge: 'Completa',
       badgeDesc: '',
@@ -1811,7 +1872,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
   lancheManha: [
     {
       name: 'Fruta com chia',
-      qty: 'Maçã 1 unidade + Chia 1 colher de sopa',
+      qty: 'MaÃ§Ã£ 1 unidade + Chia 1 colher de sopa',
       cal: 125,
       badge: 'Leve',
       badgeDesc: '',
@@ -1837,8 +1898,8 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
 
   ceia: [
     {
-      name: 'Chá com fruta',
-      qty: 'Chá sem açúcar 1 xícara + Maçã 1 unidade',
+      name: 'ChÃ¡ com fruta',
+      qty: 'ChÃ¡ sem aÃ§Ãºcar 1 xÃ­cara + MaÃ§Ã£ 1 unidade',
       cal: 70,
       badge: 'Leve',
       badgeDesc: '',
@@ -1846,7 +1907,7 @@ const handleProfileUpdate = (profile: Partial<UserProfile>) => {
     },
     {
       name: 'Banana com canela',
-      qty: 'Banana prata 1 unidade + Canela em pó 1 colher de chá',
+      qty: 'Banana prata 1 unidade + Canela em pÃ³ 1 colher de chÃ¡',
       cal: 85,
       badge: 'Leve',
       badgeDesc: '',
@@ -2019,7 +2080,7 @@ return finalDedupedOptions.map((option, index) => ({
     return MAIN_MEAL_PROTEINS.some(protein => {
       const normalizedProtein = normalizeText(protein);
 
-      // Whey e achocolatado nunca podem contar como proteína de almoço/jantar.
+      // Whey e achocolatado nunca podem contar como proteÃ­na de almoÃ§o/jantar.
       if (normalizedProtein.includes('whey') || normalizedProtein.includes('achocolatado')) {
         return false;
       }
@@ -2039,7 +2100,7 @@ return finalDedupedOptions.map((option, index) => ({
       return [
         {
           name: 'Frango com mandioca e salada',
-          qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+          qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde Ã  vontade',
           cal: 485,
           badge: 'Recomendada',
           badgeDesc: '',
@@ -2047,7 +2108,7 @@ return finalDedupedOptions.map((option, index) => ({
         },
         {
           name: 'Peixe com batata e legumes',
-          qty: 'Tilápia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 150g',
+          qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 150g',
           cal: 420,
           badge: 'Completa',
           badgeDesc: '',
@@ -2055,7 +2116,7 @@ return finalDedupedOptions.map((option, index) => ({
         },
         {
           name: 'Patinho com arroz e legumes',
-          qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 150g',
+          qty: 'Patinho moÃ­do 140g + Arroz branco cozido 120g + Legumes variados 150g',
           cal: 520,
           badge: 'Completa',
           badgeDesc: '',
@@ -2066,16 +2127,16 @@ return finalDedupedOptions.map((option, index) => ({
 
     return [
       {
-        name: 'Arroz, feijão preto e frango',
-        qty: 'Arroz branco cozido 150g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+        name: 'Arroz, feijÃ£o preto e frango',
+        qty: 'Arroz branco cozido 150g + FeijÃ£o preto cozido 100g + Peito de Frango grelhado 150g + Salada verde Ã  vontade',
         cal: 555,
         badge: 'Recomendada',
         badgeDesc: '',
         score: 1000,
       },
       {
-        name: 'Arroz, feijão e carne moída',
-        qty: 'Arroz branco cozido 150g + Feijão preto cozido 100g + Patinho moído 140g + Salada verde à vontade',
+        name: 'Arroz, feijÃ£o e carne moÃ­da',
+        qty: 'Arroz branco cozido 150g + FeijÃ£o preto cozido 100g + Patinho moÃ­do 140g + Salada verde Ã  vontade',
         cal: 610,
         badge: 'Completa',
         badgeDesc: '',
@@ -2083,7 +2144,7 @@ return finalDedupedOptions.map((option, index) => ({
       },
       {
         name: 'Peixe com batata e legumes',
-        qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 150g',
+        qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 150g',
         cal: 450,
         badge: 'Completa',
         badgeDesc: '',
@@ -2112,17 +2173,17 @@ return finalDedupedOptions.map((option, index) => ({
     for (const opt of options) {
       if (!opt) continue;
 
-      // Remove opção duplicada.
+      // Remove opÃ§Ã£o duplicada.
       if (isDuplicateOption(opt, cleanedOptions)) continue;
 
       if (isMainMealKey(mealKey)) {
-        // Almoço/jantar não podem ter whey/achocolatado.
+        // AlmoÃ§o/jantar nÃ£o podem ter whey/achocolatado.
         if (hasSupplementInMainMeal(opt)) continue;
 
-        // Não aceitar remendo genérico.
+        // NÃ£o aceitar remendo genÃ©rico.
         if (hasGenericProteinPatch(opt)) continue;
 
-        // Almoço/jantar precisam ter proteína real.
+        // AlmoÃ§o/jantar precisam ter proteÃ­na real.
         if (!hasRealMainProtein(opt)) continue;
       }
 
@@ -2137,7 +2198,7 @@ return finalDedupedOptions.map((option, index) => ({
 
     let finalOptions = cleanedOptions;
 
-    // Se almoço/jantar ficou com poucas opções, completar com opções reais.
+    // Se almoÃ§o/jantar ficou com poucas opÃ§Ãµes, completar com opÃ§Ãµes reais.
     if (isMainMealKey(mealKey) && finalOptions.length < 3) {
       const fallbacks = getFallbackOptions(mealKey);
 
@@ -2149,12 +2210,12 @@ return finalDedupedOptions.map((option, index) => ({
       }
     }
 
-    // Nunca deixar refeição vazia.
+    // Nunca deixar refeiÃ§Ã£o vazia.
     if (finalOptions.length === 0) {
       finalOptions = [
         {
-          name: 'Pão integral com queijo minas',
-          qty: 'Pão integral 2 fatias + Queijo minas frescal 1 fatia',
+          name: 'PÃ£o integral com queijo minas',
+          qty: 'PÃ£o integral 2 fatias + Queijo minas frescal 1 fatia',
           cal: 280,
           badge: 'Recomendada',
           badgeDesc: '',
@@ -2193,7 +2254,7 @@ const swapMealItem = (mealKey: string, index: number) => {
     cafe: [
       {
         name: 'Tapioca com banana e canela',
-        qty: 'Tapioca (goma) 50g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+        qty: 'Tapioca (goma) 50g + Banana prata 1 unidade + Canela em pÃ³ 1 colher de chÃ¡',
         cal: 335,
         badge: 'Completa',
         badgeDesc: '',
@@ -2208,16 +2269,16 @@ const swapMealItem = (mealKey: string, index: number) => {
         score: 880,
       },
       {
-        name: 'Pão árabe com homus e tomate',
-        qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa + Tomate 80g',
+        name: 'PÃ£o Ã¡rabe com homus e tomate',
+        qty: 'PÃ£o Ã¡rabe 1 unidade + Homus 1 colher de sopa + Tomate 80g',
         cal: 330,
         badge: 'Completa',
         badgeDesc: '',
         score: 860,
       },
       {
-        name: 'Fruta com chia e bebida de amêndoas',
-        qty: 'Maçã 1 unidade + Chia 1 colher de sopa + Bebida de amêndoas 1 copo',
+        name: 'Fruta com chia e bebida de amÃªndoas',
+        qty: 'MaÃ§Ã£ 1 unidade + Chia 1 colher de sopa + Bebida de amÃªndoas 1 copo',
         cal: 180,
         badge: 'Leve',
         badgeDesc: '',
@@ -2232,8 +2293,8 @@ const swapMealItem = (mealKey: string, index: number) => {
         score: 820,
       },
       {
-        name: 'Pão integral com ovos',
-        qty: 'Pão integral 2 fatias + Ovo de galinha 2 unidades',
+        name: 'PÃ£o integral com ovos',
+        qty: 'PÃ£o integral 2 fatias + Ovo de galinha 2 unidades',
         cal: 330,
         badge: 'Completa',
         badgeDesc: '',
@@ -2243,8 +2304,8 @@ const swapMealItem = (mealKey: string, index: number) => {
 
     almoco: [
       {
-        name: 'Arroz, feijão e frango',
-        qty: 'Arroz branco cozido 140g + Feijão preto cozido 100g + Peito de Frango grelhado 150g + Salada verde à vontade',
+        name: 'Arroz, feijÃ£o e frango',
+        qty: 'Arroz branco cozido 140g + FeijÃ£o preto cozido 100g + Peito de Frango grelhado 150g + Salada verde Ã  vontade',
         cal: 555,
         badge: 'Completa',
         badgeDesc: '',
@@ -2252,7 +2313,7 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Peixe com batata e legumes',
-        qty: 'Tilápia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
+        qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 220g + Legumes variados 180g',
         cal: 450,
         badge: 'Completa',
         badgeDesc: '',
@@ -2260,15 +2321,15 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Patinho com arroz e legumes',
-        qty: 'Patinho moído 140g + Arroz branco cozido 120g + Legumes variados 180g',
+        qty: 'Patinho moÃ­do 140g + Arroz branco cozido 120g + Legumes variados 180g',
         cal: 520,
         badge: 'Completa',
         badgeDesc: '',
         score: 860,
       },
       {
-        name: 'Arroz, feijão e tofu grelhado',
-        qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+        name: 'Arroz, feijÃ£o e tofu grelhado',
+        qty: 'Arroz integral cozido 130g + FeijÃ£o preto cozido 100g + Tofu grelhado 180g + Salada verde Ã  vontade',
         cal: 500,
         badge: 'Completa',
         badgeDesc: '',
@@ -2276,15 +2337,15 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Batata com lentilha e salada',
-        qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde à vontade',
+        qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde Ã  vontade',
         cal: 420,
         badge: 'Completa',
         badgeDesc: '',
         score: 820,
       },
       {
-        name: 'Cuscuz com grão-de-bico e legumes',
-        qty: 'Cuscuz de milho cozido 150g + Grão-de-bico cozido 140g + Legumes variados 180g',
+        name: 'Cuscuz com grÃ£o-de-bico e legumes',
+        qty: 'Cuscuz de milho cozido 150g + GrÃ£o-de-bico cozido 140g + Legumes variados 180g',
         cal: 465,
         badge: 'Completa',
         badgeDesc: '',
@@ -2303,7 +2364,7 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Frango com mandioca e salada',
-        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde à vontade',
+        qty: 'Peito de Frango grelhado 150g + Mandioca cozida 150g + Salada verde Ã  vontade',
         cal: 485,
         badge: 'Completa',
         badgeDesc: '',
@@ -2311,23 +2372,23 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Peixe com batata e legumes',
-        qty: 'Tilápia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 180g',
+        qty: 'TilÃ¡pia grelhada 160g + Batata inglesa cozida 200g + Legumes variados 180g',
         cal: 420,
         badge: 'Leve',
         badgeDesc: '',
         score: 860,
       },
       {
-        name: 'Arroz, feijão e tofu grelhado',
-        qty: 'Arroz integral cozido 130g + Feijão preto cozido 100g + Tofu grelhado 180g + Salada verde à vontade',
+        name: 'Arroz, feijÃ£o e tofu grelhado',
+        qty: 'Arroz integral cozido 130g + FeijÃ£o preto cozido 100g + Tofu grelhado 180g + Salada verde Ã  vontade',
         cal: 500,
         badge: 'Completa',
         badgeDesc: '',
         score: 840,
       },
       {
-        name: 'Cuscuz com grão-de-bico e legumes',
-        qty: 'Cuscuz de milho cozido 150g + Grão-de-bico cozido 140g + Legumes variados 180g',
+        name: 'Cuscuz com grÃ£o-de-bico e legumes',
+        qty: 'Cuscuz de milho cozido 150g + GrÃ£o-de-bico cozido 140g + Legumes variados 180g',
         cal: 465,
         badge: 'Completa',
         badgeDesc: '',
@@ -2335,7 +2396,7 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Batata com lentilha e salada',
-        qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde à vontade',
+        qty: 'Batata inglesa cozida 250g + Lentilha cozida 160g + Salada verde Ã  vontade',
         cal: 420,
         badge: 'Completa',
         badgeDesc: '',
@@ -2346,7 +2407,7 @@ const swapMealItem = (mealKey: string, index: number) => {
     lanche: [
       {
         name: 'Pipoca com fruta',
-        qty: 'Pipoca (milho p/ estourar) 30g + Maçã 1 unidade',
+        qty: 'Pipoca (milho p/ estourar) 30g + MaÃ§Ã£ 1 unidade',
         cal: 240,
         badge: 'Simples',
         badgeDesc: '',
@@ -2354,15 +2415,15 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Tapioca com banana e canela',
-        qty: 'Tapioca (goma) 40g + Banana prata 1 unidade + Canela em pó 1 colher de chá',
+        qty: 'Tapioca (goma) 40g + Banana prata 1 unidade + Canela em pÃ³ 1 colher de chÃ¡',
         cal: 285,
         badge: 'Completa',
         badgeDesc: '',
         score: 880,
       },
       {
-        name: 'Pão árabe com homus',
-        qty: 'Pão árabe 1 unidade + Homus 1 colher de sopa',
+        name: 'PÃ£o Ã¡rabe com homus',
+        qty: 'PÃ£o Ã¡rabe 1 unidade + Homus 1 colher de sopa',
         cal: 285,
         badge: 'Completa',
         badgeDesc: '',
@@ -2370,15 +2431,15 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Fruta com chia',
-        qty: 'Maçã 1 unidade + Chia 1 colher de sopa',
+        qty: 'MaÃ§Ã£ 1 unidade + Chia 1 colher de sopa',
         cal: 125,
         badge: 'Leve',
         badgeDesc: '',
         score: 840,
       },
       {
-        name: 'Sanduíche natural de atum',
-        qty: 'Pão integral 2 fatias + Atum em lata (água) 1 lata + Requeijão light 20g',
+        name: 'SanduÃ­che natural de atum',
+        qty: 'PÃ£o integral 2 fatias + Atum em lata (Ã¡gua) 1 lata + RequeijÃ£o light 20g',
         cal: 360,
         badge: 'Completa',
         badgeDesc: '',
@@ -2397,7 +2458,7 @@ const swapMealItem = (mealKey: string, index: number) => {
     lancheManha: [
       {
         name: 'Fruta com chia',
-        qty: 'Maçã 1 unidade + Chia 1 colher de sopa',
+        qty: 'MaÃ§Ã£ 1 unidade + Chia 1 colher de sopa',
         cal: 125,
         badge: 'Leve',
         badgeDesc: '',
@@ -2431,8 +2492,8 @@ const swapMealItem = (mealKey: string, index: number) => {
 
     ceia: [
       {
-        name: 'Chá com fruta',
-        qty: 'Chá sem açúcar 1 xícara + Maçã 1 unidade',
+        name: 'ChÃ¡ com fruta',
+        qty: 'ChÃ¡ sem aÃ§Ãºcar 1 xÃ­cara + MaÃ§Ã£ 1 unidade',
         cal: 70,
         badge: 'Leve',
         badgeDesc: '',
@@ -2440,7 +2501,7 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Banana com canela',
-        qty: 'Banana prata 1 unidade + Canela em pó 1 colher de chá',
+        qty: 'Banana prata 1 unidade + Canela em pÃ³ 1 colher de chÃ¡',
         cal: 85,
         badge: 'Leve',
         badgeDesc: '',
@@ -2456,7 +2517,7 @@ const swapMealItem = (mealKey: string, index: number) => {
       },
       {
         name: 'Leite com canela',
-        qty: 'Leite desnatado 1 copo + Canela em pó 1 colher de chá',
+        qty: 'Leite desnatado 1 copo + Canela em pÃ³ 1 colher de chÃ¡',
         cal: 75,
         badge: 'Leve',
         badgeDesc: '',
@@ -2472,7 +2533,7 @@ const swapMealItem = (mealKey: string, index: number) => {
     const currentOptions = prev[mealKey] || [];
 
     if (!currentOptions[index]) {
-      console.warn('Trocar opção: opção não encontrada', { mealKey, index });
+      console.warn('Trocar opÃ§Ã£o: opÃ§Ã£o nÃ£o encontrada', { mealKey, index });
       return prev;
     }
 
@@ -2504,7 +2565,7 @@ const swapMealItem = (mealKey: string, index: number) => {
       sourceBank[0];
 
     if (!replacement) {
-      console.warn('Trocar opção: nenhuma substituição encontrada', { mealKey, index });
+      console.warn('Trocar opÃ§Ã£o: nenhuma substituiÃ§Ã£o encontrada', { mealKey, index });
       return prev;
     }
 
@@ -2539,7 +2600,7 @@ const addRecipeToPlan = (recipe: any, mealKey: string) => {
   ].join(' ');
 
   if (isFoodRestricted(recipeText, userProfile)) {
-    alert('Essa receita não combina com suas restrições atuais.');
+    alert('Essa receita nÃ£o combina com suas restriÃ§Ãµes atuais.');
     return;
   }
 
@@ -2651,8 +2712,8 @@ const addRecipeToPlan = (recipe: any, mealKey: string) => {
       mainDifficulty: 'Vontade de Doces',
       restrictions: [],
       preferredIngredients: {
-        breakfast: ['Pão integral', 'Ovo de galinha'],
-        main: ['Peito de Frango grelhado', 'Arroz integral cozido', 'Feijão carioca cozido'],
+        breakfast: ['PÃ£o integral', 'Ovo de galinha'],
+        main: ['Peito de Frango grelhado', 'Arroz integral cozido', 'FeijÃ£o carioca cozido'],
         snacks: ['Iogurte natural', 'Banana prata', 'Pipoca']
       }
     };
@@ -2692,10 +2753,10 @@ useEffect(() => {
   );
 }
 
-// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
+// â”€â”€â”€ SHARED COMPONENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-// ─── REFEICAO SEARCH MODAL ────────────────────────────────────────────────────
+// â”€â”€â”€ REFEICAO SEARCH MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: () => void; onAdd: (entry: MealEntry) => void }) {
   const { addCustomFood, userProfile } = useApp();
@@ -2819,7 +2880,7 @@ return (
             <div className="p-8 border-b flex justify-between items-center bg-gray-50/50">
               <div>
                 <h3 className="text-xl font-black text-gray-900">{showCreateFood ? 'Novo Alimento' : 'Adicionar Alimento'}</h3>
-                {!showCreateFood && <p className="text-[10px] font-bold text-gray-400 mt-0.5">{FOODS.length} alimentos disponíveis</p>}
+                {!showCreateFood && <p className="text-[10px] font-bold text-gray-400 mt-0.5">{FOODS.length} alimentos disponÃ­veis</p>}
               </div>
               <button onClick={onClose} className="p-3 hover:bg-gray-200 rounded-2xl transition-colors bg-gray-100">
                 <X size={20} className="text-gray-500" />
@@ -2839,7 +2900,7 @@ return (
                         <input value={newCal} onChange={e => setNewCal(e.target.value)} keyboardType="numeric" className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-green-500 text-sm font-bold" placeholder="0" />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Proteína</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase ml-1">ProteÃ­na</label>
                         <input value={newP} onChange={e => setNewP(e.target.value)} keyboardType="numeric" className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-green-500 text-sm font-bold" placeholder="0" />
                       </div>
                       <div className="space-y-2">
@@ -2870,20 +2931,20 @@ return (
 
                   {fuzzySuggestion && (
                     <div className="mb-6 mx-2 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-between">
-                       <p className="text-xs font-bold text-orange-800">Você quis dizer <span className="underline italic text-orange-900">{fuzzySuggestion.suggestion}</span>?</p>
+                       <p className="text-xs font-bold text-orange-800">VocÃª quis dizer <span className="underline italic text-orange-900">{fuzzySuggestion.suggestion}</span>?</p>
                        <div className="flex gap-2">
                           <button onClick={() => {
                             setSearch(fuzzySuggestion.match);
                             setFuzzySuggestion(null);
                           }} className="px-3 py-1 bg-orange-500 text-white rounded-lg text-[9px] font-black uppercase">Sim</button>
-                          <button onClick={() => setFuzzySuggestion(null)} className="px-3 py-1 bg-white text-orange-400 rounded-lg text-[9px] font-black uppercase border border-orange-100">Não</button>
+                          <button onClick={() => setFuzzySuggestion(null)} className="px-3 py-1 bg-white text-orange-400 rounded-lg text-[9px] font-black uppercase border border-orange-100">NÃ£o</button>
                        </div>
                     </div>
                   )}
                   
                   {filtered.length === 0 && search.length > 0 && !fuzzySuggestion && (
                     <div className="mb-6 p-6 bg-gray-50 rounded-[32px] text-center border-2 border-dashed border-gray-100">
-                      <p className="text-sm font-bold text-gray-400 mb-4 leading-relaxed">Alimento não encontrado. Deseja adicionar manualmente?</p>
+                      <p className="text-sm font-bold text-gray-400 mb-4 leading-relaxed">Alimento nÃ£o encontrado. Deseja adicionar manualmente?</p>
                       <button onClick={() => {
                         setNewName(search);
                         setShowCreateFood(true);
@@ -2917,7 +2978,7 @@ return (
                             </div>
                             <div>
                                <p className="font-black text-green-700 text-sm">Novo personalizado</p>
-                               <p className="text-[10px] font-bold text-green-600/70 uppercase">Crie seu próprio alimento</p>
+                               <p className="text-[10px] font-bold text-green-600/70 uppercase">Crie seu prÃ³prio alimento</p>
                             </div>
                          </div>
                          <ChevronRight size={16} className="text-green-400" />
@@ -2935,7 +2996,7 @@ return (
                            </div>
                            <div>
                              <p className="font-black text-gray-900 text-sm">{food.name}</p>
-                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{food.category} · {food.portionNote || (food.un ? `1 ${food.un}` : '100g')}</p>
+                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{food.category} Â· {food.portionNote || (food.un ? `1 ${food.un}` : '100g')}</p>
                            </div>
                         </div>
                         <div className="text-right">
@@ -2980,7 +3041,7 @@ return (
           Receita
         </p>
         <p className="text-[9px] font-bold text-amber-600/70 uppercase tracking-tight">
-          Como preparar essa opção
+          Como preparar essa opÃ§Ã£o
         </p>
       </div>
     </div>
@@ -2988,7 +3049,7 @@ return (
     {selectedFood.recipe?.length && (
       <div className="mb-4">
         <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">
-          Você vai usar
+          VocÃª vai usar
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -3019,7 +3080,7 @@ return (
     {selectedFood.portionNote && (
       <div className="bg-white/70 border border-amber-100 rounded-2xl px-4 py-3">
         <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-1">
-          Porção sugerida
+          PorÃ§Ã£o sugerida
         </p>
 
         <p className="text-xs font-bold text-amber-900/80">
@@ -3066,7 +3127,7 @@ return (
                    <div className="grid grid-cols-4 gap-3 mb-10">
                       {[
                         { l: 'Calorias', v: Math.round(selectedFood.cal * (((unit === 'un' && selectedFood.amountPerUn) ? (parseFloat(qty) || 0) * selectedFood.amountPerUn : (parseFloat(qty) || 0)) / 100)), c: 'bg-gray-50 text-gray-900 border-gray-100' },
-                        { l: 'Proteína', v: (selectedFood.p * (((unit === 'un' && selectedFood.amountPerUn) ? (parseFloat(qty) || 0) * selectedFood.amountPerUn : (parseFloat(qty) || 0)) / 100)).toFixed(1) + 'g', c: 'bg-blue-50 text-blue-600 border-blue-100' },
+                        { l: 'ProteÃ­na', v: (selectedFood.p * (((unit === 'un' && selectedFood.amountPerUn) ? (parseFloat(qty) || 0) * selectedFood.amountPerUn : (parseFloat(qty) || 0)) / 100)).toFixed(1) + 'g', c: 'bg-blue-50 text-blue-600 border-blue-100' },
                         { l: 'Carbos', v: (selectedFood.c * (((unit === 'un' && selectedFood.amountPerUn) ? (parseFloat(qty) || 0) * selectedFood.amountPerUn : (parseFloat(qty) || 0)) / 100)).toFixed(1) + 'g', c: 'bg-green-50 text-green-600 border-green-100' },
                         { l: 'Gorduras', v: (selectedFood.f * (((unit === 'un' && selectedFood.amountPerUn) ? (parseFloat(qty) || 0) * selectedFood.amountPerUn : (parseFloat(qty) || 0)) / 100)).toFixed(1) + 'g', c: 'bg-orange-50 text-orange-600 border-orange-100' },
                       ].map(m => (
@@ -3089,7 +3150,7 @@ return (
   );
 }
 
-// ─── MAIN SCREENS ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ MAIN SCREENS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function CalorieRing({
   consumed,
@@ -3159,7 +3220,7 @@ function CalorieRing({
       </div>
 
       <p className="mt-3 text-center text-[10px] font-bold text-white/60">
-        Meta diária: {safeGoal} calorias
+        Meta diÃ¡ria: {safeGoal} calorias
       </p>
 
       <span className="sr-only">
@@ -3169,13 +3230,13 @@ function CalorieRing({
   );
 }
 
-// ─── ONBOARDING SCREENS ────────────────────────────────────────────────────────
+// â”€â”€â”€ ONBOARDING SCREENS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function WelcomeScreen({ onNext }: { onNext: () => void }) {
   return (
     <div className="min-h-screen bg-green-500 flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="z-10 flex flex-col items-center text-center">
         <Logo light />
-        <p className="text-lg font-medium opacity-80 max-w-[280px] leading-relaxed mt-4">Seu plano alimentar com o apoio do seu círculo</p>
+        <p className="text-lg font-medium opacity-80 max-w-[280px] leading-relaxed mt-4">Seu plano alimentar com o apoio do seu cÃ­rculo</p>
       </motion.div>
 
       <motion.div 
@@ -3188,7 +3249,7 @@ function WelcomeScreen({ onNext }: { onNext: () => void }) {
           onClick={onNext}
           className="w-full bg-white text-green-600 font-black py-5 rounded-[32px] text-lg shadow-2xl active:scale-95 transition-all"
         >
-          Começar Jornada
+          ComeÃ§ar Jornada
         </button>
       </motion.div>
     </div>
@@ -3216,7 +3277,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
         msg = 'Preencha seu e-mail para continuar.';
       } else if (!email.includes('@')) {
         fields.push('email');
-        msg = 'Digite um e-mail válido.';
+        msg = 'Digite um e-mail vÃ¡lido.';
       } else if (!password.trim()) {
         fields.push('password');
         msg = 'Digite sua senha.';
@@ -3230,7 +3291,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
          msg = 'Digite seu e-mail.';
       } else if (!email.includes('@')) {
          fields.push('email');
-         msg = 'Digite um e-mail válido.';
+         msg = 'Digite um e-mail vÃ¡lido.';
       } else if (!password.trim()) {
          fields.push('password');
          msg = 'Digite uma senha.';
@@ -3242,7 +3303,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
          msg = 'Confirme sua senha.';
       } else if (password !== confirmPassword) {
          fields.push('password', 'confirmPassword');
-         msg = 'As senhas não conferem.';
+         msg = 'As senhas nÃ£o conferem.';
       }
     }
 
@@ -3327,7 +3388,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
-                  placeholder="••••••••" 
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
                 />
              </div>
              {mode === 'signup' && (
@@ -3338,7 +3399,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${errorFields.includes('confirmPassword') ? 'border-red-100 bg-red-50/30' : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'}`} 
-                    placeholder="••••••••" 
+                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
                   />
                </div>
              )}
@@ -3394,7 +3455,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
           </div>
        </div>
        <div className="text-center text-xs text-gray-400 font-medium pb-2">
-         {mode === 'login' ? 'Não tem uma conta?' : 'Já tem uma conta?'}
+         {mode === 'login' ? 'NÃ£o tem uma conta?' : 'JÃ¡ tem uma conta?'}
          <button 
           onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
           className="text-green-600 font-black ml-1 outline-none hover:underline"
@@ -3408,15 +3469,15 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
 
 const INGREDIENTS = {
   breakfast: [
-    'Pão integral', 'Pão francês', 'Tapioca', 'Aveia', 'Cuscuz', 'Iogurte', 'Leite', 'Ovos', 
-    'Queijo minas', 'Cottage', 'Banana', 'Maçã', 'Morango', 'Mamão', 'Mel'
+    'PÃ£o integral', 'PÃ£o francÃªs', 'Tapioca', 'Aveia', 'Cuscuz', 'Iogurte', 'Leite', 'Ovos', 
+    'Queijo minas', 'Cottage', 'Banana', 'MaÃ§Ã£', 'Morango', 'MamÃ£o', 'Mel'
   ],
   main: [
-    'Arroz branco', 'Arroz integral', 'Feijão', 'Batata inglesa', 'Batata doce', 'Inhame', 'Mandioca', 
-    'Macarrão', 'Frango', 'Patinho', 'Carne magra', 'Peixe', 'Atum', 'Salada', 'Legumes'
+    'Arroz branco', 'Arroz integral', 'FeijÃ£o', 'Batata inglesa', 'Batata doce', 'Inhame', 'Mandioca', 
+    'MacarrÃ£o', 'Frango', 'Patinho', 'Carne magra', 'Peixe', 'Atum', 'Salada', 'Legumes'
   ],
   snacks: [
-    'Iogurte', 'Fruta', 'Aveia', 'Pão integral', 'Frango desfiado', 'Atum', 
+    'Iogurte', 'Fruta', 'Aveia', 'PÃ£o integral', 'Frango desfiado', 'Atum', 
     'Queijo', 'Pipoca', 'Crepioca', 'Castanhas'
   ]
 };
@@ -3444,14 +3505,14 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
 
   const restrictionOptions = [
     'Lactose',
-    'Glúten',
+    'GlÃºten',
     'Amendoim',
     'Castanhas/nozes',
     'Ovo',
     'Leite',
     'Soja',
     'Peixes',
-    'Crustáceos',
+    'CrustÃ¡ceos',
     'Frutos do Mar',
     'Gergelim',
     'Corantes/aditivos',
@@ -3466,7 +3527,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
     setScreeningError('');
 
     if (step === 9 && (!profile.restrictions || profile.restrictions.length === 0)) {
-      setScreeningError('Selecione uma restrição ou marque "Nenhuma" para continuar.');
+      setScreeningError('Selecione uma restriÃ§Ã£o ou marque "Nenhuma" para continuar.');
       return;
     }
 
@@ -3535,7 +3596,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              Sua idade e sexo biológico
+              Sua idade e sexo biolÃ³gico
             </h2>
 
             <div className="grid grid-cols-2 gap-4">
@@ -3637,7 +3698,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
 
             <div className="grid grid-cols-1 gap-3">
               {[
-                { k: 'sem_restricao', l: 'Sem restrição', d: 'Como de tudo' },
+                { k: 'sem_restricao', l: 'Sem restriÃ§Ã£o', d: 'Como de tudo' },
                 { k: 'vegetariano', l: 'Vegetariano', d: 'Sem carne (frango, carne, peixe)' },
                 { k: 'vegano', l: 'Vegano', d: 'Sem nenhum item de origem animal' },
                 { k: 'pescetariano', l: 'Pescetariano', d: 'Sem carne, mas como peixe' },
@@ -3689,8 +3750,8 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
             <div className="grid grid-cols-1 gap-3">
               {[
                 { k: 'perda', l: 'Emagrecer', d: 'Focar em queima de gordura' },
-                { k: 'manutencao', l: 'Manter Peso', d: 'Saúde e definição' },
-                { k: 'ganho', l: 'Ganhar Massa', d: 'Foco em músculos e força' },
+                { k: 'manutencao', l: 'Manter Peso', d: 'SaÃºde e definiÃ§Ã£o' },
+                { k: 'ganho', l: 'Ganhar Massa', d: 'Foco em mÃºsculos e forÃ§a' },
               ].map(opt => {
                 const selected = profile.goal === opt.k;
 
@@ -3733,12 +3794,12 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              Frequência de treinos
+              FrequÃªncia de treinos
             </h2>
 
             <div className="space-y-8 text-center">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                Sessões por semana
+                SessÃµes por semana
               </p>
 
               <div className="flex justify-center text-9xl font-black text-green-500">
@@ -3761,7 +3822,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              Refeições por dia
+              RefeiÃ§Ãµes por dia
             </h2>
 
             <div className="grid grid-cols-2 gap-3 mt-8">
@@ -3784,7 +3845,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
                     </span>
 
                     <span className="text-[10px] font-bold uppercase mt-1">
-                      Refeições
+                      RefeiÃ§Ãµes
                     </span>
                   </button>
                 );
@@ -3806,8 +3867,8 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
                 'Vontade de Doces',
                 'Fome Excessiva',
                 'Rotina Social',
-                'Não saber cozinhar',
-                'Organização das refeições',
+                'NÃ£o saber cozinhar',
+                'OrganizaÃ§Ã£o das refeiÃ§Ãµes',
               ].map(diff => {
                 const selected = profile.mainDifficulty === diff;
 
@@ -3843,16 +3904,16 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
           <div className="space-y-8">
             <div className="space-y-2">
               <p className="text-xs font-bold text-red-500">
-  Segurança
+  SeguranÃ§a
 </p>
 
               <h2 className="text-4xl font-black text-gray-900 leading-tight">
-                Restrições ou Alergias?
+                RestriÃ§Ãµes ou Alergias?
               </h2>
             </div>
 
             <p className="text-xs text-gray-500 font-bold px-1 uppercase tracking-tight">
-              Marque apenas o que você precisa evitar.
+              Marque apenas o que vocÃª precisa evitar.
             </p>
 
             {screeningError && (
@@ -3875,7 +3936,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-lg font-black">
-                    Nenhuma restrição
+                    Nenhuma restriÃ§Ã£o
                   </p>
 
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-tight text-green-600">
@@ -3924,7 +3985,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               <input
                 autoFocus
                 className="w-full mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
-                placeholder="Descreva outra restrição..."
+                placeholder="Descreva outra restriÃ§Ã£o..."
               />
             )}
           </div>
@@ -3997,7 +4058,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               : 'bg-green-500 text-white shadow-green-100'
           }`}
         >
-          {step === totalSteps ? 'Próximo Passo' : 'Próximo'}
+          {step === totalSteps ? 'PrÃ³ximo Passo' : 'PrÃ³ximo'}
         </button>
       </div>
     </div>
@@ -4104,7 +4165,7 @@ function PlanBuilderScreen({
           </h2>
 
           <p className="text-xs text-gray-400 font-bold">
-            Selecione os ingredientes que você mais gosta.
+            Selecione os ingredientes que vocÃª mais gosta.
           </p>
         </div>
 
@@ -4124,14 +4185,14 @@ function PlanBuilderScreen({
                       : 'bg-gray-50 border-transparent text-gray-400 shadow-sm'
                   }`}
                 >
-                  {selected ? '✓ ' : ''}
+                  {selected ? 'âœ“ ' : ''}
                   {ing}
                 </button>
               );
             })
           ) : (
             <p className="text-sm font-bold text-gray-400 italic">
-              Nenhum ingrediente padrão disponível com suas restrições. Adicione abaixo.
+              Nenhum ingrediente padrÃ£o disponÃ­vel com suas restriÃ§Ãµes. Adicione abaixo.
             </p>
           )}
         </div>
@@ -4149,9 +4210,9 @@ function PlanBuilderScreen({
               className="flex-1 p-4 bg-gray-50 rounded-2xl text-sm font-bold border-none focus:ring-2 focus:ring-green-500"
               placeholder={
                 cat === 'breakfast'
-                  ? 'Ex: Requeijão light...'
+                  ? 'Ex: RequeijÃ£o light...'
                   : cat === 'main'
-                  ? 'Ex: Brócolis, Feijão preto...'
+                  ? 'Ex: BrÃ³colis, FeijÃ£o preto...'
                   : 'Ex: Iogurte, Mix de castanhas...'
               }
             />
@@ -4201,7 +4262,7 @@ function PlanBuilderScreen({
       <div className="space-y-8 pb-20">
         <div className="space-y-2">
           <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">
-            Revisão
+            RevisÃ£o
           </p>
 
           <h2 className="text-3xl font-black text-gray-900 leading-tight">
@@ -4209,14 +4270,14 @@ function PlanBuilderScreen({
           </h2>
 
           <p className="text-xs text-gray-400 font-bold">
-            Você escolheu {selectedMealCount} refeições por dia.
+            VocÃª escolheu {selectedMealCount} refeiÃ§Ãµes por dia.
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
             <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3">
-              Café da manhã
+              CafÃ© da manhÃ£
             </p>
 
             <p className="text-sm font-bold text-gray-700 leading-relaxed">
@@ -4226,7 +4287,7 @@ function PlanBuilderScreen({
 
           <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
             <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3">
-              Almoço e jantar
+              AlmoÃ§o e jantar
             </p>
 
             <p className="text-sm font-bold text-gray-700 leading-relaxed">
@@ -4237,7 +4298,7 @@ function PlanBuilderScreen({
           {showSnackStep && (
             <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
               <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3">
-                Lanches e refeições extras
+                Lanches e refeiÃ§Ãµes extras
               </p>
 
               <p className="text-sm font-bold text-gray-700 leading-relaxed">
@@ -4255,14 +4316,14 @@ function PlanBuilderScreen({
       case 1:
         return renderIngredientStep(
           'breakfast',
-          'Café da manhã',
+          'CafÃ© da manhÃ£',
           INGREDIENTS.breakfast
         );
 
       case 2:
         return renderIngredientStep(
           'main',
-          'Almoço e jantar',
+          'AlmoÃ§o e jantar',
           INGREDIENTS.main
         );
 
@@ -4270,7 +4331,7 @@ function PlanBuilderScreen({
         if (showSnackStep) {
           return renderIngredientStep(
             'snacks',
-            'Lanches e refeições extras',
+            'Lanches e refeiÃ§Ãµes extras',
             INGREDIENTS.snacks
           );
         }
@@ -4342,7 +4403,7 @@ function PlanBuilderScreen({
               : 'bg-green-500 text-white shadow-green-100'
           }`}
         >
-          {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
+          {step === totalSteps ? 'Gerar Meu Plano' : 'PrÃ³ximo'}
         </button>
       </div>
     </div>
@@ -4386,13 +4447,13 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
     const normalized = String(type || '').toLowerCase();
 
-    if (normalized === 'cafe') return 'Café da manhã';
-    if (normalized === 'almoco') return 'Almoço';
+    if (normalized === 'cafe') return 'CafÃ© da manhÃ£';
+    if (normalized === 'almoco') return 'AlmoÃ§o';
     if (normalized === 'lanche') return 'Lanche da tarde';
     if (normalized === 'jantar') return 'Jantar';
     if (normalized === 'ceia') return 'Ceia';
 
-    return type || 'Refeição';
+    return type || 'RefeiÃ§Ã£o';
   };
 
   const sortedMeals = [...meals].sort(
@@ -4429,7 +4490,7 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <div className="flex justify-between items-center mb-8">
               <div>
                 <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-                  Histórico
+                  HistÃ³rico
                 </p>
 
                 <h2 className="text-2xl font-black">
@@ -4630,7 +4691,7 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                                         {it.unit === 'g'
                                           ? 'g'
                                           : it.food?.un || 'un'}{' '}
-                                        · P:{it.p} C:{it.c} G:{it.f}
+                                        Â· P:{it.p} C:{it.c} G:{it.f}
                                       </p>
                                     </div>
 
@@ -4641,7 +4702,7 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                                 ))
                               ) : (
                                 <p className="text-xs font-bold text-gray-400">
-                                  Sem itens detalhados nesta refeição.
+                                  Sem itens detalhados nesta refeiÃ§Ã£o.
                                 </p>
                               )}
                             </div>
@@ -4708,7 +4769,7 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
               onClick={onClose}
               className="w-full py-5 mt-8 bg-green-500 text-white font-black rounded-[32px] text-xs uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
             >
-              Fechar Histórico
+              Fechar HistÃ³rico
             </button>
           </motion.div>
         </div>
@@ -4725,11 +4786,11 @@ const getReadablePlanTitle = (option: any, mealKey: string) => {
   const hasPatinho =
     text.includes('patinho') ||
     text.includes('carne moida') ||
-    text.includes('carne moída');
+    text.includes('carne moÃ­da');
   const hasTofu = text.includes('tofu');
   const hasPeixe =
     text.includes('tilapia') ||
-    text.includes('tilápia') ||
+    text.includes('tilÃ¡pia') ||
     text.includes('peixe') ||
     text.includes('atum');
 
@@ -4737,64 +4798,64 @@ const getReadablePlanTitle = (option: any, mealKey: string) => {
   const hasArrozIntegral = text.includes('arroz integral');
   const arrozLabel = hasArrozIntegral ? 'arroz integral' : 'arroz';
 
-  const hasFeijao = text.includes('feijao') || text.includes('feijão');
+  const hasFeijao = text.includes('feijao') || text.includes('feijÃ£o');
   const hasLegumes = text.includes('legumes');
   const hasSalada = text.includes('salada');
   const hasBatata = text.includes('batata');
-  const hasMacarrao = text.includes('macarrao') || text.includes('macarrão');
+  const hasMacarrao = text.includes('macarrao') || text.includes('macarrÃ£o');
   const hasMandioca = text.includes('mandioca');
   const hasInhame = text.includes('inhame');
   const hasLentilha = text.includes('lentilha');
   const hasGraoBico =
     text.includes('grao-de-bico') ||
-    text.includes('grão-de-bico');
+    text.includes('grÃ£o-de-bico');
 
   if (mealKey === 'almoco' || mealKey === 'jantar') {
     if (hasFrango && hasArroz && hasFeijao) {
-      return `Frango com ${arrozLabel}, feijão e legumes`;
+      return `Frango com ${arrozLabel}, feijÃ£o e legumes`;
     }
 
     if (hasPatinho && hasArroz && hasFeijao) {
-      return `Carne moída com ${arrozLabel} e feijão`;
+      return `Carne moÃ­da com ${arrozLabel} e feijÃ£o`;
     }
 
     if (hasTofu && hasArroz && hasFeijao) {
-      return `Tofu com ${arrozLabel}, feijão e salada`;
+      return `Tofu com ${arrozLabel}, feijÃ£o e salada`;
     }
 
     if (hasPeixe && hasBatata) return 'Peixe com batata e legumes';
     if (hasFrango && hasBatata) return 'Frango com batata e salada';
-    if (hasPatinho && hasMacarrao) return 'Macarrão com carne moída';
+    if (hasPatinho && hasMacarrao) return 'MacarrÃ£o com carne moÃ­da';
     if (hasFrango && hasMandioca) return 'Frango com mandioca e salada';
     if (hasPatinho && hasInhame) return 'Carne magra com inhame';
     if (hasLentilha && hasBatata) return 'Lentilha com batata e salada';
-    if (hasGraoBico) return 'Grão-de-bico com legumes';
+    if (hasGraoBico) return 'GrÃ£o-de-bico com legumes';
     if (hasLegumes && hasFrango) return 'Frango com legumes';
-    if (hasLegumes && hasPatinho) return 'Carne moída com legumes';
+    if (hasLegumes && hasPatinho) return 'Carne moÃ­da com legumes';
   }
 
   if (mealKey === 'cafe') {
     if (text.includes('tapioca') && text.includes('banana')) return 'Tapioca com banana';
     if (text.includes('panqueca')) return 'Panqueca de banana com aveia';
     if (text.includes('aveia') && text.includes('banana')) return 'Aveia com banana';
-    if ((text.includes('pao') || text.includes('pão')) && text.includes('ovo')) {
-      return 'Pão integral com ovos';
+    if ((text.includes('pao') || text.includes('pÃ£o')) && text.includes('ovo')) {
+      return 'PÃ£o integral com ovos';
     }
-    if ((text.includes('pao') || text.includes('pão')) && text.includes('requeijao')) {
-      return 'Pão integral com requeijão';
+    if ((text.includes('pao') || text.includes('pÃ£o')) && text.includes('requeijao')) {
+      return 'PÃ£o integral com requeijÃ£o';
     }
-    if ((text.includes('pao') || text.includes('pão')) && text.includes('queijo')) {
-      return 'Pão integral com queijo';
+    if ((text.includes('pao') || text.includes('pÃ£o')) && text.includes('queijo')) {
+      return 'PÃ£o integral com queijo';
     }
   }
 
   if (mealKey.includes('lanche') || mealKey === 'ceia') {
-    if ((text.includes('sanduiche') || text.includes('sanduíche')) && hasFrango) {
-      return 'Sanduíche de frango';
+    if ((text.includes('sanduiche') || text.includes('sanduÃ­che')) && hasFrango) {
+      return 'SanduÃ­che de frango';
     }
 
-    if ((text.includes('sanduiche') || text.includes('sanduíche')) && text.includes('atum')) {
-      return 'Sanduíche de atum';
+    if ((text.includes('sanduiche') || text.includes('sanduÃ­che')) && text.includes('atum')) {
+      return 'SanduÃ­che de atum';
     }
 
     if (text.includes('iogurte') && text.includes('whey')) return 'Iogurte com whey e fruta';
@@ -4803,7 +4864,7 @@ const getReadablePlanTitle = (option: any, mealKey: string) => {
     if (text.includes('pipoca')) return 'Pipoca com fruta';
   }
 
-  return rawTitle || 'Opção do plano';
+  return rawTitle || 'OpÃ§Ã£o do plano';
 };
 
 const getReadablePlanDescription = (option: any) => {
@@ -4910,12 +4971,50 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
       { cal: 0, p: 0, c: 0, f: 0 }
     );
 
+    const optionCal = Math.round(safeNumber(option?.cal));
+    const optionP = Math.round(safeNumber(option?.p));
+    const optionC = Math.round(safeNumber(option?.c));
+    const optionF = Math.round(safeNumber(option?.f));
+
+    const shouldUseFallback =
+      items.length === 0 ||
+      (Math.round(totalsFromItems.cal) === 0 && optionCal > 0);
+
+    if (shouldUseFallback) {
+      const fallbackItems: MealEntry[] = [
+        {
+          food: {
+            name: option?.name || 'OpÃ§Ã£o do plano',
+            cal: optionCal,
+            p: optionP,
+            c: optionC,
+            f: optionF,
+            category: 'Plano',
+          } as FoodItem,
+          qty: 1,
+          unit: 'un',
+          cal: optionCal,
+          p: optionP,
+          c: optionC,
+          f: optionF,
+        },
+      ];
+
+      return {
+        items: fallbackItems,
+        cal: optionCal,
+        p: optionP,
+        c: optionC,
+        f: optionF,
+      };
+    }
+
     return {
       items,
-      cal: Math.round(totalsFromItems.cal || safeNumber(option?.cal)),
-      p: Math.round(totalsFromItems.p),
-      c: Math.round(totalsFromItems.c),
-      f: Math.round(totalsFromItems.f),
+      cal: Math.round(totalsFromItems.cal || optionCal),
+      p: Math.round(totalsFromItems.p || optionP),
+      c: Math.round(totalsFromItems.c || optionC),
+      f: Math.round(totalsFromItems.f || optionF),
     };
   };
 
@@ -4975,7 +5074,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
 
             <h1 className="text-2xl font-black mt-1">
               {isToday
-                ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Visitante'} 👋`
+                ? `OlÃ¡, ${userProfile?.name?.split(' ')[0] || 'Visitante'} ðŸ‘‹`
                 : `Visualizando ${dateDisplay}`}
             </h1>
           </div>
@@ -5003,7 +5102,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
 
             <div className="leading-tight">
               <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
-                Disponível hoje
+                DisponÃ­vel hoje
               </p>
 
               <p className="text-sm font-black uppercase tracking-tight">
@@ -5018,7 +5117,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         <div className="bg-white rounded-[30px] p-5 shadow-xl border border-gray-50 grid grid-cols-3 gap-4">
           <div className="space-y-3">
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">
-              Proteína
+              ProteÃ­na
             </p>
 
             <ProgressBar val={totals.p} max={macros.p} color={C.protein} />
@@ -5100,7 +5199,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                       </p>
 
                       <p className="text-xs text-gray-500 font-semibold">
-                        {meal.time} · {meal.items.length} itens
+                        {meal.time} Â· {meal.items.length} itens
                       </p>
                     </div>
                   </div>
@@ -5152,9 +5251,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setPendingMealType(rm.type || cfg.key);
-                                    setPendingEditMealId(rm.id);
-                                    onNavigate('registrar');
+                                    onGoToList();
                                   }}
                                   className="text-[10px] font-black text-green-600 uppercase"
                                 >
@@ -5171,7 +5268,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                                       </p>
 
                                       <p className="text-[10px] text-gray-400 font-semibold">
-                                        {it.qty} {it.unit === 'g' ? 'g' : it.food?.un || 'un'} • P: {it.p}g | C: {it.c}g | G: {it.f}g
+                                        {it.qty} {it.unit === 'g' ? 'g' : it.food?.un || 'un'} â€¢ P: {it.p}g | C: {it.c}g | G: {it.f}g
                                       </p>
                                     </div>
 
@@ -5223,23 +5320,22 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-black text-gray-800 leading-snug">
                       {selectedPlanOption
-  ? getReadablePlanTitle(selectedPlanOption, cfg.key)
-  : 'Sugestão do plano'}
+                        ? getReadablePlanTitle(selectedPlanOption, cfg.key)
+                        : 'SugestÃ£o do plano'}
                     </p>
 
                     {selectedPlanOption && (
-  <div className="mt-2 space-y-1">
-    {getReadablePlanDescription(selectedPlanOption).slice(0, 4).map((line, index) => (
-      <p
-        key={`${cfg.key}-plan-line-${index}`}
-        className="text-[10px] font-bold text-gray-400 leading-snug break-words"
-      >
-        • {line}
-      </p>
-    ))}
-  </div>
-)}
-                   
+                      <div className="mt-2 space-y-1">
+                        {getReadablePlanDescription(selectedPlanOption).slice(0, 4).map((line, index) => (
+                          <p
+                            key={`${cfg.key}-plan-line-${index}`}
+                            className="text-[10px] font-bold text-gray-400 leading-snug break-words"
+                          >
+                            â€¢ {line}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <span className="text-[10px] font-black text-green-600 whitespace-nowrap">
@@ -5257,7 +5353,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                         ? 'border-gray-100 bg-gray-50 text-gray-300'
                         : 'border-gray-200 bg-white text-gray-500'
                     }`}
-                    aria-label="Trocar opção do plano"
+                    aria-label="Trocar opÃ§Ã£o do plano"
                   >
                     <Shuffle size={16} />
                   </button>
@@ -5318,7 +5414,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                       </p>
 
                       <p className="text-[10px] text-gray-500 font-bold uppercase">
-                        {w.duration > 0 ? `${w.duration} min` : 'Manual'} · {w.burned} calorias
+                        {w.duration > 0 ? `${w.duration} min` : 'Manual'} Â· {w.burned} calorias
                       </p>
                     </div>
 
@@ -5357,45 +5453,35 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
         </div>
       </div>
 
-      <AnimatePresence>
-        {showWorkoutModal && (
-          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowWorkoutModal(false)}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      {showWorkoutModal && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+          <div
+            onClick={() => setShowWorkoutModal(false)}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          />
+
+          <div className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
+
+            <h2 className="text-3xl font-black text-gray-900 mb-2">
+              Novo ExercÃ­cio
+            </h2>
+
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">
+              Adicione um ou mais realizados hoje
+            </p>
+
+            <WorkoutForm
+              onClose={() => setShowWorkoutModal(false)}
+              onSave={(w) => {
+                addWorkout(w);
+                setShowWorkoutModal(false);
+              }}
+              estimateBurned={estimateBurned}
             />
-
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar"
-            >
-              <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
-
-              <h2 className="text-3xl font-black text-gray-900 mb-2">
-                Novo Exercício
-              </h2>
-
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">
-                Adicione um ou mais realizados hoje
-              </p>
-
-              <WorkoutForm
-                onClose={() => setShowWorkoutModal(false)}
-                onSave={(w) => {
-                  addWorkout(w);
-                  setShowWorkoutModal(false);
-                }}
-                estimateBurned={estimateBurned}
-              />
-            </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
@@ -5501,7 +5587,7 @@ function WorkoutForm({
 
           <div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-              Duração em minutos
+              DuraÃ§Ã£o em minutos
             </p>
 
             <input
@@ -5580,7 +5666,7 @@ function WorkoutForm({
             </p>
 
             <p className="mt-2 text-xs font-bold text-orange-700 leading-relaxed">
-              Use essa opção quando o relógio, esteira ou aplicativo já informou o gasto calórico.
+              Use essa opÃ§Ã£o quando o relÃ³gio, esteira ou aplicativo jÃ¡ informou o gasto calÃ³rico.
             </p>
           </div>
         </div>
@@ -5719,7 +5805,7 @@ function RecipeLibrary() {
                   </h2>
 
                   <p className="mt-1 text-xs font-bold text-gray-400">
-                    Receitas práticas para encaixar no seu plano alimentar.
+                    Receitas prÃ¡ticas para encaixar no seu plano alimentar.
                   </p>
                 </div>
 
@@ -5854,7 +5940,7 @@ function RecipeLibrary() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-2xl bg-blue-50 p-3 text-center">
                     <p className="text-[9px] font-black uppercase text-blue-500">
-                      Proteína
+                      ProteÃ­na
                     </p>
                     <p className="mt-1 text-lg font-black text-blue-700">
                       {selectedRecipe.p}g
@@ -5882,7 +5968,7 @@ function RecipeLibrary() {
 
                 <div>
                   <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    Você vai usar
+                    VocÃª vai usar
                   </p>
 
                   <div className="space-y-2">
@@ -6059,24 +6145,45 @@ function PlanoScreen() {
       };
     });
 
-    const validItems = items.length > 0 ? items : [
-      {
-        food: {
-          name: option.name,
-          cal: safeNumber(option.cal),
-          p: 0,
-          c: 0,
-          f: 0,
-          category: 'Plano',
-        } as FoodItem,
-        qty: 1,
-        unit: 'un',
-        cal: Math.round(safeNumber(option.cal)),
-        p: 0,
-        c: 0,
-        f: 0,
-      },
-    ];
+    const optionCal = Math.round(safeNumber(option.cal));
+    const optionP = Math.round(safeNumber(option.p));
+    const optionC = Math.round(safeNumber(option.c));
+    const optionF = Math.round(safeNumber(option.f));
+
+    const totalsFromItems = items.reduce(
+      (acc, item) => ({
+        cal: acc.cal + safeNumber(item.cal),
+        p: acc.p + safeNumber(item.p),
+        c: acc.c + safeNumber(item.c),
+        f: acc.f + safeNumber(item.f),
+      }),
+      { cal: 0, p: 0, c: 0, f: 0 }
+    );
+
+    const shouldUseFallback =
+      items.length === 0 ||
+      (Math.round(totalsFromItems.cal) === 0 && optionCal > 0);
+
+    const validItems: MealEntry[] = shouldUseFallback
+      ? [
+          {
+            food: {
+              name: option.name || 'OpÃ§Ã£o do plano',
+              cal: optionCal,
+              p: optionP,
+              c: optionC,
+              f: optionF,
+              category: 'Plano',
+            } as FoodItem,
+            qty: 1,
+            unit: 'un',
+            cal: optionCal,
+            p: optionP,
+            c: optionC,
+            f: optionF,
+          },
+        ]
+      : items;
 
     const totals = validItems.reduce(
       (acc, item) => ({
@@ -6097,10 +6204,10 @@ function PlanoScreen() {
         minute: '2-digit',
       }),
       items: validItems,
-      cal: Math.round(totals.cal || safeNumber(option.cal)),
-      p: Math.round(totals.p),
-      c: Math.round(totals.c),
-      f: Math.round(totals.f),
+      cal: Math.round(totals.cal || optionCal),
+      p: Math.round(totals.p || optionP),
+      c: Math.round(totals.c || optionC),
+      f: Math.round(totals.f || optionF),
     });
   };
 
@@ -6112,14 +6219,14 @@ function PlanoScreen() {
     const resolvedName = resolveFoodName(raw, FOODS) || findFuzzyMatch(raw);
 
     if (!resolvedName) {
-      setBlockError(`Não encontrei "${raw}" no banco de alimentos.`);
+      setBlockError(`NÃ£o encontrei "${raw}" no banco de alimentos.`);
       return;
     }
 
     const current = userProfile.blockedFoods || [];
 
     if (current.includes(resolvedName)) {
-      setBlockError(`${resolvedName} já está bloqueado.`);
+      setBlockError(`${resolvedName} jÃ¡ estÃ¡ bloqueado.`);
       return;
     }
 
@@ -6139,7 +6246,7 @@ function PlanoScreen() {
     const resolvedName = resolveFoodName(raw, FOODS) || findFuzzyMatch(raw);
 
     if (!resolvedName) {
-      setFavoriteError(`Não encontrei "${raw}" no banco de alimentos.`);
+      setFavoriteError(`NÃ£o encontrei "${raw}" no banco de alimentos.`);
       return;
     }
 
@@ -6197,7 +6304,7 @@ function PlanoScreen() {
                 </p>
 
                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                  Novas opções geradas com sucesso
+                  Novas opÃ§Ãµes geradas com sucesso
                 </p>
               </div>
             </div>
@@ -6242,13 +6349,14 @@ function PlanoScreen() {
                 </h3>
 
                 <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">
-                  {mealPlan[cfg.key]?.length || 0} opções geradas
+                  {mealPlan[cfg.key]?.length || 0} opÃ§Ãµes geradas
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
-              {(mealPlan[cfg.key] || []).map((opt: any, i: number) => {
+              {removeDuplicateMealOptions(mealPlan[cfg.key] || []).map((opt: any, i: number) => {
+                const visibleOptions = removeDuplicateMealOptions(mealPlan[cfg.key] || []);
                 const cleanedQty = orderMealQtyText(
                   sanitizeOptionQtyText(opt.qty || ''),
                   cfg.key
@@ -6291,9 +6399,9 @@ function PlanoScreen() {
                             </span>
                           )}
 
-                          {opt.badge === 'Menos proteína' && (
+                          {opt.badge === 'Menos proteÃ­na' && (
                             <span className="bg-[#FEF3C7] text-[#92400E] text-[7px] font-black uppercase px-2 py-0.5 rounded-md">
-                              Menos proteína
+                              Menos proteÃ­na
                             </span>
                           )}
 
@@ -6412,6 +6520,7 @@ function PlanoScreen() {
                 </h2>
 
                 <button
+                  type="button"
                   onClick={() => setShowAdjustModal(false)}
                   className="p-3 bg-gray-100 rounded-2xl active:scale-90 transition-all text-gray-400"
                 >
@@ -6427,52 +6536,63 @@ function PlanoScreen() {
 
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { id: 'sem_restricao', label: 'Sem Restrição' },
+                      { id: 'sem_restricao', label: 'Sem RestriÃ§Ã£o' },
                       { id: 'vegetariano', label: 'Vegetariano' },
                       { id: 'vegano', label: 'Vegano' },
                       { id: 'pescetariano', label: 'Pescetariano' },
-                    ] as const).map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => handleProfileUpdate({ dietaryProfile: p.id })}
-                        className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${
-                          userProfile.dietaryProfile === p.id ||
-                          (!userProfile.dietaryProfile && p.id === 'sem_restricao')
-                            ? 'bg-green-50 border-green-500 text-green-600 shadow-sm'
-                            : 'bg-white border-transparent text-gray-400'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                    ] as const).map(p => {
+                      const isActive =
+                        userProfile.dietaryProfile === p.id ||
+                        (!userProfile.dietaryProfile && p.id === 'sem_restricao');
+
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handleProfileUpdate({ dietaryProfile: p.id })}
+                          className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${
+                            isActive
+                              ? 'bg-green-50 border-2 border-green-500 text-green-600 shadow-sm'
+                              : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100">
                   <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
-                    Restrições / alergias
+                    RestriÃ§Ãµes / alergias
                   </p>
 
                   <div className="flex flex-wrap gap-2">
-                    {['Lactose', 'Glúten', 'Ovo', 'Peixes', 'Amendoim'].map(r => (
-                      <button
-                        key={r}
-                        onClick={() => handleRestrictionToggle(r)}
-                        className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${
-                          userProfile.restrictions.includes(r.toLowerCase())
-                            ? 'bg-red-50 border-red-500 text-red-600 shadow-sm'
-                            : 'bg-white border-transparent text-gray-400'
-                        }`}
-                      >
-                        Sem {r}
-                      </button>
-                    ))}
+                    {['Lactose', 'GlÃºten', 'Ovo', 'Peixes', 'Amendoim'].map(r => {
+                      const isActive = userProfile.restrictions.includes(r.toLowerCase());
+
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => handleRestrictionToggle(r)}
+                          className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${
+                            isActive
+                              ? 'bg-red-50 border-2 border-red-500 text-red-600 shadow-sm'
+                              : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div>
                   <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
-                    Estilo das refeições
+                    Estilo das refeiÃ§Ãµes
                   </p>
 
                   <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 space-y-4">
@@ -6486,24 +6606,30 @@ function PlanoScreen() {
                           {([
                             { id: 'balanced', label: 'Completa' },
                             { id: 'simple', label: 'Simples' },
-                          ] as const).map(style => (
-                            <button
-                              key={style.id}
-                              onClick={() => {
-                                const styles = { ...(userProfile.mealStyles || {}) };
-                                styles[m.key] = style.id;
-                                handleProfileUpdate({ mealStyles: styles });
-                              }}
-                              className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap flex-1 ${
-                                userProfile.mealStyles?.[m.key] === style.id ||
-                                (!userProfile.mealStyles?.[m.key] && style.id === 'balanced')
-                                  ? 'bg-green-500 text-white shadow-md'
-                                  : 'text-gray-300'
-                              }`}
-                            >
-                              {style.label}
-                            </button>
-                          ))}
+                          ] as const).map(style => {
+                            const isActive =
+                              userProfile.mealStyles?.[m.key] === style.id ||
+                              (!userProfile.mealStyles?.[m.key] && style.id === 'balanced');
+
+                            return (
+                              <button
+                                key={style.id}
+                                type="button"
+                                onClick={() => {
+                                  const styles = { ...(userProfile.mealStyles || {}) };
+                                  styles[m.key] = style.id;
+                                  handleProfileUpdate({ mealStyles: styles });
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap flex-1 ${
+                                  isActive
+                                    ? 'bg-green-500 text-white shadow-md'
+                                    : 'bg-transparent text-gray-500 hover:bg-gray-50'
+                                }`}
+                              >
+                                {style.label}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -6513,7 +6639,7 @@ function PlanoScreen() {
                 <div>
                   <div className="flex justify-between items-center mb-4 px-1">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                      Não quero no plano
+                      NÃ£o quero no plano
                     </p>
 
                     <span className="text-[8px] font-bold text-gray-300 uppercase">
@@ -6531,12 +6657,13 @@ function PlanoScreen() {
                         }}
                         onKeyDown={e => e.key === 'Enter' && handleAddBlock()}
                         placeholder="Ex: coentro, manteiga, cuscuz..."
-                        className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-red-400 outline-none placeholder:text-gray-300"
+                        className="flex-1 bg-white border border-gray-100 px-4 py-3 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-gray-800 outline-none placeholder:text-gray-300"
                       />
 
                       <button
+                        type="button"
                         onClick={handleAddBlock}
-                        className="px-4 bg-red-500 text-white rounded-2xl active:scale-95 transition-all"
+                        className="w-12 h-12 bg-gray-800 hover:bg-gray-900 text-white rounded-2xl flex items-center justify-center transition-all active:scale-95 shrink-0"
                       >
                         <Plus size={20} />
                       </button>
@@ -6549,7 +6676,7 @@ function PlanoScreen() {
                     )}
 
                     <p className="mt-3 text-[10px] font-semibold text-gray-400 leading-relaxed">
-                      Digite o nome de um alimento existente no banco. Se ele não existir, adicione o alimento antes de bloquear.
+                      Digite o nome de um alimento existente no banco. Se ele nÃ£o existir, adicione o alimento antes de bloquear.
                     </p>
                   </div>
 
@@ -6564,6 +6691,7 @@ function PlanoScreen() {
                         <span>{item}</span>
 
                         <button
+                          type="button"
                           onClick={() =>
                             handleProfileUpdate({
                               blockedFoods: (userProfile.blockedFoods || []).filter(i => i !== item),
@@ -6580,13 +6708,14 @@ function PlanoScreen() {
 
                 <div>
                   <p className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">
-                    Seus favoritos ({activeCategory === 'breakfast' ? 'Café' : activeCategory === 'main' ? 'Pratos' : 'Lanches'})
+                    Seus favoritos ({activeCategory === 'breakfast' ? 'CafÃ©' : activeCategory === 'main' ? 'Pratos' : 'Lanches'})
                   </p>
 
                   <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-5">
                     {(['breakfast', 'main', 'snacks'] as const).map(cat => (
                       <button
                         key={cat}
+                        type="button"
                         onClick={() => setActiveCategory(cat)}
                         className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all ${
                           activeCategory === cat
@@ -6594,7 +6723,7 @@ function PlanoScreen() {
                             : 'text-gray-400'
                         }`}
                       >
-                        {cat === 'breakfast' ? 'Café' : cat === 'main' ? 'Pratos' : 'Lanches'}
+                        {cat === 'breakfast' ? 'CafÃ©' : cat === 'main' ? 'Pratos' : 'Lanches'}
                       </button>
                     ))}
                   </div>
@@ -6612,6 +6741,7 @@ function PlanoScreen() {
                     />
 
                     <button
+                      type="button"
                       onClick={handleAddPref}
                       className="p-3 bg-green-500 text-white rounded-xl active:scale-95 transition-all"
                     >
@@ -6636,6 +6766,7 @@ function PlanoScreen() {
                         <span>{item}</span>
 
                         <button
+                          type="button"
                           onClick={() => handleRemovePref(item)}
                           className="p-1"
                         >
@@ -6648,6 +6779,7 @@ function PlanoScreen() {
               </div>
 
               <button
+                type="button"
                 onClick={() => {
                   generateNewPlan();
                   setShowAdjustModal(false);
@@ -6655,7 +6787,7 @@ function PlanoScreen() {
                 }}
                 className="w-full py-5 bg-green-500 text-white font-black rounded-[32px] mt-10 text-xs uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
               >
-                Salvar Alterações
+                Salvar AlteraÃ§Ãµes
               </button>
             </motion.div>
           </motion.div>
@@ -6686,7 +6818,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
     : member.workouts?.length
     ? member.workouts
     : member.trained
-    ? [{ type: 'Musculação', burned: 350, duration: 45 }]
+    ? [{ type: 'MusculaÃ§Ã£o', burned: 350, duration: 45 }]
     : [];
 
   const burned = workouts.reduce(
@@ -6700,14 +6832,14 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
     ? myMeals
     : [
         {
-          type: 'Café da manhã',
-          desc: 'Pão integral com ovos',
+          type: 'CafÃ© da manhÃ£',
+          desc: 'PÃ£o integral com ovos',
           cal: 320,
           time: '08:15',
         },
         {
-          type: 'Almoço',
-          desc: 'Arroz, feijão preto e frango',
+          type: 'AlmoÃ§o',
+          desc: 'Arroz, feijÃ£o preto e frango',
           cal: 559,
           time: '12:30',
         },
@@ -6722,11 +6854,11 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
   const formatMealType = (type: string) => {
     const normalized = String(type || '').toLowerCase();
 
-    if (normalized === 'cafe' || normalized === 'café da manhã') return 'Café da manhã';
-    if (normalized === 'almoco' || normalized === 'almoço') return 'Almoço';
+    if (normalized === 'cafe' || normalized === 'cafÃ© da manhÃ£') return 'CafÃ© da manhÃ£';
+    if (normalized === 'almoco' || normalized === 'almoÃ§o') return 'AlmoÃ§o';
     if (normalized === 'jantar') return 'Jantar';
     if (normalized === 'lanche') return 'Lanche da tarde';
-    if (normalized === 'lanchemanha') return 'Lanche da manhã';
+    if (normalized === 'lanchemanha') return 'Lanche da manhÃ£';
     if (normalized === 'ceia') return 'Ceia';
 
     return type;
@@ -6739,7 +6871,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
   };
 
   const getWorkoutName = (workout: any) => {
-    if (workout.type === 'musculacao') return 'Musculação';
+    if (workout.type === 'musculacao') return 'MusculaÃ§Ã£o';
 
     return WORKOUT_TYPES.find(wt => wt.key === workout.type)?.label || workout.type || 'Treino';
   };
@@ -6778,7 +6910,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
 
               <div className="min-w-0">
                 <h2 className="text-lg font-black truncate">
-                  {member.name} {isMe && '(Você)'}
+                  {member.name} {isMe && '(VocÃª)'}
                 </h2>
 
                 <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
@@ -6835,14 +6967,14 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
               </div>
             </div>
 <p className="text-center text-[10px] font-bold text-white/55">
-  Meta diária: {Math.round(goal)} calorias
+  Meta diÃ¡ria: {Math.round(goal)} calorias
 </p>
 
-          {/* Refeições */}
+          {/* RefeiÃ§Ãµes */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                Refeições de hoje
+                RefeiÃ§Ãµes de hoje
               </p>
 
               <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
@@ -6887,7 +7019,7 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
               ) : (
                 <div className="text-center py-6 bg-gray-50 rounded-3xl border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                    Nenhuma refeição registrada hoje.
+                    Nenhuma refeiÃ§Ã£o registrada hoje.
                   </p>
                 </div>
               )}
@@ -6954,9 +7086,9 @@ function ViewMemberDay({ member, onClose }: { member: any; onClose: () => void }
 
 function IncentiveQuick({ handleIncentive }: { handleIncentive: (m: string) => void }) {
   const categories = [
-    { label: 'Elogiar', items: ["Mandou bem no prato! 👏", "Refeição nota 10! 😋", "Equilíbrio perfeito! 🥗", "Inspiração pro grupo! ✨"] },
-    { label: 'Motivar', items: ["Foco na meta! 🚀", "Continua firme! 💪", "Não para agora! 🔥", "Você consegue! 👊"] },
-    { label: 'Lembrar', items: ["Beba água! 💧", "Já treinou hoje? 👟", "Bateu a proteína? 🍗", "Dorme cedo! 😴"] }
+    { label: 'Elogiar', items: ["Mandou bem no prato! ðŸ‘", "RefeiÃ§Ã£o nota 10! ðŸ˜‹", "EquilÃ­brio perfeito! ðŸ¥—", "InspiraÃ§Ã£o pro grupo! âœ¨"] },
+    { label: 'Motivar', items: ["Foco na meta! ðŸš€", "Continua firme! ðŸ’ª", "NÃ£o para agora! ðŸ”¥", "VocÃª consegue! ðŸ‘Š"] },
+    { label: 'Lembrar', items: ["Beba Ã¡gua! ðŸ’§", "JÃ¡ treinou hoje? ðŸ‘Ÿ", "Bateu a proteÃ­na? ðŸ—", "Dorme cedo! ðŸ˜´"] }
   ];
 
   return (
@@ -6981,519 +7113,7 @@ function IncentiveQuick({ handleIncentive }: { handleIncentive: (m: string) => v
   );
 }
 
-function CirculoScreen() {
-  const { userProfile, myCheckin, getTotals, calorieGoal, meals, workouts } = useApp();
-  const totals = getTotals();
-  const workoutCalories = workouts.reduce((sum, workout) => sum + workout.burned, 0);
-  const restanteHoje = Math.max(0, calorieGoal - totals.cal);
-  const burned = workouts.reduce((acc, w) => acc + safeNumber(w.burned), 0);
-  
-  const [activeCircle, setActiveCircle] = useState('Thiago & Partners');
-  const [circles, setCircles] = useState(['Thiago & Partners', 'Família', 'Projeto Verão']);
-  const [reactions, setReactions] = useState<Record<string, { emoji: string; count: number }[]>>({});
-  const [myReactions, setMyReactions] = useState<Record<string, string>>({}); 
-  const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
-  
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showMemberModal, setShowMemberModal] = useState<any>(null);
-  const [newCircleName, setNewCircleName] = useState('');
-  const [supportFeed, setSupportFeed] = useState<{ id: string; msg: string; time: string; user: string }[]>([]);
 
-  const membersData = useMemo(() => {
-      const me = { 
-        id: 'me', 
-        name: userProfile?.name || 'Você', 
-        consumed: totals.cal, 
-        remaining: Math.round(Math.max(0, calorieGoal - totals.cal)),
-        img: '👤', 
-        imgUrl: userProfile?.profilePicture,
-        status: 'Online', 
-        trained: myCheckin === 'treino' 
-      };
-    
-    if (activeCircle === 'Thiago & Partners') {
-      return [
-        me,
-        { 
-          id: 'p1', name: 'Partner ❤️', consumed: 1240, remaining: 560, img: '👩', status: 'Ativo(a) há 5m', trained: true,
-          workouts: [{ type: 'Musculação', burned: 280, duration: 45 }] 
-        },
-        { id: 'p2', name: 'Lucas Silva', consumed: 1850, remaining: -50, img: '👨', status: 'Ativo(a) há 2h', trained: false },
-        { 
-          id: 'p3', name: 'Ana Souza', consumed: 920, remaining: 880, img: '👩', status: 'Ativo(a) há 1h', trained: true,
-          workouts: [
-            { type: 'Yoga', burned: 120, duration: 50 },
-            { type: 'Caminhada', burned: 150, duration: 30 }
-          ]
-        },
-      ];
-    }
-    if (activeCircle === 'Família') {
-      return [
-        me,
-        { id: 'f1', name: 'Mãe', consumed: 850, remaining: 350, img: '👵', status: 'Ativo(a) há 15m', trained: false },
-        { 
-          id: 'f2', name: 'Pai', consumed: 1560, remaining: 440, img: '👴', status: 'Ativo(a) há 3h', trained: true,
-          workouts: [{ type: 'Pilates', burned: 180, duration: 40 }]
-        },
-      ];
-    }
-    return [me, { 
-      id: 'v1', name: 'Marcos', consumed: 2100, remaining: 100, img: '🏋️', status: 'Focado', trained: true,
-      workouts: [{ type: 'Crossfit', burned: 450, duration: 60 }]
-    }];
-  }, [activeCircle, userProfile, totals, calorieGoal, burned, myCheckin]);
-
- const feedItems = useMemo(() => {
-  const getSortValue = (item: any) => {
-    if (/^\d+$/.test(String(item.id))) {
-      return Number(item.id);
-    }
-
-    const time = String(item.time || '00:00');
-    const [hour, minute] = time.split(':').map(Number);
-
-    if (Number.isFinite(hour) && Number.isFinite(minute)) {
-      return hour * 60 + minute;
-    }
-
-    return 0;
-  };
-
-  const myShared = meals.filter(m => m.shared).map(m => ({
-    id: m.id,
-    userName: userProfile?.name || 'Você',
-    type: m.type,
-    desc: m.items.map(it => it.food.name).join(', '),
-    cal: m.cal,
-    time: m.time,
-    photo: m.photo,
-    isMessage: false,
-  }));
-
-  const mockShared = activeCircle === 'Thiago & Partners'
-    ? [
-        {
-          id: 'mock-1230',
-          userName: 'Partner ❤️',
-          type: 'almoco',
-          desc: 'Arroz, feijão preto e frango',
-          cal: 559,
-          time: '12:30',
-          photo: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200',
-          isMessage: false,
-        },
-        {
-          id: 'mock-1645',
-          userName: 'Lucas Silva',
-          type: 'lanche',
-          desc: 'Whey Protein com aveia',
-          cal: 320,
-          time: '16:45',
-          photo: null,
-          isMessage: false,
-        },
-      ]
-    : activeCircle === 'Família'
-    ? [
-        {
-          id: 'mock-0745',
-          userName: 'Mãe',
-          type: 'cafe',
-          desc: 'Frutas com iogurte',
-          cal: 210,
-          time: '07:45',
-          photo: null,
-          isMessage: false,
-        },
-      ]
-    : [];
-
-  const messages = supportFeed.map(s => ({
-    id: s.id,
-    userName: s.user,
-    type: 'message',
-    desc: s.msg,
-    cal: 0,
-    time: s.time,
-    photo: null,
-    isMessage: true,
-  }));
-
-  return [...messages, ...myShared, ...mockShared].sort(
-    (a, b) => getSortValue(b) - getSortValue(a)
-  );
-}, [meals, userProfile, supportFeed, activeCircle]);
-
-  const handleReaction = (mealId: string, emoji: string) => {
-    setMyReactions(prev => {
-      const current = prev[mealId];
-      if (current === emoji) {
-        // Toggle off
-        const next = { ...prev };
-        delete next[mealId];
-        return next;
-      }
-      // Toggle to new emoji
-      return { ...prev, [mealId]: emoji };
-    });
-
-    setReactions(prev => {
-      const current = prev[mealId] || [];
-      const userEmoji = myReactions[mealId];
-      let next = [...current];
-
-      // If user had a reaction, decrement it
-      if (userEmoji) {
-        const oldIdx = next.findIndex(r => r.emoji === userEmoji);
-        if (oldIdx >= 0) {
-          next[oldIdx] = { ...next[oldIdx], count: Math.max(0, next[oldIdx].count - 1) };
-        }
-      }
-
-      // If new emoji is the same as old, we already toggled off in setMyReactions
-      // But here we just handle the increment if it's different
-      if (userEmoji !== emoji) {
-        const newIdx = next.findIndex(r => r.emoji === emoji);
-        if (newIdx >= 0) {
-          next[newIdx] = { ...next[newIdx], count: next[newIdx].count + 1 };
-        } else {
-          next.push({ emoji, count: 1 });
-        }
-      }
-
-      return { ...prev, [mealId]: next.filter(r => r.count > 0) };
-    });
-  };
-
-  const handleIncentive = (msg: string) => {
-    setIncentiveFeedback(`Enviado: ${msg.replace(/['"]/g, '')}`);
-    const newSupport = {
-      id: Date.now().toString(),
-      msg: msg.replace(/['"]/g, ''),
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      user: userProfile?.name || 'Você'
-    };
-    setSupportFeed(prev => [newSupport, ...prev]);
-    setTimeout(() => setIncentiveFeedback(null), 3000);
-  };
-
-  return (
-    <div className="w-full max-w-md bg-gray-50 min-h-screen pb-20">
-       {/* Feedback Pop */}
-       <AnimatePresence>
-         {incentiveFeedback && (
-           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-white px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl">
-              {incentiveFeedback}
-           </motion.div>
-         )}
-       </AnimatePresence>
-
-       <div className="bg-[#8B5CF6] pt-12 px-6 pb-12 rounded-b-[40px] text-white relative shadow-lg">
-          <div className="flex justify-between items-center mb-10 relative z-10 font-sans">
-             <div>
-                <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em] mb-1">Comunidade</p>
-                <h1 className="text-2xl font-black">{activeCircle}</h1>
-             </div>
-             <div className="flex gap-2">
-                <button 
-                  onClick={() => setShowInviteModal(true)}
-                  className="p-3 bg-white/20 rounded-2xl backdrop-blur-md border border-white/10 active:scale-95 transition-all"
-                >
-                   <UserPlus size={18} />
-                </button>
-             </div>
-          </div>
-
-          <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar relative z-10 scroll-smooth">
-             {circles.map(c => (
-                <button 
-                  key={c} 
-                  onClick={() => setActiveCircle(c)}
-                  className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shadow-sm border ${activeCircle === c ? 'bg-white text-indigo-600 border-white/50 scale-105 shadow-xl' : 'bg-indigo-700/30 text-white/60 border-white/10'}`}
-                >
-                   {c}
-                </button>
-             ))}
-             <button onClick={() => setShowCreateModal(true)} className="p-3 bg-white/10 text-white rounded-2xl border border-white/20 active:scale-95 transition-all"><Plus size={18} /></button>
-          </div>
-       </div>
-
-       <div className="px-5 mt-10 pb-10 flex flex-col gap-10 text-gray-900 font-sans">
-          <div className="bg-white rounded-[40px] p-8 shadow-2xl border border-gray-50 overflow-hidden relative">
-             <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest">Seu círculo</h3>
-             <div className="flex flex-col gap-4">
-                {membersData.map((m: any) => (
-                   <div key={m.id} className="bg-gray-50/50 rounded-[28px] p-4 border border-gray-100 flex flex-col group active:bg-gray-100 transition-all">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                           <div className="relative">
-                             <div className="w-12 h-12 bg-white rounded-[18px] flex items-center justify-center font-black text-indigo-500 shadow-md border border-gray-50 text-lg overflow-hidden">
-                               {m.imgUrl ? <img src={m.imgUrl} className="w-full h-full object-cover" /> : m.img}
-                             </div>
-                             {m.trained && (
-                               <div className="absolute -top-1 -right-1 bg-green-500 text-white p-1 rounded-full border-2 border-white shadow-sm">
-                                 <Zap size={8} fill="currentColor" />
-                               </div>
-                             )}
-                           </div>
-                           <div>
-                              <p className="text-sm font-black text-gray-900">{m.name}</p>
-                              <p className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">{m.status}</p>
-                           </div>
-                        </div>
-                        <div className="text-right">
-                           <div className="flex flex-col items-end">
-                              <span className="text-base font-black text-indigo-600 leading-none">{Math.round((m.consumed / (m.consumed + m.remaining)) * 100)}%</span>
-                              <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Meta</span>
-                           </div>
-                        </div>
-                      </div>
-                      
-                      <div className="h-2 bg-gray-200/50 rounded-full overflow-hidden mb-4">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min(100, (m.consumed / (m.consumed + m.remaining)) * 100)}%` }}
-                          className="h-full bg-indigo-500 rounded-full"
-                        />
-                      </div>
-                      
-                      
-
-                      <button 
-                         onClick={() => setShowMemberModal(m)} 
-                         className="w-full py-3 bg-white text-indigo-600 rounded-2xl border border-indigo-100 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
-                      >
-                         Ver dia
-                      </button>
-                   </div>
-                ))}
-             </div>
-          </div>
-
-
-          {/* Activity Feed */}
-          <div className="bg-white rounded-[40px] p-8 shadow-2xl border border-gray-50">
-             <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest text-center">Atualizações</h3>
-             <div className="space-y-8">
-                {feedItems.map((item) => (
-                   <div key={item.id} className="relative pl-6 border-l-2 border-indigo-50 pb-2">
-                      <div className="absolute -left-[5px] top-0 w-2 h-2 bg-indigo-500 rounded-full ring-4 ring-indigo-50" />
-                      
-                      {item.isMessage ? (
-                        <div className="bg-indigo-50/50 rounded-[28px] p-6 border border-indigo-100 mb-2 shadow-sm italic">
-                           <div className="flex justify-between items-center mb-2">
-                              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{item.userName} enviou:</p>
-                              <span className="text-[8px] font-bold text-indigo-300 uppercase tracking-tighter">{item.time}</span>
-                           </div>
-                           <p className="text-sm font-bold text-gray-800 leading-relaxed">{item.desc}</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex justify-between items-start mb-4">
-                             <div className="flex-1 pr-4">
-                                <p className="text-sm font-black text-gray-900 flex items-center flex-wrap gap-2">
-                                  {item.userName} 
-                                  <span className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                                    {MEAL_CONFIGS[4].find(c => c.key === item.type)?.label || item.type}
-                                  </span>
-                                </p>
-                                <p className="text-xs font-bold text-gray-500 mt-1.5 leading-snug">{item.desc}</p>
-                             </div>
-                             <span className="text-[9px] font-black text-gray-300 uppercase tracking-tight text-right w-16 whitespace-nowrap">{item.time}</span>
-                          </div>
-
-                          <div className="w-full aspect-[4/3] rounded-[34px] overflow-hidden bg-green-50 my-4 border border-green-100 relative">
-  {item.photo ? (
-    <img
-      src={item.photo}
-      alt={item.desc || 'Refeição registrada'}
-      className="w-full h-full object-cover"
-      referrerPolicy="no-referrer"
-      onError={(event) => {
-        event.currentTarget.style.display = 'none';
-      }}
-    />
-  ) : null}
-
-  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br from-green-50 to-emerald-100">
-    <div className="w-14 h-14 rounded-3xl bg-white flex items-center justify-center shadow-sm mb-3">
-      <Camera size={24} className="text-green-600" />
-    </div>
-
-    <p className="text-sm font-black text-green-800">
-      Refeição registrada
-    </p>
-
-    <p className="text-[11px] font-bold text-green-600 mt-1">
-      Sem foto publicada
-    </p>
-  </div>
-</div>
-
-                          <div className="flex items-center justify-between mt-4">
-                             <div className="flex items-center gap-2 px-1">
-                               <Rocket size={12} className="text-indigo-400" />
-                               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{item.cal} calorias</span>
-                             </div>
-                             <div className="flex gap-1.5">
-                                {['👏', '🔥', '💪', '🚀'].map(emoji => (
-                                   <button 
-                                     key={emoji} 
-                                     onClick={() => handleReaction(item.id, emoji)}
-                                     className={`w-10 h-10 flex items-center justify-center rounded-2xl text-base transition-all active:scale-90 hover:shadow-md ${myReactions[item.id] === emoji ? 'bg-indigo-100 border-2 border-indigo-200 text-lg' : 'bg-gray-50/50 hover:bg-gray-100 border border-transparent'}`}
-                                   >
-                                      <span className="relative">
-                                         {emoji}
-                                         {(reactions[item.id] || []).find(r => r.emoji === emoji)?.count > 0 && (
-                                           <span className="absolute -top-3 -right-3 text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded-full shadow-lg">{(reactions[item.id] || []).find(r => r.emoji === emoji)?.count}</span>
-                                         )}
-                                      </span>
-                                   </button>
-                                ))}
-                             </div>
-                          </div>
-                        </>
-                      )}
-                   </div>
-                ))}
-             </div>
-
-             <div className="mt-12 pt-10 border-t border-gray-100">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] mb-6 text-center italic">Incentivo Rápido</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                   {["Boa refeição!", "Mandou bem!", "No foco!", "Toma água!", "🚀🚀🚀"].map(msg => (
-                      <button 
-                        key={msg} 
-                        onClick={() => handleIncentive(msg)} 
-                        className="px-5 py-3 bg-indigo-50/30 text-indigo-600 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-all active:scale-95 shadow-sm"
-                      >
-                         {msg}
-                      </button>
-                   ))}
-                </div>
-             </div>
-          </div>
-       </div>
-
-       <AnimatePresence>
-         {showCreateModal && (
-           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 text-gray-900">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateModal(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[48px] p-10 shadow-2xl z-10 space-y-8">
-               <div className="text-center">
-                 <div className="w-20 h-20 bg-indigo-50 rounded-[32px] flex items-center justify-center mx-auto mb-4 text-indigo-600 shadow-inner">
-                   <Users size={40} />
-                 </div>
-                 <h2 className="text-2xl font-black tracking-tight">Criar Círculo</h2>
-                 <p className="text-xs text-gray-400 font-bold mt-2">Convide amigos e motivem-se juntos.</p>
-               </div>
-               
-               <div className="space-y-3">
-                 <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Nome do Grupo</label>
-                 <input 
-                   autoFocus 
-                   value={newCircleName} 
-                   onChange={e => setNewCircleName(e.target.value)} 
-                   className="w-full p-5 bg-gray-50 rounded-[28px] font-bold border-none focus:ring-2 focus:ring-indigo-500 shadow-inner text-sm" 
-                   placeholder="Ex: Time Madrugada" 
-                 />
-               </div>
-               
-               <div className="flex gap-3 pt-2">
-                 <button onClick={() => setShowCreateModal(false)} className="flex-1 py-5 font-black text-gray-400 bg-gray-100 rounded-3xl text-[10px] uppercase tracking-widest">Sair</button>
-                 <button 
-                   onClick={() => { 
-                     if(newCircleName.trim()) {
-                       setCircles([...circles, newCircleName]); 
-                       setActiveCircle(newCircleName); 
-                       setShowCreateModal(false); 
-                       setNewCircleName('');
-                     }
-                   }} 
-                   className="flex-[2] py-5 font-black text-white bg-indigo-600 rounded-3xl text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100"
-                 >
-                   Criar Círculo
-                 </button>
-               </div>
-             </motion.div>
-           </div>
-         )}
-         
-         {showInviteModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 text-gray-900">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInviteModal(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[48px] p-12 shadow-2xl z-10 space-y-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50 rounded-full -mr-20 -mt-20 opacity-50" />
-                
-                <div className="flex justify-between items-center relative z-10">
-                  <h2 className="text-2xl font-black tracking-tight uppercase">Convidar</h2>
-                  <button onClick={() => setShowInviteModal(false)} className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors shadow-sm"><X size={18}/></button>
-                </div>
-                
-                <div className="space-y-10 relative z-10">
-                   <p className="text-xs font-bold text-gray-500 leading-relaxed text-center px-2">Compartilhe o código abaixo. Seus amigos poderão entrar no grupo instantaneamente.</p>
-                   
-                   <div className="bg-indigo-600 p-10 rounded-[44px] shadow-2xl shadow-indigo-200 text-center relative group overflow-hidden">
-                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-                     <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em] mb-4 opacity-70">Código FitCircle</p>
-                     <p className="text-5xl font-black text-white tracking-tighter drop-shadow-xl group-hover:scale-110 transition-transform duration-700">FC-9921</p>
-                   </div>
-                   
-                   <div className="flex flex-col gap-4">
-                      <button 
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText('FC-9921');
-                            setIncentiveFeedback('Código: FC-9921 copiado!');
-                            setTimeout(() => setIncentiveFeedback(null), 2000);
-                          } catch (e) {
-                            console.error(e);
-                          }
-                        }}
-                        className="w-full py-6 bg-white text-indigo-600 font-black rounded-3xl text-[10px] uppercase tracking-[0.3em] active:scale-95 transition-all border-2 border-indigo-50 shadow-md hover:bg-indigo-50 flex items-center justify-center gap-3"
-                      >
-                         <LayoutGrid size={16} />
-                         Copiar Código
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          const shareData = {
-                            title: 'Convite FitCircle',
-                            text: 'Venha treinar comigo no FitCircle! Use meu código para entrar no círculo: FC-9921',
-                            url: 'https://fitcircle.app/circle/9921'
-                          };
-                          try {
-                            if (navigator.share) {
-                              await navigator.share(shareData);
-                            } else {
-                              await navigator.clipboard.writeText(shareData.url);
-                              setIncentiveFeedback('Link compartilhado');
-                              setTimeout(() => setIncentiveFeedback(null), 2000);
-                            }
-                          } catch (e) {
-                            console.error(e);
-                          }
-                        }}
-                        className="w-full py-6 bg-indigo-600 text-white font-black rounded-3xl text-[10px] uppercase tracking-[0.3em] active:scale-95 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-3"
-                      >
-                         <Share2 size={16} />
-                         Enviar convite
-                      </button>
-                   </div>
-                </div>
-              </motion.div>
-            </div>
-         )}
-
-         {showMemberModal && (
-            <ViewMemberDay member={showMemberModal} onClose={() => setShowMemberModal(null)} />
-         )}
-       </AnimatePresence>
-    </div>
-  );
-}
 
 function EditProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { userProfile, updateProfile, handleProfileUpdate, mealCount, setMealCount } = useApp();
@@ -7599,8 +7219,8 @@ function EditProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                     <select value={profile.goal} onChange={e => setProfile({...profile, goal: e.target.value as any})} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-none">
                       <option value="perda">Perda de Peso</option>
                       <option value="ganho">Ganho de Massa</option>
-                      <option value="manutencao">Manutenção</option>
-                      <option value="recomposicao">Recomposição</option>
+                      <option value="manutencao">ManutenÃ§Ã£o</option>
+                      <option value="recomposicao">RecomposiÃ§Ã£o</option>
                     </select>
                   </div>
                 </div>
@@ -7608,7 +7228,7 @@ function EditProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
               <div className="mt-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Refeições por dia</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">RefeiÃ§Ãµes por dia</label>
                   <div className="grid grid-cols-4 gap-2">
                   {[3, 4, 5, 6].map(n => (
                     <button
@@ -7650,7 +7270,7 @@ function EditProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
                 <div className="flex gap-4 pt-4">
                   <button onClick={onClose} className="flex-1 py-4 font-black text-gray-400 bg-gray-100 rounded-3xl uppercase text-xs">Cancelar</button>
-                  <button onClick={handleSave} className="flex-[2] py-4 font-black text-white bg-green-500 rounded-3xl shadow-xl shadow-green-100 uppercase text-xs">Salvar Alterações</button>
+                  <button onClick={handleSave} className="flex-[2] py-4 font-black text-white bg-green-500 rounded-3xl shadow-xl shadow-green-100 uppercase text-xs">Salvar AlteraÃ§Ãµes</button>
                 </div>
               </div>
             </div>
@@ -7677,7 +7297,7 @@ function PerfilScreen() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const fallbackProfile: UserProfile = {
-    name: 'Usuário FitCircle',
+    name: 'UsuÃ¡rio FitCircle',
     age: 25,
     weight: 70,
     height: 170,
@@ -7716,55 +7336,55 @@ function PerfilScreen() {
       : userProfile?.goal === 'ganho'
       ? 'Ganho de Massa'
       : userProfile?.goal === 'manutencao'
-      ? 'Manutenção'
-      : 'Recomposição';
+      ? 'ManutenÃ§Ã£o'
+      : 'RecomposiÃ§Ã£o';
 
- const getBmiInfo = () => {
-  if (!userProfile) return { label: 'Não informado', color: '#9CA3AF', position: 0 };
+  const getBmiInfo = () => {
+    if (!userProfile) return { label: 'NÃ£o informado', color: '#9CA3AF', position: 0 };
 
-  const calculatedPosition = Math.max(
-    0,
-    Math.min(100, ((bmi - 15) / (40 - 15)) * 100)
-  );
+    const calculatedPosition = Math.max(
+      0,
+      Math.min(100, ((bmi - 15) / (40 - 15)) * 100)
+    );
 
-  if (bmi < 18.5) {
+    if (bmi < 18.5) {
+      return {
+        label: 'Abaixo do peso',
+        color: '#60A5FA',
+        position: calculatedPosition,
+      };
+    }
+
+    if (bmi < 24.9) {
+      return {
+        label: 'Faixa saudÃ¡vel',
+        color: '#22C55E',
+        position: calculatedPosition,
+      };
+    }
+
+    if (bmi < 29.9) {
+      return {
+        label: 'Sobrepeso',
+        color: '#F59E0B',
+        position: calculatedPosition,
+      };
+    }
+
+    if (bmi < 34.9) {
+      return {
+        label: 'Obesidade I',
+        color: '#F97316',
+        position: calculatedPosition,
+      };
+    }
+
     return {
-      label: 'Abaixo do peso',
-      color: '#60A5FA',
+      label: 'Obesidade II+',
+      color: '#EF4444',
       position: calculatedPosition,
     };
-  }
-
-  if (bmi < 24.9) {
-    return {
-      label: 'Faixa saudável',
-      color: '#22C55E',
-      position: calculatedPosition,
-    };
-  }
-
-  if (bmi < 29.9) {
-    return {
-      label: 'Sobrepeso',
-      color: '#F59E0B',
-      position: calculatedPosition,
-    };
-  }
-
-  if (bmi < 34.9) {
-    return {
-      label: 'Obesidade I',
-      color: '#F97316',
-      position: calculatedPosition,
-    };
-  }
-
-  return {
-    label: 'Obesidade II+',
-    color: '#EF4444',
-    position: calculatedPosition,
   };
-};
 
   const bmiInfo = getBmiInfo();
 
@@ -7776,23 +7396,6 @@ function PerfilScreen() {
     });
 
     setIsEditing(false);
-  };
-
-  const handleShare = async () => {
-    const text = 'Estou usando o FitCircle para organizar meu plano alimentar.';
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'FitCircle',
-          text,
-        });
-      } catch {
-        // Usuário cancelou o compartilhamento.
-      }
-    } else {
-      alert(text);
-    }
   };
 
   return (
@@ -7849,7 +7452,7 @@ function PerfilScreen() {
             </div>
 
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-              Meta diária
+              Meta diÃ¡ria
             </p>
 
             <p className="text-xl font-black text-gray-900 mt-1">
@@ -7881,66 +7484,66 @@ function PerfilScreen() {
         </div>
 
         <div className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-lg shadow-gray-100/70">
-  <div className="flex items-center justify-between mb-5">
-    <div>
-      <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
-        Painel corporal
-      </p>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
+                Painel corporal
+              </p>
 
-      <h2 className="text-lg font-black text-gray-900 mt-1">
-        IMC visual
-      </h2>
-    </div>
+              <h2 className="text-lg font-black text-gray-900 mt-1">
+                IMC visual
+              </h2>
+            </div>
 
-    <div className="text-right">
-      <p className="text-2xl font-black text-gray-900">
-        {bmiValue}
-      </p>
+            <div className="text-right">
+              <p className="text-2xl font-black text-gray-900">
+                {bmiValue}
+              </p>
 
-      <p
-        className="text-[9px] font-black uppercase tracking-widest"
-        style={{ color: bmiInfo.color }}
-      >
-        {bmiInfo.label}
-      </p>
-    </div>
-  </div>
+              <p
+                className="text-[9px] font-black uppercase tracking-widest"
+                style={{ color: bmiInfo.color }}
+              >
+                {bmiInfo.label}
+              </p>
+            </div>
+          </div>
 
-  <div className="relative pt-4 pb-2">
-   <div
-  className="relative h-4 rounded-full overflow-hidden shadow-inner"
-  style={{
-    background:
-      'linear-gradient(to right, #60A5FA 0%, #60A5FA 14%, #22C55E 18%, #22C55E 40%, #FACC15 48%, #F59E0B 62%, #F97316 78%, #EF4444 100%)',
-  }}
->
-  <div
-    className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-4 bg-white shadow-lg transition-all duration-500 ease-out"
-    style={{
-      left: `${Math.min(Math.max(bmiInfo.position, 3), 97)}%`,
-      transform: 'translate(-50%, -50%)',
-      borderColor: bmiInfo.color,
-    }}
-  />
-</div>
+          <div className="relative pt-4 pb-2">
+            <div
+              className="relative h-4 rounded-full overflow-hidden shadow-inner"
+              style={{
+                background:
+                  'linear-gradient(to right, #60A5FA 0%, #60A5FA 14%, #22C55E 18%, #22C55E 40%, #FACC15 48%, #F59E0B 62%, #F97316 78%, #EF4444 100%)',
+              }}
+            >
+              <div
+                className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-4 bg-white shadow-lg transition-all duration-500 ease-out"
+                style={{
+                  left: `${Math.min(Math.max(bmiInfo.position, 3), 97)}%`,
+                  transform: 'translate(-50%, -50%)',
+                  borderColor: bmiInfo.color,
+                }}
+              />
+            </div>
 
-    <div
-      className="absolute top-[10px] h-7 w-7 rounded-full border-4 bg-white shadow-lg"
-      style={{
-        left: `${Math.min(Math.max(bmiInfo.position, 4), 92)}%`,
-        transform: 'translateX(-50%)',
-        borderColor: bmiInfo.color,
-      }}
-    />
-  </div>
+            <div
+              className="absolute top-[10px] h-7 w-7 rounded-full border-4 bg-white shadow-lg"
+              style={{
+                left: `${Math.min(Math.max(bmiInfo.position, 4), 92)}%`,
+                transform: 'translateX(-50%)',
+                borderColor: bmiInfo.color,
+              }}
+            />
+          </div>
 
-  <div className="flex justify-between mt-3 text-[8px] font-black text-gray-300 uppercase tracking-widest">
-    <span>Baixo</span>
-    <span>Saudável</span>
-    <span>Alto</span>
-  </div>
-</div>
-           
+          <div className="flex justify-between mt-3 text-[8px] font-black text-gray-300 uppercase tracking-widest">
+            <span>Baixo</span>
+            <span>SaudÃ¡vel</span>
+            <span>Alto</span>
+          </div>
+        </div>
+
         <div className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-lg shadow-gray-100/70">
           <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-4">
             Macros estimados
@@ -7949,7 +7552,7 @@ function PerfilScreen() {
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
               <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest">
-                Proteína
+                ProteÃ­na
               </p>
 
               <p className="text-lg font-black text-blue-700 mt-1">
@@ -7998,7 +7601,7 @@ function PerfilScreen() {
 
           <button
             type="button"
-            onClick={() => alert('No navegador do celular, toque em Compartilhar e depois em “Adicionar à Tela de Início”.')}
+            onClick={() => alert('No navegador do celular, toque em Compartilhar e depois em â€œAdicionar Ã  Tela de InÃ­cioâ€.')}
             className="mt-4 w-full rounded-2xl bg-green-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-green-700 active:scale-95 transition-all"
           >
             Como instalar
@@ -8013,7 +7616,7 @@ function PerfilScreen() {
           >
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
-                <X size={18} className="text-gray-500" />
+                <LogOut size={18} className="text-gray-500" />
               </div>
 
               <div className="text-left">
@@ -8022,7 +7625,7 @@ function PerfilScreen() {
                 </p>
 
                 <p className="text-[10px] font-bold text-gray-400 mt-1">
-                  Encerra a sessão, sem apagar seus dados.
+                  Encerra a sessÃ£o, sem apagar seus dados.
                 </p>
               </div>
             </div>
@@ -8030,29 +7633,35 @@ function PerfilScreen() {
             <ChevronRight size={18} className="text-gray-300" />
           </button>
 
-          <div className="bg-white/60 border border-gray-100 rounded-[28px] p-5 text-center">
-            <p className="text-[10px] font-bold text-gray-400 leading-relaxed mb-3">
-              Ferramentas de teste e ações sensíveis
+          <div className="mt-2 mb-12 p-5 bg-red-50/50 border border-red-100 border-dashed rounded-3xl">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle size={16} className="text-red-500" />
+
+              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">
+                Zona de Perigo
+              </p>
+            </div>
+
+            <p className="text-[11px] font-bold text-red-400 leading-relaxed mb-4">
+              AÃ§Ãµes de teste e limpeza do aplicativo. Use apenas quando quiser reiniciar ou carregar dados fictÃ­cios.
             </p>
 
-            <div className="flex items-center justify-center gap-4 flex-wrap">
+            <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={fillDemo}
-                className="text-[10px] font-black text-gray-500 uppercase tracking-widest underline underline-offset-4 active:scale-95 transition-all"
+                className="w-full py-3 bg-white border border-gray-200 text-gray-600 font-bold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-sm flex items-center justify-center"
               >
-                Usar demo
+                Carregar dados demo
               </button>
 
-              <span className="w-1 h-1 rounded-full bg-gray-300" />
-
-     <button
-  type="button"
-  onClick={() => setShowResetConfirm(true)}
-  className="mx-auto mt-3 block text-center text-[11px] font-bold text-red-400 underline-offset-4 hover:text-red-500 hover:underline"
->
-  Resetar aplicativo
-</button>
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                className="w-full py-3 bg-red-100 text-red-600 hover:bg-red-200 font-bold rounded-2xl text-xs uppercase tracking-wider active:scale-95 transition-all shadow-sm flex items-center justify-center"
+              >
+                Resetar aplicativo
+              </button>
             </div>
           </div>
         </div>
@@ -8162,14 +7771,14 @@ function PerfilScreen() {
                   >
                     <option value="perda">Perda de Peso</option>
                     <option value="ganho">Ganho de Massa</option>
-                    <option value="manutencao">Manutenção</option>
-                    <option value="recomposicao">Recomposição</option>
+                    <option value="manutencao">ManutenÃ§Ã£o</option>
+                    <option value="recomposicao">RecomposiÃ§Ã£o</option>
                   </select>
                 </div>
 
                 <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
-                    Refeições por dia
+                    RefeiÃ§Ãµes por dia
                   </p>
 
                   <div className="grid grid-cols-4 gap-2">
@@ -8227,7 +7836,7 @@ function PerfilScreen() {
                     onClick={saveProfile}
                     className="flex-[2] py-4 rounded-2xl bg-green-500 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
                   >
-                    Salvar alterações
+                    Salvar alteraÃ§Ãµes
                   </button>
                 </div>
               </div>
@@ -8265,7 +7874,7 @@ function PerfilScreen() {
                 <button
                   type="button"
                   onClick={() => setShowLogoutConfirm(false)}
-                 className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xs font-black uppercase"
+                  className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xs font-black uppercase"
                 >
                   Cancelar
                 </button>
@@ -8305,14 +7914,14 @@ function PerfilScreen() {
               </h3>
 
               <p className="text-sm font-bold text-gray-400 mt-2 leading-relaxed">
-                Essa ação limpa seus dados de teste e volta o app para o início.
+                Essa aÃ§Ã£o limpa seus dados de teste e volta o app para o inÃ­cio.
               </p>
 
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setShowResetConfirm(false)}
-                 className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xs font-black uppercase"
+                  className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xs font-black uppercase"
                 >
                   Cancelar
                 </button>
@@ -8352,7 +7961,7 @@ function PerfilScreen() {
               </h3>
 
               <p className="text-sm font-bold text-gray-500 mt-3 leading-relaxed">
-                Aqui ficam suas metas, IMC, macros e preferências. Use “Editar Perfil” para ajustar refeições e treinos.
+                Aqui ficam suas metas, IMC, macros e preferÃªncias. Use â€œEditar Perfilâ€ para ajustar refeiÃ§Ãµes e treinos.
               </p>
 
               <button
@@ -8426,9 +8035,9 @@ function RegisterWorkoutModal({
           />
 
           <motion.div
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
+         initial={{ opacity: 0 }}
+animate={{ opacity: 1 }}
+exit={{ opacity: 0 }}
             className="relative z-10 bg-white w-full max-w-sm rounded-[34px] p-6 shadow-2xl max-h-[88vh] overflow-y-auto no-scrollbar"
           >
             <div className="flex items-center justify-between mb-6">
@@ -8458,7 +8067,7 @@ function RegisterWorkoutModal({
             <div className="space-y-5">
               <div>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                  Tipo de exercício
+                  Tipo de exercÃ­cio
                 </p>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -8491,7 +8100,7 @@ function RegisterWorkoutModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
-                    Duração
+                    DuraÃ§Ã£o
                   </label>
 
                   <input
@@ -8679,49 +8288,58 @@ function RefeicoesListScreen({
     };
   };
 
-  const registerSelectedPlanOption = (mealKey: string, option: any) => {
-    const items = buildItemsFromPlanOption(option);
+const registerSelectedPlanOption = (mealKey: string, option: any) => {
+  const parsedItems = buildItemsFromPlanOption(option);
 
-    const safeItems =
-      items.length > 0
-        ? items
-        : [
-            {
-              food: {
-                name: option.name || 'Opção do plano',
-                cal: safeNumber(option.cal),
-                p: 0,
-                c: 0,
-                f: 0,
-                category: 'Plano',
-              } as FoodItem,
-              qty: 1,
-              unit: 'un',
-              cal: Math.round(safeNumber(option.cal)),
-              p: 0,
-              c: 0,
-              f: 0,
-            },
-          ];
+  const parsedTotals = getItemsTotals(parsedItems);
+  const optionCal = Math.round(safeNumber(option?.cal));
+  const optionP = Math.round(safeNumber(option?.p));
+  const optionC = Math.round(safeNumber(option?.c));
+  const optionF = Math.round(safeNumber(option?.f));
 
-    const totals = getItemsTotals(safeItems);
-    const now = new Date();
+  const shouldUseRecipeFallback =
+    parsedItems.length === 0 ||
+    (parsedTotals.cal === 0 && optionCal > 0);
 
-    addMeal({
-      type: mealKey,
-      time: now.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      items: safeItems,
-      cal: totals.cal || Math.round(safeNumber(option.cal)),
-      p: totals.p,
-      c: totals.c,
-      f: totals.f,
-    });
+  const safeItems: MealEntry[] = shouldUseRecipeFallback
+    ? [
+        {
+          food: {
+            name: option?.name || getOptionTitle(option, mealKey) || 'OpÃ§Ã£o do plano',
+            cal: optionCal,
+            p: optionP,
+            c: optionC,
+            f: optionF,
+            category: 'Plano',
+          } as FoodItem,
+          qty: 1,
+          unit: 'un',
+          cal: optionCal,
+          p: optionP,
+          c: optionC,
+          f: optionF,
+        },
+      ]
+    : parsedItems;
 
-    setOpenMealKey(null);
-  };
+  const totals = getItemsTotals(safeItems);
+  const now = new Date();
+
+  addMeal({
+    type: mealKey,
+    time: now.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    items: safeItems,
+    cal: totals.cal || optionCal,
+    p: totals.p || optionP,
+    c: totals.c || optionC,
+    f: totals.f || optionF,
+  });
+
+  setOpenMealKey(null);
+};
 
   const startEditingMeal = (meal: any) => {
     setEditingMealId(meal.id);
@@ -8777,7 +8395,7 @@ function RefeicoesListScreen({
       return getReadablePlanTitle(option, mealKey);
     }
 
-    return option?.name || 'Opção do plano';
+    return option?.name || 'OpÃ§Ã£o do plano';
   };
 
   const getOptionLines = (option: any) => {
@@ -8809,7 +8427,7 @@ function RefeicoesListScreen({
           </p>
 
           <h1 className="text-xl font-black text-gray-900">
-            Registrar refeição
+            Registrar refeiÃ§Ã£o
           </h1>
         </div>
       </div>
@@ -8832,14 +8450,14 @@ function RefeicoesListScreen({
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl shrink-0">
                     {cfg.key === 'cafe'
-                      ? '☕'
+                      ? 'â˜•'
                       : cfg.key === 'almoco'
-                      ? '🍽️'
+                      ? 'ðŸ½ï¸'
                       : cfg.key === 'jantar'
-                      ? '🌙'
+                      ? 'ðŸŒ™'
                       : cfg.key === 'ceia'
-                      ? '🌛'
-                      : '🍎'}
+                      ? 'ðŸŒ›'
+                      : 'ðŸŽ'}
                   </div>
 
                   <div className="min-w-0">
@@ -8851,7 +8469,7 @@ function RefeicoesListScreen({
                       {registeredMeals.length > 0
                         ? `${registeredMeals.length} registro(s)`
                         : isOpen
-                        ? 'Escolha uma opção'
+                        ? 'Escolha uma opÃ§Ã£o'
                         : 'Toque em registrar'}
                     </p>
                   </div>
@@ -8899,7 +8517,7 @@ function RefeicoesListScreen({
                                       key={`${cfg.key}-line-${index}-${idx}`}
                                       className="text-[10px] font-bold text-gray-400 leading-snug break-words"
                                     >
-                                      • {line}
+                                      â€¢ {line}
                                     </p>
                                   ))}
                                 </div>
@@ -8915,18 +8533,18 @@ function RefeicoesListScreen({
                               onClick={() => registerSelectedPlanOption(cfg.key, option)}
                               className="mt-4 w-full rounded-2xl bg-green-500 py-3 text-[10px] font-black uppercase tracking-widest text-white active:scale-95 transition-all shadow-lg shadow-green-100"
                             >
-                              Adicionar esta opção
+                              Adicionar esta opÃ§Ã£o
                             </button>
                           </div>
                         ))
                       ) : (
                         <div className="rounded-[24px] bg-gray-50 border border-gray-100 p-5 text-center">
                           <p className="text-sm font-black text-gray-900">
-                            Nenhuma opção pronta
+                            Nenhuma opÃ§Ã£o pronta
                           </p>
 
                           <p className="mt-1 text-xs font-bold text-gray-400">
-                            Monte essa refeição manualmente.
+                            Monte essa refeiÃ§Ã£o manualmente.
                           </p>
                         </div>
                       )}
@@ -8967,7 +8585,7 @@ function RefeicoesListScreen({
 
                             <p className="text-[10px] font-bold text-gray-400 mt-1">
                               {isEditing
-                                ? `${visibleTotals.cal} calorias após edição`
+                                ? `${visibleTotals.cal} calorias apÃ³s ediÃ§Ã£o`
                                 : `${Math.round(safeNumber(meal.cal))} calorias`}
                             </p>
                           </div>
@@ -8997,7 +8615,7 @@ function RefeicoesListScreen({
                             >
                               <div className="mt-4 pt-4 border-t border-green-100 space-y-3">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
-                                  Ajuste o que você realmente comeu
+                                  Ajuste o que vocÃª realmente comeu
                                 </p>
 
                                 {draftItems.length > 0 ? (
@@ -9012,7 +8630,7 @@ function RefeicoesListScreen({
                                         </p>
 
                                         <p className="text-[10px] font-bold text-gray-400">
-                                          {item?.qty} {item?.unit === 'g' ? 'g' : item?.food?.un || 'un'} · {Math.round(safeNumber(item?.cal))} cal
+                                          {item?.qty} {item?.unit === 'g' ? 'g' : item?.food?.un || 'un'} Â· {Math.round(safeNumber(item?.cal))} cal
                                         </p>
                                       </div>
 
@@ -9067,7 +8685,7 @@ function RefeicoesListScreen({
   onClick={() => saveEditedMeal(meal)}
   className="w-full py-4 bg-green-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2"
 >
-  Salvar alterações
+  Salvar alteraÃ§Ãµes
 </button>
 
                                 <button
@@ -9075,7 +8693,7 @@ function RefeicoesListScreen({
   onClick={() => removeWholeMeal(meal.id)}
   className="w-full py-3 text-red-500 hover:text-red-600 font-bold text-[10px] uppercase tracking-widest active:scale-95 transition-all bg-transparent hover:bg-red-50 rounded-2xl flex items-center justify-center"
 >
-  Excluir refeição inteira
+  Excluir refeiÃ§Ã£o inteira
 </button>
                               </div>
                             </motion.div>
@@ -9101,7 +8719,7 @@ const getStreakStyle = (days: number) => {
       ring: 'ring-orange-200/40',
       icon: Flame,
       title: 'Aquecendo os motores',
-      subtitle: 'O círculo está começando a ganhar ritmo.',
+      subtitle: 'O cÃ­rculo estÃ¡ comeÃ§ando a ganhar ritmo.',
     };
   }
 
@@ -9112,7 +8730,7 @@ const getStreakStyle = (days: number) => {
       ring: 'ring-orange-300/50',
       icon: Flame,
       title: 'Ganhando ritmo!',
-      subtitle: 'Vocês estão mantendo a consistência juntos.',
+      subtitle: 'VocÃªs estÃ£o mantendo a consistÃªncia juntos.',
     };
   }
 
@@ -9122,8 +8740,8 @@ const getStreakStyle = (days: number) => {
       bg: 'bg-red-100',
       ring: 'ring-red-300/50',
       icon: Flame,
-      title: 'Círculo em chamas!',
-      subtitle: 'A sequência do grupo está forte.',
+      title: 'CÃ­rculo em chamas!',
+      subtitle: 'A sequÃªncia do grupo estÃ¡ forte.',
     };
   }
 
@@ -9132,8 +8750,8 @@ const getStreakStyle = (days: number) => {
     bg: 'bg-indigo-100',
     ring: 'ring-indigo-300/50',
     icon: Zap,
-    title: 'Intocáveis!',
-    subtitle: 'O círculo virou referência de disciplina.',
+    title: 'IntocÃ¡veis!',
+    subtitle: 'O cÃ­rculo virou referÃªncia de disciplina.',
   };
 };
 function CirculoScreenFoodstagram() {
@@ -9156,20 +8774,39 @@ function CirculoScreenFoodstagram() {
 
   const streakDays = 8;
 
+  const getMealLabel = (value: string) => {
+    const normalized = String(value || '').toLowerCase();
+
+    const labels: Record<string, string> = {
+      cafe: 'CafÃ© da manhÃ£',
+      almoco: 'AlmoÃ§o',
+      lanche: 'Lanche da tarde',
+      lanchemanha: 'Lanche da manhÃ£',
+      jantar: 'Jantar',
+      ceia: 'Ceia',
+    };
+
+    return labels[normalized] || 'RefeiÃ§Ã£o';
+  };
+
+  const getMealPostSubtitle = (value: string) => {
+    return `${getMealLabel(value)} registrado`;
+  };
+
   const members = [
     {
       id: 'me',
-      name: 'Você',
-      avatar: '🧑',
-      status: meals.length > 0 ? 'Registrou hoje' : 'Ainda sem registro',
+      name: 'VocÃª',
+      avatar: 'ðŸ§‘',
+      status: meals.length > 0 || workouts.length > 0 ? 'Registrou hoje' : 'Ainda sem registro',
       goal: calorieGoal,
       consumed: totals.cal,
       burned,
     },
     {
       id: 'partner',
-      name: 'Partner 💖',
-      avatar: '🦁',
+      name: 'Partner ðŸ’–',
+      avatar: 'ðŸ¦',
       status: 'Meta em andamento',
       goal: 1800,
       consumed: 1320,
@@ -9179,7 +8816,7 @@ function CirculoScreenFoodstagram() {
       id: 'ana',
       name: 'Ana',
       avatar: 'A',
-      status: 'Registrou almoço',
+      status: 'Registrou almoÃ§o',
       goal: 1650,
       consumed: 980,
       burned: 180,
@@ -9194,45 +8831,70 @@ function CirculoScreenFoodstagram() {
       burned: 420,
     },
   ];
-const getMealPostSubtitle = (value: string) => {
-  const normalized = String(value || '').toLowerCase();
 
-  const labels: Record<string, string> = {
-    cafe: 'Café da manhã',
-    almoco: 'Almoço',
-    lanche: 'Lanche da tarde',
-    lanchemanha: 'Lanche da manhã',
-    jantar: 'Jantar',
-    ceia: 'Ceia',
-  };
+  const mealPosts = Array.isArray(meals)
+    ? meals.map((meal: any, index: number) => {
+        const mealLabel = getMealLabel(meal.type);
+        const firstItemName = meal?.items?.[0]?.food?.name || mealLabel;
 
-  return `${labels[normalized] || 'Registro'} registrado`;
-};
+        return {
+          id: `meal-${meal.id || index}`,
+          member: 'VocÃª',
+          avatar: 'ðŸ§‘',
+          time: meal.time || new Date().toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          type: 'meal',
+          title: mealLabel,
+          subtitle: getMealPostSubtitle(meal.type),
+          detail: firstItemName,
+          calories: Math.round(safeNumber(meal.cal)),
+        };
+      })
+    : [];
+
+  const workoutPosts = Array.isArray(workouts)
+    ? workouts.map((workout: any, index: number) => {
+        const workoutLabel =
+          WORKOUT_TYPES.find((wt: any) => wt.key === workout.type)?.label ||
+          workout.type ||
+          'Treino';
+
+        return {
+          id: `workout-${workout.id || index}`,
+          member: 'VocÃª',
+          avatar: 'ðŸ§‘',
+          time: workout.time || new Date().toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          type: 'workout',
+          title: workoutLabel,
+          subtitle: workout.duration > 0
+            ? `${workout.duration} min de treino`
+            : 'Treino registrado',
+          detail: 'Atividade registrada',
+          calories: Math.round(safeNumber(workout.burned)),
+        };
+      })
+    : [];
+
   const posts = [
-    {
-      id: 'me-today',
-      member: 'Você',
-      avatar: '🧑',
-      time: new Date().toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      type: meals.length > 0 ? 'meal' : 'empty',
-      title: meals.length > 0 ? meals[0].items?.[0]?.food?.name || 'Registro do dia' : 'Registro do dia',
-      subtitle: meals.length > 0 ? getMealPostSubtitle(meals[0].type) : 'Registro salvo',
-      calories: meals.length > 0 ? meals[0].cal : totals.cal,
-    },
+    ...mealPosts,
+    ...workoutPosts,
     {
       id: 'partner-today',
-      member: 'Partner 💖',
-      avatar: '🦁',
+      member: 'Partner ðŸ’–',
+      avatar: 'ðŸ¦',
       time: '14:10',
       type: 'meal',
-      title: 'Almoço registrado',
-      subtitle: 'Seguindo o plano do dia',
+      title: 'AlmoÃ§o',
+      subtitle: 'AlmoÃ§o registrado',
+      detail: 'Seguindo o plano do dia',
       calories: 520,
     },
-  ];
+  ].sort((a, b) => String(b.time).localeCompare(String(a.time)));
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-28 overflow-x-hidden">
@@ -9243,11 +8905,11 @@ const getMealPostSubtitle = (value: string) => {
         <div className="relative z-10 flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-black text-white/75 uppercase tracking-widest">
-              Círculo
+              CÃ­rculo
             </p>
 
             <h1 className="mt-2 text-3xl font-black leading-tight">
-              Círculo de apoio
+              CÃ­rculo de apoio
             </h1>
           </div>
 
@@ -9255,8 +8917,9 @@ const getMealPostSubtitle = (value: string) => {
             type="button"
             onClick={() => setShowInviteModal(true)}
             className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-2xl active:scale-95 transition-all"
+            aria-label="Convidar amigos"
           >
-            👥
+            ðŸ‘¥
           </button>
         </div>
 
@@ -9264,20 +8927,20 @@ const getMealPostSubtitle = (value: string) => {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-16 h-16 rounded-[24px] flex items-center justify-center shadow-inner bg-orange-100 ring-4 ring-orange-300/40">
-                <span className="text-3xl">🔥</span>
+                <span className="text-3xl">ðŸ”¥</span>
               </div>
 
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">
-                  Ofensiva do Círculo
+                  Ofensiva do CÃ­rculo
                 </p>
 
                 <p className="text-base font-black text-white tracking-tight leading-tight">
-                  Círculo em chamas!
+                  CÃ­rculo em chamas!
                 </p>
 
                 <p className="text-[10px] font-bold text-white/65 leading-snug mt-1">
-                  Vocês estão mantendo a consistência juntos.
+                  VocÃªs estÃ£o mantendo a consistÃªncia juntos.
                 </p>
               </div>
             </div>
@@ -9298,26 +8961,26 @@ const getMealPostSubtitle = (value: string) => {
       <div className="-mt-8 px-5 relative z-20 space-y-8">
         <div className="bg-white rounded-[34px] p-5 shadow-xl shadow-gray-200/60 border border-gray-100">
           <div className="flex items-center justify-between mb-5">
-  <div>
-    <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-      Seu círculo
-    </p>
+            <div>
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                Seu cÃ­rculo
+              </p>
 
-    <h2 className="mt-1 text-xl font-black text-gray-900">
-      Grupo atual
-    </h2>
-  </div>
-</div>
+              <h2 className="mt-1 text-xl font-black text-gray-900">
+                  Membros do círculo
+              </h2>
+            </div>
+          </div>
 
           <div className="flex justify-between gap-3">
             {members.map(member => (
               <button
-  key={member.id}
-  type="button"
-  aria-label={`Ver dia de ${member.name}`}
-  onClick={() => setSelectedMember(member)}
-  className="flex-1 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
->
+                key={member.id}
+                type="button"
+                aria-label={`Ver dia de ${member.name}`}
+                onClick={() => setSelectedMember(member)}
+                className="flex-1 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
+              >
                 <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl font-black text-green-700 overflow-hidden">
                   {member.avatar}
                 </div>
@@ -9332,7 +8995,7 @@ const getMealPostSubtitle = (value: string) => {
 
         <div>
           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">
-            Atualizações
+            Atividade recente
           </p>
 
           <h2 className="text-2xl font-black text-gray-900 mb-5">
@@ -9364,9 +9027,12 @@ const getMealPostSubtitle = (value: string) => {
 
                   <button
                     type="button"
-                    className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center active:scale-95 transition-all"
+                    className="p-2 rounded-full hover:bg-gray-50 active:scale-90 transition-all flex items-center justify-center group"
+                    aria-label="Curtir atualizaÃ§Ã£o"
                   >
-                    💜
+                    <span className="text-xl text-gray-300 group-hover:text-red-500 transition-colors">
+                      â™¡
+                    </span>
                   </button>
                 </div>
 
@@ -9378,19 +9044,27 @@ const getMealPostSubtitle = (value: string) => {
                       </p>
 
                       <p className="text-[11px] font-bold text-gray-400 mt-0.5">
-  {post.subtitle || 'Registro salvo'}
-</p>
-                    </div>
-
-                    <div className="bg-green-50 border border-green-100 rounded-2xl px-3 py-2 text-right shrink-0">
-                      <p className="text-base font-black text-green-600">
-                        {Math.round(safeNumber(post.calories))}
+                        {post.subtitle || 'Registro salvo'}
                       </p>
 
-                      <p className="text-[8px] font-black text-green-500 uppercase">
-                        calorias
-                      </p>
+                      {post.detail && (
+                        <p className="text-xs font-bold text-gray-500 mt-2 leading-snug">
+                          {post.detail}
+                        </p>
+                      )}
                     </div>
+
+                    {safeNumber(post.calories) > 0 && (
+                      <div className="bg-green-50 border border-green-100 rounded-2xl px-3 py-2 text-right shrink-0">
+                        <p className="text-base font-black text-green-600">
+                          {Math.round(safeNumber(post.calories))}
+                        </p>
+
+                        <p className="text-[8px] font-black text-green-500 uppercase">
+                          calorias
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -9444,7 +9118,7 @@ const getMealPostSubtitle = (value: string) => {
 
               <div className="space-y-6 relative z-10 mt-5">
                 <p className="text-sm font-bold text-gray-500 leading-relaxed text-center px-4">
-                  Compartilhe seu link exclusivo. Quem clicar poderá entrar no seu círculo.
+                  Compartilhe seu link exclusivo. Quem clicar poderÃ¡ entrar no seu cÃ­rculo.
                 </p>
 
                 <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-2xl p-2 pl-4">
@@ -9483,7 +9157,7 @@ const getMealPostSubtitle = (value: string) => {
                   onClick={async () => {
                     const shareData = {
                       title: 'Convite FitCircle',
-                      text: 'Vem treinar comigo no FitCircle! Entre no meu círculo:',
+                      text: 'Vem treinar comigo no FitCircle! Entre no meu cÃ­rculo:',
                       url: 'https://fitcircle.app/c/FC-9921',
                     };
 
@@ -9713,7 +9387,7 @@ function Navigation() {
     { key: 'hoje', label: 'Hoje', icon: Calendar },
     { key: 'plano', label: 'Plano', icon: Book },
     { key: 'add', label: 'Adicionar', icon: Plus, central: true },
-    { key: 'circulo', label: 'Círculo', icon: Users },
+    { key: 'circulo', label: 'CÃ­rculo', icon: Users },
     { key: 'perfil', label: 'Perfil', icon: User },
   ] as const;
 
@@ -9843,7 +9517,7 @@ function Navigation() {
                   </p>
 
                   <h2 className="text-2xl font-black text-gray-900 mt-1">
-                    O que você quer adicionar?
+                    O que vocÃª quer adicionar?
                   </h2>
                 </div>
 
@@ -9858,26 +9532,32 @@ function Navigation() {
 
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  type="button"
-                  data-testid="quick-add-meal"
-                  onClick={() => {
-                    setShowQuickAdd(false);
-                    goToMealList();
-                  }}
-                  className="rounded-[28px] bg-green-50 border border-green-100 p-5 text-left active:scale-95 transition-all"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-green-600 shadow-sm mb-4">
-                    <Utensils size={24} />
-                  </div>
+  type="button"
+  data-testid="quick-add-meal"
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-                  <p className="text-sm font-black text-gray-900">
-                    Refeição
-                  </p>
+    setShowQuickAdd(false);
 
-                  <p className="text-[10px] font-bold text-gray-400 mt-1">
-                    Registrar comida
-                  </p>
-                </button>
+    requestAnimationFrame(() => {
+      goToMealList();
+    });
+  }}
+  className="rounded-[28px] bg-green-50 border border-green-100 p-5 text-left active:scale-95 transition-all"
+>
+  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-green-600 shadow-sm mb-4">
+    <Utensils size={24} />
+  </div>
+
+  <p className="text-sm font-black text-gray-900">
+    RefeiÃ§Ã£o
+  </p>
+
+  <p className="text-[10px] font-bold text-gray-400 mt-1">
+    Registrar comida
+  </p>
+</button>
 
                 <button
                   type="button"
