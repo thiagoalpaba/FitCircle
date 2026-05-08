@@ -3929,8 +3929,8 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
     (step === 9 && (!profile.restrictions || profile.restrictions.length === 0));
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <div className="p-8 pt-12 flex items-center justify-between">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-white">
+      <div className="shrink-0 bg-white p-8 pt-12 flex items-center justify-between">
         <button
           type="button"
           onClick={back}
@@ -3943,8 +3943,8 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
 
         <div className="flex flex-col items-center">
           <p className="text-xs font-bold text-gray-400">
-  Passo {step} de {totalSteps}
-</p>
+            Passo {step} de {totalSteps}
+          </p>
 
           <div className="flex gap-1 mt-2">
             {Array.from({ length: totalSteps }).map((_, i) => (
@@ -3961,21 +3961,21 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         <div className="w-12" />
       </div>
 
-      <div className="flex-1 px-8 py-4 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-8 py-4 pb-8 no-scrollbar">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
             initial={{ x: 20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -20, opacity: 0 }}
-            className="h-full"
+            className="min-h-full"
           >
             {renderStep()}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      <div className="p-8 pb-12">
+      <div className="shrink-0 border-t border-gray-100 bg-white p-6 pb-8">
         <button
           type="button"
           disabled={nextDisabled}
@@ -3992,6 +3992,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
     </div>
   );
 }
+
 
 function PlanBuilderScreen({ profile, onComplete }: { profile: UserProfile; onComplete: (finalProfile: UserProfile) => void }) {
   const [step, setStep] = useState(1);
@@ -6948,9 +6949,14 @@ function PerfilScreen() {
                 {bmiInfo.label}
               </p>
             </div>
-          </div>
 
-          <div className="relative h-4 bg-gradient-to-r from-blue-300 via-green-400 via-yellow-400 to-red-500 rounded-full overflow-hidden">
+          <div
+  className="h-3 rounded-full"
+  style={{
+    background:
+      'linear-gradient(to right, #60A5FA 0%, #60A5FA 18.5%, #22C55E 18.5%, #22C55E 24.9%, #FACC15 24.9%, #FACC15 29.9%, #EF4444 29.9%, #EF4444 100%)',
+  }}
+/>
             <div
               className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full border-4 shadow-lg"
               style={{
