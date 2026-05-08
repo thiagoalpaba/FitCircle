@@ -6915,50 +6915,57 @@ function PerfilScreen() {
         </div>
 
         <div className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-lg shadow-gray-100/70">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
-                Painel corporal
-              </p>
+  <div className="flex items-center justify-between mb-5">
+    <div>
+      <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
+        Painel corporal
+      </p>
 
-              <h2 className="text-lg font-black text-gray-900 mt-1">
-                IMC visual
-              </h2>
-            </div>
+      <h2 className="text-lg font-black text-gray-900 mt-1">
+        IMC visual
+      </h2>
+    </div>
 
-            <div className="text-right">
-              <p className="text-2xl font-black text-gray-900">
-                {bmiValue}
-              </p>
+    <div className="text-right">
+      <p className="text-2xl font-black text-gray-900">
+        {bmiValue}
+      </p>
 
-              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: bmiInfo.color }}>
-                {bmiInfo.label}
-              </p>
-            </div>
+      <p
+        className="text-[9px] font-black uppercase tracking-widest"
+        style={{ color: bmiInfo.color }}
+      >
+        {bmiInfo.label}
+      </p>
+    </div>
+  </div>
 
-          <div
-  className="h-3 rounded-full overflow-hidden"
-  style={{
-    background:
-      'linear-gradient(to right, #60A5FA 0%, #60A5FA 18.5%, #22C55E 18.5%, #22C55E 24.9%, #FACC15 24.9%, #FACC15 29.9%, #EF4444 29.9%, #EF4444 100%)',
-  }}
-/>
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full border-4 shadow-lg"
-              style={{
-                left: `${Math.min(Math.max(bmiInfo.position, 0), 94)}%`,
-                borderColor: bmiInfo.color,
-              }}
-            />
-          </div>
+  <div className="relative pt-4 pb-2">
+    <div
+      className="h-3 rounded-full"
+      style={{
+        background:
+          'linear-gradient(to right, #60A5FA 0%, #60A5FA 18.5%, #22C55E 18.5%, #22C55E 24.9%, #FACC15 24.9%, #FACC15 29.9%, #EF4444 29.9%, #EF4444 100%)',
+      }}
+    />
 
-          <div className="flex justify-between mt-3 text-[8px] font-black text-gray-300 uppercase tracking-widest">
-            <span>Baixo</span>
-            <span>Saudável</span>
-            <span>Alto</span>
-          </div>
-        </div>
+    <div
+      className="absolute top-[10px] h-7 w-7 rounded-full border-4 bg-white shadow-lg"
+      style={{
+        left: `${Math.min(Math.max(bmiInfo.position, 4), 92)}%`,
+        transform: 'translateX(-50%)',
+        borderColor: bmiInfo.color,
+      }}
+    />
+  </div>
 
+  <div className="flex justify-between mt-3 text-[8px] font-black text-gray-300 uppercase tracking-widest">
+    <span>Baixo</span>
+    <span>Saudável</span>
+    <span>Alto</span>
+  </div>
+</div>
+           
         <div className="bg-white rounded-[32px] p-5 border border-gray-100 shadow-lg shadow-gray-100/70">
           <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-4">
             Macros estimados
