@@ -4369,7 +4369,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           <div>
             <h3 className="text-xl font-black text-gray-900">Refeições</h3>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-              Registrar refeição
+              Planejamento do dia
             </p>
           </div>
 
@@ -4500,7 +4500,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                     {cfg.label}
                   </p>
                   <p className="text-[10px] text-green-600 font-black uppercase mt-0.5">
-                    Sugestão
+                    Do plano
                   </p>
                 </div>
               </div>
@@ -4523,7 +4523,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                   }}
                  className="inline-flex items-center justify-center rounded-full border border-green-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 active:scale-95 transition-all"
                 >
-                  Registrar
+                  Adicionar
                 </button>
               </div>
             </div>
@@ -7689,11 +7689,11 @@ function RefeicoesListScreen({
 
         <div>
           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-            Registrar
+            Hoje
           </p>
 
           <h1 className="text-xl font-black text-gray-900">
-            Refeições do Dia
+            Registrar refeição
           </h1>
         </div>
       </div>
@@ -7729,7 +7729,7 @@ function RefeicoesListScreen({
                     <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
                       {registeredMeals.length > 0
                         ? `${registeredMeals.length} registro(s)`
-                        : 'Sem registro ainda'}
+                        : 'Toque em adicionar para registrar'}
                     </p>
                   </div>
                 </div>
@@ -8212,12 +8212,15 @@ function AddMealScreen({
     mealPlan,
   } = useApp();
 
+  const [showManualModal, setShowManualModal] = useState(false);
+
   const currentMealType = pendingMealType || 'cafe';
   const planOptions = mealPlan[currentMealType] || [];
 
   const closeAndBack = () => {
     setPendingMealType(null);
     setPendingEditMealId(null);
+    setShowManualModal(false);
     onBack();
   };
 
@@ -8247,23 +8250,23 @@ function AddMealScreen({
   };
 
   const addPlanOption = (option: any) => {
-    const macros = getPlanOptionMacros(option.qty || '');
+    const optionMacros = getPlanOptionMacros(option.qty || '');
 
     const entry: MealEntry = {
       food: {
         name: option.name,
         cal: safeNumber(option.cal),
-        p: macros.p,
-        c: macros.c,
-        f: macros.f,
+        p: optionMacros.p,
+        c: optionMacros.c,
+        f: optionMacros.f,
         category: 'Plano',
       } as FoodItem,
       qty: 1,
       unit: 'un',
       cal: Math.round(safeNumber(option.cal)),
-      p: macros.p,
-      c: macros.c,
-      f: macros.f,
+      p: optionMacros.p,
+      c: optionMacros.c,
+      f: optionMacros.f,
     };
 
     handleAddEntry(entry);
@@ -8282,71 +8285,131 @@ function AddMealScreen({
 
         <div>
           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-            Registrar
+            Hoje
           </p>
 
           <h1 className="text-xl font-black text-gray-900">
-            Adicionar refeição
+            Registrar refeição
           </h1>
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-4">
-        {planOptions.length > 0 && (
-          <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-green-700">
+      <div className="px-5 mt-5 space-y-5">
+        <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
+          <div className="mb-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
               Opções do plano
             </p>
 
-            <div className="space-y-2">
-              {planOptions.slice(0, 3).map((option: any, index: number) => (
-                <button
-                  key={`${option.name}-${index}`}
-                  type="button"
-                  onClick={() => addPlanOption(option)}
-                  className="w-full rounded-2xl bg-white p-4 text-left shadow-sm active:scale-[0.99] transition-all"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-black text-gray-900">
-                        {option.name}
-                      </p>
+            <p className="mt-1 text-xs font-bold text-green-700/70">
+              Toque em uma sugestão para registrar rápido.
+            </p>
+          </div>
 
-                      <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400">
-                        {sanitizeOptionQtyText(option.qty || '')}
-                      </p>
+          {planOptions.length > 0 ? (
+            <div className="space-y-3">
+              {planOptions.slice(0, 3).map((option: any, index: number) => {
+                const optionMacros = getPlanOptionMacros(option.qty || '');
+
+                return (
+                  <button
+                    key={`${option.name}-${index}`}
+                    type="button"
+                    onClick={() => addPlanOption(option)}
+                    className="w-full rounded-[24px] bg-white p-4 text-left shadow-sm active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-gray-900">
+                          {option.name}
+                        </p>
+
+                        <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400">
+                          {sanitizeOptionQtyText(option.qty || '')}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
+                        {Math.round(safeNumber(option.cal))} cal
+                      </span>
                     </div>
 
-                    <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
-                      {Math.round(safeNumber(option.cal))} cal
-                    </span>
-                  </div>
-                </button>
-              ))}
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <div className="rounded-2xl bg-blue-50 px-3 py-2">
+                        <p className="text-[8px] font-black uppercase text-blue-500">
+                          Prot.
+                        </p>
+                        <p className="text-xs font-black text-blue-700">
+                          {optionMacros.p}g
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-green-50 px-3 py-2">
+                        <p className="text-[8px] font-black uppercase text-green-500">
+                          Carbo
+                        </p>
+                        <p className="text-xs font-black text-green-700">
+                          {optionMacros.c}g
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-orange-50 px-3 py-2">
+                        <p className="text-[8px] font-black uppercase text-orange-500">
+                          Gord.
+                        </p>
+                        <p className="text-xs font-black text-orange-700">
+                          {optionMacros.f}g
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-[24px] bg-white p-5 text-center">
+              <p className="text-sm font-black text-gray-900">
+                Nenhuma sugestão disponível
+              </p>
+
+              <p className="mt-1 text-xs font-bold text-gray-400">
+                Use a opção de alimento avulso abaixo.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowManualModal(true)}
+          className="w-full rounded-[28px] border border-gray-100 bg-white p-5 text-left shadow-sm active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-green-600">
+              <Plus size={22} />
+            </div>
+
+            <div>
+              <p className="text-sm font-black text-gray-900">
+                Adicionar alimento avulso
+              </p>
+
+              <p className="mt-1 text-xs font-bold text-gray-400">
+                Use quando quiser montar a refeição item por item.
+              </p>
             </div>
           </div>
-        )}
-
-        <div className="rounded-[30px] border border-gray-100 bg-white p-4 text-center shadow-sm">
-          <p className="text-sm font-black text-gray-900">
-            Ou escolha um alimento manualmente
-          </p>
-
-          <p className="mt-1 text-xs font-bold text-gray-400">
-            Busque ingredientes soltos para montar sua refeição.
-          </p>
-        </div>
+        </button>
       </div>
 
       <AddFoodModal
-        isOpen={Boolean(pendingMealType || pendingEditMealId)}
-        onClose={closeAndBack}
+        isOpen={showManualModal}
+        onClose={() => setShowManualModal(false)}
         onAdd={handleAddEntry}
       />
     </div>
   );
 }
-
 function Navigation() {
   const { isLoggedIn, onboarded, completeScreening, setPendingEditMealId, setPendingMealType } = useApp();
   
@@ -8447,7 +8510,7 @@ function Navigation() {
             <Utensils size={22} />
           </div>
           <span className="text-[10px] font-black uppercase tracking-tight text-green-700 text-center leading-tight">
-            Registrar refeição
+            Planejamento do dia
           </span>
         </button>
 
