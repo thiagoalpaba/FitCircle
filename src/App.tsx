@@ -4726,6 +4726,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
     mealCount,
     meals,
     workouts,
+    addMeal,
     addWorkout,
     deleteWorkout,
     estimateBurned,
@@ -4993,9 +4994,104 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                 <button
                   type="button"
                   onClick={() => {
-                    setPendingMealType(cfg.key);
-                    onNavigate('registrar');
-                  }}
+  const option = mealPlan[cfg.key]?.[0];
+
+  if (!option) {
+    setPendingMealType(cfg.key);
+    onNavigate('registrar');
+    return;
+  }
+
+  const lines = sanitizeOptionQtyText(option.qty || '')
+    .split(' + ')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const items: MealEntry[] = lines.map((line) => {
+    const matchedFood = [...FOOD_DATABASE]
+      .sort((a, b) => b.name.length - a.name.length)
+      .find(food =>
+        normalizePlanText(line).includes(normalizePlanText(food.name))
+      );
+
+    if (!matchedFood) {
+      return {
+        food: {
+          name: line,
+          cal: 0,
+          p: 0,
+          c: 0,
+          f: 0,
+          category: 'Plano',
+        } as FoodItem,
+        qty: 1,
+        unit: 'un',
+        cal: 0,
+        p: 0,
+        c: 0,
+        f: 0,
+      };
+    }
+
+    const grams = getApproxGramsFromPlanLine(line, matchedFood);
+    const safeGrams = grams > 0 ? grams : 100;
+    const factor = safeGrams / 100;
+
+    return {
+      food: matchedFood,
+      qty: Math.round(safeGrams),
+      unit: 'g',
+      cal: Math.round(safeNumber(matchedFood.cal) * factor),
+      p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
+      c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
+      f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
+    };
+  });
+
+  const validItems = items.length > 0 ? items : [
+    {
+      food: {
+        name: option.name,
+        cal: safeNumber(option.cal),
+        p: 0,
+        c: 0,
+        f: 0,
+        category: 'Plano',
+      } as FoodItem,
+      qty: 1,
+      unit: 'un',
+      cal: Math.round(safeNumber(option.cal)),
+      p: 0,
+      c: 0,
+      f: 0,
+    },
+  ];
+
+  const totals = validItems.reduce(
+    (acc, item) => ({
+      cal: acc.cal + safeNumber(item.cal),
+      p: acc.p + safeNumber(item.p),
+      c: acc.c + safeNumber(item.c),
+      f: acc.f + safeNumber(item.f),
+    }),
+    { cal: 0, p: 0, c: 0, f: 0 }
+  );
+
+  const now = new Date();
+
+  addMeal({
+    type: cfg.key,
+    time: now.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    items: validItems,
+    cal: Math.round(totals.cal || safeNumber(option.cal)),
+    p: Math.round(totals.p),
+    c: Math.round(totals.c),
+    f: Math.round(totals.f),
+  });
+}}
                  className="inline-flex items-center justify-center rounded-full border border-green-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-green-700 active:scale-95 transition-all"
                 >
                   Adicionar
