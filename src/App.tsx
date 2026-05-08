@@ -7860,7 +7860,7 @@ function CirculoScreenFoodstagram() {
           </div>
 
           <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-2xl">
-            👥
+            <Users size={24} />
           </div>
         </div>
 
@@ -7980,8 +7980,12 @@ function CirculoScreenFoodstagram() {
                     />
                   ) : (
                     <div className="text-center px-6">
-                      <div className="text-5xl mb-3">
-                        {post.type === 'workout' ? '💪' : '🍽️'}
+                      <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
+                       {post.type === 'workout' ? (
+  <Activity size={38} className="text-green-600" />
+) : (
+  <Camera size={38} className="text-green-600" />
+)}
                       </div>
 
                       <p className="text-sm font-black text-green-700">
@@ -7989,7 +7993,7 @@ function CirculoScreenFoodstagram() {
                       </p>
 
                       <p className="mt-1 text-[11px] font-bold text-green-600">
-                        {post.type === 'workout' ? 'Atividade concluída' : 'Sem foto publicada'}
+                        {post.type === 'workout' ? 'Movimento registrado' : 'Sem foto publicada'}
                       </p>
                     </div>
                   )}
