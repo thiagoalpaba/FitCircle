@@ -8604,9 +8604,193 @@ function RefeicoesListScreen({
   onEdit: (id: string) => void;
   onAdd: (type: string) => void;
 }) {
-  const { mealCount, meals } = useApp();
+  const { mealCount, meals, mealPlan, addMeal, updateMeal, deleteMeal } = useApp();
 
   const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
+
+  const [openMealKey, setOpenMealKey] = useState<string | null>(null);
+  const [editingMealId, setEditingMealId] = useState<string | null>(null);
+  const [draftItems, setDraftItems] = useState<MealEntry[]>([]);
+
+  const buildItemsFromPlanOption = (option: any): MealEntry[] => {
+    const lines = sanitizeOptionQtyText(option?.qty || '')
+      .split(' + ')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    return lines.map((line) => {
+      const matchedFood = [...FOOD_DATABASE]
+        .sort((a, b) => b.name.length - a.name.length)
+        .find(food =>
+          normalizePlanText(line).includes(normalizePlanText(food.name))
+        );
+
+      if (!matchedFood) {
+        return {
+          food: {
+            name: line,
+            cal: 0,
+            p: 0,
+            c: 0,
+            f: 0,
+            category: 'Plano',
+          } as FoodItem,
+          qty: 1,
+          unit: 'un',
+          cal: 0,
+          p: 0,
+          c: 0,
+          f: 0,
+        };
+      }
+
+      const grams = getApproxGramsFromPlanLine(line, matchedFood);
+      const safeGrams = grams > 0 ? grams : 100;
+      const factor = safeGrams / 100;
+
+      return {
+        food: matchedFood,
+        qty: Math.round(safeGrams),
+        unit: 'g',
+        cal: Math.round(safeNumber(matchedFood.cal) * factor),
+        p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
+        c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
+        f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
+      };
+    });
+  };
+
+  const getItemsTotals = (items: MealEntry[]) => {
+    const totals = items.reduce(
+      (acc, item) => ({
+        cal: acc.cal + safeNumber(item.cal),
+        p: acc.p + safeNumber(item.p),
+        c: acc.c + safeNumber(item.c),
+        f: acc.f + safeNumber(item.f),
+      }),
+      { cal: 0, p: 0, c: 0, f: 0 }
+    );
+
+    return {
+      cal: Math.round(totals.cal),
+      p: Math.round(totals.p),
+      c: Math.round(totals.c),
+      f: Math.round(totals.f),
+    };
+  };
+
+  const registerSelectedPlanOption = (mealKey: string, option: any) => {
+    const items = buildItemsFromPlanOption(option);
+
+    const safeItems =
+      items.length > 0
+        ? items
+        : [
+            {
+              food: {
+                name: option.name || 'Opção do plano',
+                cal: safeNumber(option.cal),
+                p: 0,
+                c: 0,
+                f: 0,
+                category: 'Plano',
+              } as FoodItem,
+              qty: 1,
+              unit: 'un',
+              cal: Math.round(safeNumber(option.cal)),
+              p: 0,
+              c: 0,
+              f: 0,
+            },
+          ];
+
+    const totals = getItemsTotals(safeItems);
+    const now = new Date();
+
+    addMeal({
+      type: mealKey,
+      time: now.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      items: safeItems,
+      cal: totals.cal || Math.round(safeNumber(option.cal)),
+      p: totals.p,
+      c: totals.c,
+      f: totals.f,
+    });
+
+    setOpenMealKey(null);
+  };
+
+  const startEditingMeal = (meal: any) => {
+    setEditingMealId(meal.id);
+    setDraftItems([...(meal.items || [])]);
+  };
+
+  const cancelEditingMeal = () => {
+    setEditingMealId(null);
+    setDraftItems([]);
+  };
+
+  const removeDraftItem = (indexToRemove: number) => {
+    setDraftItems(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const saveEditedMeal = (meal: any) => {
+    if (!meal?.id) return;
+
+    if (draftItems.length === 0) {
+      deleteMeal(meal.id);
+      cancelEditingMeal();
+      return;
+    }
+
+    const totals = getItemsTotals(draftItems);
+
+    updateMeal(meal.id, {
+      items: draftItems,
+      cal: totals.cal,
+      p: totals.p,
+      c: totals.c,
+      f: totals.f,
+    });
+
+    cancelEditingMeal();
+  };
+
+  const removeWholeMeal = (mealId: string) => {
+    deleteMeal(mealId);
+    cancelEditingMeal();
+  };
+
+  const getMealStableTitle = (meal: any, cfg: any) => {
+    const count = meal?.items?.length || 0;
+
+    if (count <= 0) return `${cfg.label} registrado`;
+
+    return `${cfg.label} registrado`;
+  };
+
+  const getOptionTitle = (option: any, mealKey: string) => {
+    if (typeof getReadablePlanTitle === 'function') {
+      return getReadablePlanTitle(option, mealKey);
+    }
+
+    return option?.name || 'Opção do plano';
+  };
+
+  const getOptionLines = (option: any) => {
+    if (typeof getReadablePlanDescription === 'function') {
+      return getReadablePlanDescription(option).slice(0, 4);
+    }
+
+    return sanitizeOptionQtyText(option?.qty || '')
+      .split(' + ')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+  };
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
@@ -8636,24 +8820,29 @@ function RefeicoesListScreen({
             ? meals.filter((meal: any) => meal.type === cfg.key)
             : [];
 
+          const options = mealPlan?.[cfg.key] || [];
+          const isOpen = openMealKey === cfg.key;
+
           return (
             <div
               key={cfg.key}
               className="bg-white rounded-[30px] p-5 border border-gray-100 shadow-sm"
             >
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl shrink-0">
                     {cfg.key === 'cafe'
                       ? '☕'
                       : cfg.key === 'almoco'
                       ? '🍽️'
                       : cfg.key === 'jantar'
                       ? '🌙'
+                      : cfg.key === 'ceia'
+                      ? '🌛'
                       : '🍎'}
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-black text-gray-900">
                       {cfg.label}
                     </p>
@@ -8661,46 +8850,240 @@ function RefeicoesListScreen({
                     <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
                       {registeredMeals.length > 0
                         ? `${registeredMeals.length} registro(s)`
-                        : 'Toque em adicionar para registrar'}
+                        : isOpen
+                        ? 'Escolha uma opção'
+                        : 'Toque em registrar'}
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => onAdd(cfg.key)}
-                  className="px-4 py-3 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
-                >
-                  Registrar
-                </button>
+                {editingMealId === null && (
+  <button
+    type="button"
+    onClick={() => setOpenMealKey(isOpen ? null : cfg.key)}
+    className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg ${
+      isOpen
+        ? 'bg-gray-100 text-gray-500 shadow-gray-100'
+        : 'bg-green-500 text-white shadow-green-100'
+    }`}
+  >
+    {isOpen ? 'Fechar' : 'Registrar'}
+  </button>
+)}
               </div>
 
-              {registeredMeals.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {registeredMeals.map((meal: any) => (
-                    <div
-                      key={meal.id}
-                      className="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center justify-between gap-3"
-                    >
-                      <div>
-                        <p className="text-xs font-black text-gray-800">
-                          {meal.items?.[0]?.food?.name || cfg.label}
-                        </p>
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-5 space-y-3">
+                      {options.length > 0 ? (
+                        options.slice(0, 3).map((option: any, index: number) => (
+                          <div
+                            key={`${cfg.key}-option-${index}-${option.name}`}
+                            className="rounded-[24px] bg-gray-50 border border-gray-100 p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-black text-gray-900 leading-tight">
+                                  {getOptionTitle(option, cfg.key)}
+                                </p>
 
-                        <p className="text-[10px] font-bold text-gray-400 mt-1">
-                          {Math.round(safeNumber(meal.cal || meal.calories))} calorias
-                        </p>
-                      </div>
+                                <div className="mt-2 space-y-1">
+                                  {getOptionLines(option).map((line: string, idx: number) => (
+                                    <p
+                                      key={`${cfg.key}-line-${index}-${idx}`}
+                                      className="text-[10px] font-bold text-gray-400 leading-snug break-words"
+                                    >
+                                      • {line}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <span className="rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700 shrink-0">
+                                {Math.round(safeNumber(option.cal))} cal
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => registerSelectedPlanOption(cfg.key, option)}
+                              className="mt-4 w-full rounded-2xl bg-green-500 py-3 text-[10px] font-black uppercase tracking-widest text-white active:scale-95 transition-all shadow-lg shadow-green-100"
+                            >
+                              Adicionar esta opção
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-[24px] bg-gray-50 border border-gray-100 p-5 text-center">
+                          <p className="text-sm font-black text-gray-900">
+                            Nenhuma opção pronta
+                          </p>
+
+                          <p className="mt-1 text-xs font-bold text-gray-400">
+                            Monte essa refeição manualmente.
+                          </p>
+                        </div>
+                      )}
 
                       <button
                         type="button"
-                        onClick={() => onEdit(meal.id)}
-                        className="px-3 py-2 rounded-xl bg-white text-green-600 border border-green-100 text-[9px] font-black uppercase"
+                        onClick={() => onAdd(cfg.key)}
+                        className="w-full rounded-2xl bg-white border border-green-100 py-3 text-[10px] font-black uppercase tracking-widest text-green-600 active:scale-95 transition-all"
                       >
-                        Editar
+                        Montar avulso
                       </button>
                     </div>
-                  ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {registeredMeals.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  {registeredMeals.map((meal: any) => {
+                    const isEditing = editingMealId === meal.id;
+                    const visibleItems = isEditing ? draftItems : meal.items || [];
+                    const visibleTotals = getItemsTotals(visibleItems);
+
+                    return (
+                      <div
+                        key={meal.id}
+                        className={`rounded-2xl border p-4 transition-all ${
+                          isEditing
+                            ? 'bg-green-50 border-green-100'
+                            : 'bg-gray-50 border-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-gray-900 truncate">
+                              {getMealStableTitle(meal, cfg)}
+                            </p>
+
+                            <p className="text-[10px] font-bold text-gray-400 mt-1">
+                              {isEditing
+                                ? `${visibleTotals.cal} calorias após edição`
+                                : `${Math.round(safeNumber(meal.cal))} calorias`}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isEditing) {
+                                cancelEditingMeal();
+                              } else {
+                                startEditingMeal(meal);
+                              }
+                            }}
+                            className="px-4 py-2 rounded-xl bg-white border border-green-100 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                          >
+                            {isEditing ? 'Cancelar' : 'Editar'}
+                          </button>
+                        </div>
+
+                        <AnimatePresence>
+                          {isEditing && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-4 pt-4 border-t border-green-100 space-y-3">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
+                                  Ajuste o que você realmente comeu
+                                </p>
+
+                                {draftItems.length > 0 ? (
+                                  draftItems.map((item: any, index: number) => (
+                                    <div
+                                      key={`${meal.id}-draft-item-${index}`}
+                                      className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 border border-green-100"
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-black text-gray-900 truncate">
+                                          {item?.food?.name || 'Alimento'}
+                                        </p>
+
+                                        <p className="text-[10px] font-bold text-gray-400">
+                                          {item?.qty} {item?.unit === 'g' ? 'g' : item?.food?.un || 'un'} · {Math.round(safeNumber(item?.cal))} cal
+                                        </p>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => removeDraftItem(index)}
+                                        className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center active:scale-95 transition-all"
+                                      >
+                                        <X size={15} />
+                                      </button>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="rounded-2xl bg-white border border-red-100 p-4 text-center">
+                                    <p className="text-xs font-black text-red-500 uppercase tracking-widest">
+                                      Nenhum item restante
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[8px] font-black uppercase text-blue-500">
+                                      Prot.
+                                    </p>
+                                    <p className="text-xs font-black text-blue-700">
+                                      {visibleTotals.p}g
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[8px] font-black uppercase text-green-500">
+                                      Carbo
+                                    </p>
+                                    <p className="text-xs font-black text-green-700">
+                                      {visibleTotals.c}g
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[8px] font-black uppercase text-orange-500">
+                                      Gord.
+                                    </p>
+                                    <p className="text-xs font-black text-orange-700">
+                                      {visibleTotals.f}g
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+  type="button"
+  onClick={() => saveEditedMeal(meal)}
+  className="w-full py-4 bg-green-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2"
+>
+  Salvar alterações
+</button>
+
+                                <button
+  type="button"
+  onClick={() => removeWholeMeal(meal.id)}
+  className="w-full py-3 text-red-500 hover:text-red-600 font-bold text-[10px] uppercase tracking-widest active:scale-95 transition-all bg-transparent hover:bg-red-50 rounded-2xl flex items-center justify-center"
+>
+  Excluir refeição inteira
+</button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -8811,7 +9194,20 @@ function CirculoScreenFoodstagram() {
       burned: 420,
     },
   ];
+const getMealPostSubtitle = (value: string) => {
+  const normalized = String(value || '').toLowerCase();
 
+  const labels: Record<string, string> = {
+    cafe: 'Café da manhã',
+    almoco: 'Almoço',
+    lanche: 'Lanche da tarde',
+    lanchemanha: 'Lanche da manhã',
+    jantar: 'Jantar',
+    ceia: 'Ceia',
+  };
+
+  return `${labels[normalized] || 'Registro'} registrado`;
+};
   const posts = [
     {
       id: 'me-today',
@@ -8823,7 +9219,7 @@ function CirculoScreenFoodstagram() {
       }),
       type: meals.length > 0 ? 'meal' : 'empty',
       title: meals.length > 0 ? meals[0].items?.[0]?.food?.name || 'Registro do dia' : 'Registro do dia',
-      subtitle: meals.length > 0 ? `${meals[0].type || 'Refeição'} registrada` : 'Sem foto publicada',
+      subtitle: meals.length > 0 ? getMealPostSubtitle(meals[0].type) : 'Registro salvo',
       calories: meals.length > 0 ? meals[0].cal : totals.cal,
     },
     {
@@ -8902,32 +9298,26 @@ function CirculoScreenFoodstagram() {
       <div className="-mt-8 px-5 relative z-20 space-y-8">
         <div className="bg-white rounded-[34px] p-5 shadow-xl shadow-gray-200/60 border border-gray-100">
           <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-                Seu círculo
-              </p>
+  <div>
+    <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+      Seu círculo
+    </p>
 
-              <h2 className="mt-1 text-xl font-black text-gray-900">
-                Grupo atual
-              </h2>
-            </div>
-<button
-  type="button"
-  onClick={() => setSelectedMember(members[0])}
-  className="px-4 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
->
-  Ver dia
-</button>
-          </div>
+    <h2 className="mt-1 text-xl font-black text-gray-900">
+      Grupo atual
+    </h2>
+  </div>
+</div>
 
           <div className="flex justify-between gap-3">
             {members.map(member => (
               <button
-                key={member.id}
-                type="button"
-                onClick={() => setSelectedMember(member)}
-                className="flex-1 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
-              >
+  key={member.id}
+  type="button"
+  aria-label={`Ver dia de ${member.name}`}
+  onClick={() => setSelectedMember(member)}
+  className="flex-1 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
+>
                 <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl font-black text-green-700 overflow-hidden">
                   {member.avatar}
                 </div>
@@ -8987,9 +9377,9 @@ function CirculoScreenFoodstagram() {
                         {post.title}
                       </p>
 
-                      <p className="text-xs font-bold text-gray-400 mt-1">
-                        {post.subtitle}
-                      </p>
+                      <p className="text-[11px] font-bold text-gray-400 mt-0.5">
+  {post.subtitle || 'Registro salvo'}
+</p>
                     </div>
 
                     <div className="bg-green-50 border border-green-100 rounded-2xl px-3 py-2 text-right shrink-0">
