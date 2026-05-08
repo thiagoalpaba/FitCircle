@@ -830,33 +830,33 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     setIsLoggedIn(false);
   };
 
-  const updateProfile = (p: Partial<UserProfile>) => {
+const updateProfile = (p: Partial<UserProfile>) => {
   setUserProfile(prev => {
     if (!prev) return null;
 
     const nextProfile = { ...prev, ...p };
 
     if (typeof p.mealCount === 'number') {
-      setMealCount(p.mealCount);
+      setMealCount(p.mealCount as MealCount);
     }
 
     return nextProfile;
   });
 };
 
-  const handleProfileUpdate = (profile: Partial<UserProfile>) => {
-    setUserProfile(prev => {
-      if (!prev) return null;
-      const next = { ...prev, ...profile };
-      
-      if (profile.mealCount) {
-        setMealCount(profile.mealCount as MealCount);
-      }
-      
-      // The useEffect will trigger generateNewPlan since we add dependencies
-      return next;
-    });
-  };
+const handleProfileUpdate = (profile: Partial<UserProfile>) => {
+  setUserProfile(prev => {
+    if (!prev) return null;
+
+    const nextProfile = { ...prev, ...profile };
+
+    if (typeof profile.mealCount === 'number') {
+      setMealCount(profile.mealCount as MealCount);
+    }
+
+    return nextProfile;
+  });
+};
 
   useEffect(() => {
     if (onboarded && userProfile) {
@@ -2577,7 +2577,7 @@ const addRecipeToPlan = (recipe: any, mealKey: string) => {
   const completeScreening = (profile: UserProfile) => {
     setUserProfile(profile);
     const count = profile.mealCount;
-    setMealCount(count);
+    setMealCount((profile.mealCount || 4) as MealCount);
     
     // Recalculate Goals
     const weight = safeNumber(profile.weight, 70);
@@ -2749,7 +2749,7 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
     }
   }, [selectedFood]);
 
-  const handleAdd = () => {
+const handleAdd = () => {
   if (!selectedFood) return;
 
   const qv = parseFloat(qty) || 0;
@@ -2777,7 +2777,8 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
   setSearch('');
   setQty('100');
   setUnit('g');
-  onClose();
+  setSelectedCat('Todas');
+  setShowCreateFood(false);
 };
 
   const handleCreateFood = () => {
@@ -3078,7 +3079,7 @@ return (
 
                    <div className="flex gap-4">
                      <button onClick={() => setSelectedFood(null)} className="flex-1 py-5 bg-gray-50 text-gray-400 font-black rounded-3xl uppercase text-xs">Voltar</button>
-                     <button onClick={handleAdd} className="flex-[2] py-5 bg-green-500 text-white font-black rounded-3xl shadow-xl shadow-green-100 uppercase text-xs tracking-widest active:scale-95 transition-all">Adicionar à Refeição</button>
+                     <button onClick={handleAdd} className="flex-[2] py-5 bg-green-500 text-white font-black rounded-3xl shadow-xl shadow-green-100 uppercase text-xs tracking-widest active:scale-95 transition-all">Adicionar item</button>
                    </div>
                 </div>
               )}
@@ -4004,146 +4005,346 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
 }
 
 
-function PlanBuilderScreen({ profile, onComplete }: { profile: UserProfile; onComplete: (finalProfile: UserProfile) => void }) {
+function PlanBuilderScreen({
+  profile,
+  onComplete,
+}: {
+  profile: UserProfile;
+  onComplete: (finalProfile: UserProfile) => void;
+}) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<UserProfile>(profile);
   const [customIng, setCustomIng] = useState('');
-  const totalSteps = 4;
+
+  const selectedMealCount = safeNumber(data.mealCount || profile.mealCount, 4);
+  const showSnackStep = selectedMealCount > 3;
+  const totalSteps = showSnackStep ? 4 : 3;
 
   useEffect(() => {
     scrollToTop();
   }, [step]);
 
-  const toggleIng = (cat: keyof UserProfile['preferredIngredients'], ing: string) => {
-    const current = data.preferredIngredients[cat] || [];
-    let next;
-    if (current.includes(ing)) {
-      next = current.filter(x => x !== ing);
-    } else {
-      next = [...current, ing];
-    }
+  const toggleIng = (
+    cat: keyof UserProfile['preferredIngredients'],
+    ing: string
+  ) => {
+    const current = data.preferredIngredients?.[cat] || [];
+
+    const next = current.includes(ing)
+      ? current.filter(x => x !== ing)
+      : [...current, ing];
+
     setData({
       ...data,
       preferredIngredients: {
         ...data.preferredIngredients,
-        [cat]: next
-      }
+        [cat]: next,
+      },
     });
   };
 
   const addCustom = (cat: keyof UserProfile['preferredIngredients']) => {
     if (!customIng.trim()) return;
+
     const suggested = findFuzzyMatch(customIng.trim());
+
     toggleIng(cat, suggested || customIng.trim());
     setCustomIng('');
   };
 
-  const renderIngredientStep = (cat: keyof UserProfile['preferredIngredients'], title: string, options: string[]) => {
+  const getCurrentPreferenceKey = (): keyof UserProfile['preferredIngredients'] => {
+    if (step === 1) return 'breakfast';
+    if (step === 2) return 'main';
+    if (step === 3 && showSnackStep) return 'snacks';
+
+    return 'main';
+  };
+
+  const isCurrentStepValid = () => {
+    if (step === totalSteps) return true;
+
+    const key = getCurrentPreferenceKey();
+    return (data.preferredIngredients?.[key] || []).length > 0;
+  };
+
+  const goNext = () => {
+    if (step < totalSteps) {
+      setStep(step + 1);
+      return;
+    }
+
+    const finalProfile: UserProfile = {
+      ...data,
+      mealCount: selectedMealCount as MealCount,
+      preferredIngredients: {
+        ...data.preferredIngredients,
+        snacks: showSnackStep ? data.preferredIngredients.snacks : [],
+      },
+    };
+
+    onComplete(finalProfile);
+  };
+
+  const renderIngredientStep = (
+    cat: keyof UserProfile['preferredIngredients'],
+    title: string,
+    options: string[]
+  ) => {
     const filteredOptions = options.filter(opt => !isFoodRestricted(opt, data));
 
     return (
       <div className="space-y-8 pb-20">
         <div className="space-y-2">
-          <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Montagem do Plano</p>
-          <h2 className="text-3xl font-black text-gray-900 leading-tight">{title}</h2>
-          <p className="text-xs text-gray-400 font-bold">Selecione os ingredientes que você mais gosta.</p>
+          <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">
+            Montagem do Plano
+          </p>
+
+          <h2 className="text-3xl font-black text-gray-900 leading-tight">
+            {title}
+          </h2>
+
+          <p className="text-xs text-gray-400 font-bold">
+            Selecione os ingredientes que você mais gosta.
+          </p>
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
-          {filteredOptions.length > 0 ? filteredOptions.map(ing => (
-            <button 
-              key={ing}
-              onClick={() => toggleIng(cat, ing)}
-              className={`px-4 py-3 rounded-2xl border-2 transition-all font-bold text-sm ${data.preferredIngredients[cat]?.includes(ing) ? 'bg-green-50 border-green-500 text-green-700' : 'bg-gray-50 border-transparent text-gray-400 shadow-sm'}`}
-            >
-              {ing}
-            </button>
-          )) : (
-            <p className="text-sm font-bold text-gray-400 italic">Nenhum ingrediente padrão disponível com suas restrições. Adicione abaixo.</p>
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map(ing => {
+              const selected = data.preferredIngredients?.[cat]?.includes(ing);
+
+              return (
+                <button
+                  key={ing}
+                  type="button"
+                  onClick={() => toggleIng(cat, ing)}
+                  className={`px-4 py-3 rounded-2xl border-2 transition-all font-bold text-sm ${
+                    selected
+                      ? 'bg-green-50 border-green-500 text-green-700'
+                      : 'bg-gray-50 border-transparent text-gray-400 shadow-sm'
+                  }`}
+                >
+                  {selected ? '✓ ' : ''}
+                  {ing}
+                </button>
+              );
+            })
+          ) : (
+            <p className="text-sm font-bold text-gray-400 italic">
+              Nenhum ingrediente padrão disponível com suas restrições. Adicione abaixo.
+            </p>
           )}
         </div>
 
-      <div className="space-y-4 pt-6 border-t border-gray-100">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Outro alimento favorito</p>
-        <div className="flex gap-2">
-          <input 
-            value={customIng}
-            onChange={e => setCustomIng(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addCustom(cat)}
-            className="flex-1 p-4 bg-gray-50 rounded-2xl text-sm font-bold border-none focus:ring-2 focus:ring-green-500"
-            placeholder={cat === 'breakfast' ? 'Ex: Requeijão light...' : cat === 'main' ? 'Ex: Brócolis, Feijão preto...' : 'Ex: Iogurte, Mix de castanhas...'}
-          />
-          <button 
-            onClick={() => addCustom(cat)}
-            className="px-6 bg-green-500 text-white rounded-2xl active:scale-95 transition-all font-black text-xs uppercase"
-          >
-            Add
-          </button>
-        </div>
+        <div className="space-y-4 pt-6 border-t border-gray-100">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            Outro alimento favorito
+          </p>
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          {data.preferredIngredients[cat]?.filter(p => !options.includes(p)).map(p => (
-            <div key={p} className="flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-xl border border-green-100 animate-in fade-in zoom-in duration-200">
-              <span className="text-[10px] font-black uppercase tracking-tighter">{p}</span>
-              <button onClick={() => toggleIng(cat, p)} className="p-1 hover:bg-green-100 rounded-lg">
-                <X size={12} />
-              </button>
-            </div>
-          ))}
+          <div className="flex gap-2">
+            <input
+              value={customIng}
+              onChange={e => setCustomIng(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addCustom(cat)}
+              className="flex-1 p-4 bg-gray-50 rounded-2xl text-sm font-bold border-none focus:ring-2 focus:ring-green-500"
+              placeholder={
+                cat === 'breakfast'
+                  ? 'Ex: Requeijão light...'
+                  : cat === 'main'
+                  ? 'Ex: Brócolis, Feijão preto...'
+                  : 'Ex: Iogurte, Mix de castanhas...'
+              }
+            />
+
+            <button
+              type="button"
+              onClick={() => addCustom(cat)}
+              className="px-6 bg-green-500 text-white rounded-2xl active:scale-95 transition-all font-black text-xs uppercase"
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            {data.preferredIngredients?.[cat]
+              ?.filter(p => !options.includes(p))
+              .map(p => (
+                <div
+                  key={p}
+                  className="flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-xl border border-green-100 animate-in fade-in zoom-in duration-200"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-tighter">
+                    {p}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleIng(cat, p)}
+                    className="p-1 hover:bg-green-100 rounded-lg"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
-    </div>
+    );
+  };
+
+  const renderReviewStep = () => {
+    const breakfast = data.preferredIngredients?.breakfast || [];
+    const main = data.preferredIngredients?.main || [];
+    const snacks = data.preferredIngredients?.snacks || [];
+
+    return (
+      <div className="space-y-8 pb-20">
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">
+            Revisão
+          </p>
+
+          <h2 className="text-3xl font-black text-gray-900 leading-tight">
+            Pronto para gerar seu plano?
+          </h2>
+
+          <p className="text-xs text-gray-400 font-bold">
+            Você escolheu {selectedMealCount} refeições por dia.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
+            <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3">
+              Café da manhã
+            </p>
+
+            <p className="text-sm font-bold text-gray-700 leading-relaxed">
+              {breakfast.length > 0 ? breakfast.join(', ') : 'Nenhum selecionado'}
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
+            <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3">
+              Almoço e jantar
+            </p>
+
+            <p className="text-sm font-bold text-gray-700 leading-relaxed">
+              {main.length > 0 ? main.join(', ') : 'Nenhum selecionado'}
+            </p>
+          </div>
+
+          {showSnackStep && (
+            <div className="bg-gray-50 rounded-[28px] p-5 border border-gray-100">
+              <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3">
+                Lanches e refeições extras
+              </p>
+
+              <p className="text-sm font-bold text-gray-700 leading-relaxed">
+                {snacks.length > 0 ? snacks.join(', ') : 'Nenhum selecionado'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     );
   };
 
   const renderStep = () => {
-    switch(step) {
-      case 1: return renderIngredientStep('breakfast', 'Café da Manhã', INGREDIENTS.breakfast);
-      case 2: return renderIngredientStep('main', 'Almoço', INGREDIENTS.main);
-      case 3: return renderIngredientStep('snacks', 'Lanche da Tarde', INGREDIENTS.snacks);
-      case 4: return renderIngredientStep('main', 'Jantar', INGREDIENTS.main);
-      default: return null;
+    switch (step) {
+      case 1:
+        return renderIngredientStep(
+          'breakfast',
+          'Café da manhã',
+          INGREDIENTS.breakfast
+        );
+
+      case 2:
+        return renderIngredientStep(
+          'main',
+          'Almoço e jantar',
+          INGREDIENTS.main
+        );
+
+      case 3:
+        if (showSnackStep) {
+          return renderIngredientStep(
+            'snacks',
+            'Lanches e refeições extras',
+            INGREDIENTS.snacks
+          );
+        }
+
+        return renderReviewStep();
+
+      case 4:
+        return renderReviewStep();
+
+      default:
+        return null;
     }
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-       <div className="p-8 pt-12 flex items-center justify-between">
-          <button onClick={() => step > 1 && setStep(step - 1)} className={`p-4 rounded-2xl ${step > 1 ? 'bg-gray-50' : 'opacity-0 pointer-events-none'}`}>
-             <ChevronUp className="-rotate-90 text-gray-400" size={20} />
-          </button>
-          <div className="flex flex-col items-center">
-             <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Passo {step} de {totalSteps}</p>
-             <div className="flex gap-1 mt-2">
-                {Array.from({length: totalSteps}).map((_, i) => (
-                   <div key={i} className={`h-1 rounded-full transition-all ${i + 1 <= step ? 'w-4 bg-green-500' : 'w-2 bg-gray-100'}`} />
-                ))}
-             </div>
+      <div className="p-8 pt-12 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => step > 1 && setStep(step - 1)}
+          className={`p-4 rounded-2xl ${
+            step > 1 ? 'bg-gray-50' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <ChevronUp className="-rotate-90 text-gray-400" size={20} />
+        </button>
+
+        <div className="flex flex-col items-center">
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+            Passo {step} de {totalSteps}
+          </p>
+
+          <div className="flex gap-1 mt-2">
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 rounded-full transition-all ${
+                  i + 1 <= step ? 'w-4 bg-green-500' : 'w-2 bg-gray-100'
+                }`}
+              />
+            ))}
           </div>
-          <div className="w-12" />
-       </div>
+        </div>
 
-       <div className="flex-1 px-8 py-4 overflow-y-auto no-scrollbar">
-          <AnimatePresence mode="wait">
-             <motion.div key={step} initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                {renderStep()}
-             </motion.div>
-          </AnimatePresence>
-       </div>
+        <div className="w-12" />
+      </div>
 
-       <div className="p-8 pb-12">
-          <button 
-            disabled={data.preferredIngredients[step === 1 ? 'breakfast' : (step === 3 ? 'snacks' : 'main')].length === 0}
-            onClick={() => step < totalSteps ? setStep(step + 1) : onComplete(data)}
-            className={`w-full py-5 rounded-[32px] font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
-              data.preferredIngredients[step === 1 ? 'breakfast' : (step === 3 ? 'snacks' : 'main')].length === 0 
-                ? 'bg-gray-100 text-gray-300 shadow-none' 
-                : 'bg-green-500 text-white shadow-green-100'
-            }`}
+      <div className="flex-1 px-8 py-4 overflow-y-auto no-scrollbar">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -20, opacity: 0 }}
           >
-            {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
-          </button>
-       </div>
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="p-8 pb-12">
+        <button
+          type="button"
+          disabled={!isCurrentStepValid()}
+          onClick={goNext}
+          className={`w-full py-5 rounded-[32px] font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
+            !isCurrentStepValid()
+              ? 'bg-gray-100 text-gray-300 shadow-none'
+              : 'bg-green-500 text-white shadow-green-100'
+          }`}
+        >
+          {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -5405,9 +5606,100 @@ function PlanoScreen() {
   swapMealItem,
   updateProfile,
   handleProfileUpdate,
-  setPendingMealType,
+  addMeal,
 } = useApp();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const addPlanOptionToday = (mealKey: string, option: any) => {
+  const lines = sanitizeOptionQtyText(option.qty || '')
+    .split(' + ')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const items: MealEntry[] = lines.map((line) => {
+    const matchedFood = [...FOOD_DATABASE]
+      .sort((a, b) => b.name.length - a.name.length)
+      .find(food =>
+        normalizePlanText(line).includes(normalizePlanText(food.name))
+      );
+
+    if (!matchedFood) {
+      return {
+        food: {
+          name: line,
+          cal: 0,
+          p: 0,
+          c: 0,
+          f: 0,
+          category: 'Plano',
+        } as FoodItem,
+        qty: 1,
+        unit: 'un',
+        cal: 0,
+        p: 0,
+        c: 0,
+        f: 0,
+      };
+    }
+
+    const grams = getApproxGramsFromPlanLine(line, matchedFood);
+    const safeGrams = grams > 0 ? grams : 100;
+    const factor = safeGrams / 100;
+
+    return {
+      food: matchedFood,
+      qty: Math.round(safeGrams),
+      unit: 'g',
+      cal: Math.round(safeNumber(matchedFood.cal) * factor),
+      p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
+      c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
+      f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
+    };
+  });
+
+  const validItems = items.length > 0 ? items : [
+    {
+      food: {
+        name: option.name,
+        cal: safeNumber(option.cal),
+        p: 0,
+        c: 0,
+        f: 0,
+        category: 'Plano',
+      } as FoodItem,
+      qty: 1,
+      unit: 'un',
+      cal: Math.round(safeNumber(option.cal)),
+      p: 0,
+      c: 0,
+      f: 0,
+    },
+  ];
+
+  const totals = validItems.reduce(
+    (acc, item) => ({
+      cal: acc.cal + safeNumber(item.cal),
+      p: acc.p + safeNumber(item.p),
+      c: acc.c + safeNumber(item.c),
+      f: acc.f + safeNumber(item.f),
+    }),
+    { cal: 0, p: 0, c: 0, f: 0 }
+  );
+
+  const now = new Date();
+
+  addMeal({
+    type: mealKey,
+    time: now.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    items: validItems,
+    cal: Math.round(totals.cal || safeNumber(option.cal)),
+    p: Math.round(totals.p),
+    c: Math.round(totals.c),
+    f: Math.round(totals.f),
+  });
+};
 
 const [blockInput, setBlockInput] = useState('');
 const [blockError, setBlockError] = useState('');
@@ -5686,13 +5978,7 @@ const handleAddBlock = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    setPendingMealType(cfg.key);
-
-    window.dispatchEvent(
-      new CustomEvent('fitcircle:navigate', {
-        detail: { screen: 'registrar' },
-      })
-    );
+    addPlanOptionToday(cfg.key, option);
   }}
   className="flex-[1.2] inline-flex justify-center items-center gap-2 px-4 py-3 bg-green-50 text-green-600 hover:bg-green-100 border border-green-100 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
 >
