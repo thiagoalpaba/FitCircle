@@ -1178,6 +1178,12 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     if (normalized.includes('arroz')) finalQty = Math.min(finalQty, 150);
     if (normalized.includes('feijao')) finalQty = Math.min(finalQty, 120);
     if (normalized.includes('macarrao')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('iogurte natural')) finalQty = Math.min(finalQty, 170);
+    if (normalized.includes('iogurte grego')) finalQty = Math.min(finalQty, 170);
+    if (normalized.includes('whey')) finalQty = Math.min(finalQty, 30);
+    if (normalized.includes('melao')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('melão')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
 
     if (strict && (strict.unit === 'g' || strict.unit === 'gramas')) {
       finalQty = Math.min(finalQty, strict.max);
@@ -8188,10 +8194,22 @@ function AddMealScreen({
 }: {
   onBack: () => void;
 }) {
-  const { userProfile, meals } = useApp();
+  const { userProfile, meals, setPendingMealType } = useApp();
 
   const mealCount = (userProfile?.mealCount || 4) as 3 | 4 | 5 | 6;
   const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
+
+  const getMealIcon = (key: string) => {
+    if (key === 'cafe') return '☕';
+    if (key === 'almoco') return '🍽️';
+    if (key === 'jantar') return '🌙';
+    if (key === 'ceia') return '🌜';
+    return '🍎';
+  };
+
+  const handleAdd = (mealKey: string) => {
+    setPendingMealType(mealKey);
+  };
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
@@ -8201,9 +8219,7 @@ function AddMealScreen({
           onClick={onBack}
           className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
         >
-          <span className="text-xl font-black text-gray-500 leading-none">
-            ×
-          </span>
+          <X size={18} className="text-gray-500" />
         </button>
 
         <div>
@@ -8237,15 +8253,7 @@ function AddMealScreen({
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl shrink-0">
-                    {cfg.key === 'cafe'
-                      ? '☕'
-                      : cfg.key === 'almoco'
-                      ? '🍽️'
-                      : cfg.key === 'jantar'
-                      ? '🌙'
-                      : cfg.key === 'ceia'
-                      ? '🌜'
-                      : '🍎'}
+                    {getMealIcon(cfg.key)}
                   </div>
 
                   <div className="min-w-0">
@@ -8263,10 +8271,10 @@ function AddMealScreen({
 
                 <button
                   type="button"
-                  onClick={onBack}
-                  className="px-4 py-3 rounded-2xl bg-white text-green-600 border border-green-100 text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
+                  onClick={() => handleAdd(cfg.key)}
+                  className="px-4 py-3 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
                 >
-                  Voltar
+                  Adicionar
                 </button>
               </div>
 
@@ -8297,6 +8305,7 @@ function AddMealScreen({
     </div>
   );
 }
+
 function Navigation() {
   const { isLoggedIn, onboarded, completeScreening, setPendingEditMealId, setPendingMealType } = useApp();
   
