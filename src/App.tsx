@@ -1161,6 +1161,11 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     if (unitType === 'un') {
       if (normalized.includes('ovo de galinha')) finalQty = Math.min(finalQty, isBreakfast ? 2 : 3);
       if (normalized.includes('clara de ovo')) finalQty = Math.min(finalQty, 4);
+            if (normalized.includes('iogurte natural')) finalQty = Math.min(finalQty, 1);
+      if (normalized.includes('iogurte grego')) finalQty = Math.min(finalQty, 1);
+      if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
+      if (normalized.includes('banana')) finalQty = Math.min(finalQty, 1);
+      if (normalized.includes('maca') || normalized.includes('maçã')) finalQty = Math.min(finalQty, 1);
 
             if (
         strict &&
@@ -1187,9 +1192,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     if (normalized.includes('macarrao')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('iogurte natural')) finalQty = Math.min(finalQty, 170);
     if (normalized.includes('iogurte grego')) finalQty = Math.min(finalQty, 170);
-    if (normalized.includes('whey')) finalQty = Math.min(finalQty, 30);
     if (normalized.includes('melao')) finalQty = Math.min(finalQty, 180);
-    if (normalized.includes('melão')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
 
     if (strict && (strict.unit === 'g' || strict.unit === 'gramas')) {
@@ -4777,7 +4780,15 @@ function RecipeLibrary() {
     return !isFoodRestricted(recipeText, userProfile);
   };
 
-  const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed);
+  const hiddenRecipeIds = new Set([
+  'pipoca-queijo-fruta',
+  'pipoca-fruta-chia',
+  'banana-canela',
+]);
+
+const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
+  recipe => !hiddenRecipeIds.has(recipe.id)
+);
   const configs = userProfile ? MEAL_CONFIGS[userProfile.mealCount] : MEAL_CONFIGS[4];
 
   // Mostra imagem só nas receitas que estão confiáveis por enquanto.
@@ -6926,7 +6937,7 @@ function PerfilScreen() {
             </div>
 
           <div
-  className="h-3 rounded-full"
+  className="h-3 rounded-full overflow-hidden"
   style={{
     background:
       'linear-gradient(to right, #60A5FA 0%, #60A5FA 18.5%, #22C55E 18.5%, #22C55E 24.9%, #FACC15 24.9%, #FACC15 29.9%, #EF4444 29.9%, #EF4444 100%)',
@@ -7898,7 +7909,7 @@ function CirculoScreenFoodstagram() {
             type="button"
             onClick={() => setSelectedMember(members[0])}
             className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
-            aria-label="Abrir meu resumo"
+            aria-label="Abrir meu resumo do dia"
           >
             <Users size={24} />
           </button>
@@ -8175,29 +8186,24 @@ function AddMealScreen({
 }: {
   onBack: () => void;
 }) {
-  const { userProfile, meals, setPendingMealType } = useApp();
+  const { pendingMealType, pendingEditMealId, setPendingMealType, setPendingEditMealId } = useApp();
 
-  const mealCount = (userProfile?.mealCount || 4) as 3 | 4 | 5 | 6;
-  const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
-
-  const getMealIcon = (key: string) => {
-    if (key === 'cafe') return '☕';
-    if (key === 'almoco') return '🍽️';
-    if (key === 'jantar') return '🌙';
-    if (key === 'ceia') return '🌜';
-    return '🍎';
-  };
-
-  const handleAdd = (mealKey: string) => {
-    setPendingMealType(mealKey);
-  };
+  useEffect(() => {
+    if (!pendingMealType && !pendingEditMealId) {
+      onBack();
+    }
+  }, [pendingMealType, pendingEditMealId, onBack]);
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
       <div className="bg-white pt-12 px-6 pb-6 border-b border-gray-100 flex items-center gap-4 sticky top-0 z-30">
         <button
           type="button"
-          onClick={onBack}
+          onClick={() => {
+            setPendingMealType(null);
+            setPendingEditMealId(null);
+            onBack();
+          }}
           className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
         >
           <X size={18} className="text-gray-500" />
@@ -8209,80 +8215,35 @@ function AddMealScreen({
           </p>
 
           <h1 className="text-xl font-black text-gray-900">
-            Refeições do Dia
+            Adicionar refeição
           </h1>
         </div>
       </div>
 
-      <div className="px-5 mt-5 space-y-4">
-        {configs.map((cfg) => {
-          const registeredMeals = Array.isArray(meals)
-            ? meals.filter((meal: any) => meal.type === cfg.key)
-            : [];
+      <div className="px-6 py-10">
+        <div className="rounded-[32px] border border-gray-100 bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-green-50 text-green-600">
+            <Plus size={26} />
+          </div>
 
-          const totalCalories = registeredMeals.reduce(
-            (sum: number, meal: any) =>
-              sum + safeNumber(meal.cal || meal.calories),
-            0
-          );
+          <p className="text-lg font-black text-gray-900">
+            Abrindo registro...
+          </p>
 
-          return (
-            <div
-              key={cfg.key}
-              className="bg-white rounded-[30px] p-5 border border-gray-100 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl shrink-0">
-                    {getMealIcon(cfg.key)}
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-gray-900">
-                      {cfg.label}
-                    </p>
-
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
-                      {registeredMeals.length > 0
-                        ? `${registeredMeals.length} registro(s) · ${Math.round(totalCalories)} calorias`
-                        : 'Ainda não registrado'}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleAdd(cfg.key)}
-                  className="px-4 py-3 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
-                >
-                  Adicionar
-                </button>
-              </div>
-
-              {registeredMeals.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {registeredMeals.map((meal: any) => (
-                    <div
-                      key={meal.id}
-                      className="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center justify-between gap-3"
-                    >
-                      <div>
-                        <p className="text-xs font-black text-gray-800">
-                          {meal.items?.[0]?.food?.name || cfg.label}
-                        </p>
-
-                        <p className="text-[10px] font-bold text-gray-400 mt-1">
-                          {Math.round(safeNumber(meal.cal || meal.calories))} calorias
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+          <p className="mt-2 text-xs font-bold leading-relaxed text-gray-400">
+            Escolha os alimentos e salve sua refeição.
+          </p>
+        </div>
       </div>
+
+      <AddFoodModal
+        isOpen={Boolean(pendingMealType || pendingEditMealId)}
+        onClose={() => {
+          setPendingMealType(null);
+          setPendingEditMealId(null);
+          onBack();
+        }}
+      />
     </div>
   );
 }
