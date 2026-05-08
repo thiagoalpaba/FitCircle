@@ -6850,18 +6850,18 @@ function PerfilScreen() {
               />
             ) : (
               <span className="font-black text-[#16A34A] text-2xl">
-                {userProfile?.name?.[0] || 'F'}
+                {userProfile?.name ? userProfile.name.slice(0, 2).toUpperCase() : 'FC'}
               </span>
             )}
           </div>
         </div>
 
         <h1 className="text-xl font-black">
-          {userProfile?.name || 'Usuário FitCircle'}
+          {userProfile?.name && userProfile.name.length > 1 ? userProfile.name : 'Seu perfil'}
         </h1>
 
         <p className="text-[10px] font-bold opacity-75 mt-1 uppercase tracking-widest">
-          Objetivo: {goalLabel}
+          Foco atual: {goalLabel}
         </p>
 
         <div className="flex justify-center gap-2 mt-5">
@@ -6941,17 +6941,18 @@ function PerfilScreen() {
   </div>
 
   <div className="relative pt-4 pb-2">
-    <div
+   <div
   className="relative h-4 rounded-full overflow-hidden shadow-inner"
   style={{
     background:
-      'linear-gradient(to right, #60A5FA 0%, #60A5FA 14%, #22C55E 25%, #22C55E 40%, #F59E0B 55%, #F97316 75%, #EF4444 100%)',
+      'linear-gradient(to right, #60A5FA 0%, #60A5FA 14%, #22C55E 18%, #22C55E 40%, #FACC15 48%, #F59E0B 62%, #F97316 78%, #EF4444 100%)',
   }}
 >
   <div
-    className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full border-4 shadow-lg transition-all duration-500 ease-out"
+    className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-4 bg-white shadow-lg transition-all duration-500 ease-out"
     style={{
-      left: `calc(${bmiInfo.position}% - 10px)`,
+      left: `${Math.min(Math.max(bmiInfo.position, 3), 97)}%`,
+      transform: 'translate(-50%, -50%)',
       borderColor: bmiInfo.color,
     }}
   />
@@ -7024,7 +7025,7 @@ function PerfilScreen() {
               </p>
 
               <p className="text-[11px] font-bold text-gray-400 leading-relaxed mt-1">
-                Adicione o app à tela inicial para acessar mais rápido.
+                Acesse o FitCircle direto pela tela inicial do celular.
               </p>
             </div>
           </div>
@@ -7032,7 +7033,7 @@ function PerfilScreen() {
           <button
             type="button"
             onClick={() => alert('No navegador do celular, toque em Compartilhar e depois em “Adicionar à Tela de Início”.')}
-            className="w-full mt-4 py-3 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+            className="mt-4 w-full rounded-2xl bg-green-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-green-700 active:scale-95 transition-all"
           >
             Como instalar
           </button>
@@ -7042,7 +7043,7 @@ function PerfilScreen() {
           <button
             type="button"
             onClick={handleShare}
-            className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm active:bg-gray-50 transition-all text-left"
+            className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm min-h-[130px]"
           >
             <Share size={20} className="text-green-600 mb-3" />
 
@@ -7058,7 +7059,7 @@ function PerfilScreen() {
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm active:bg-gray-50 transition-all text-left"
+            className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm active:bg-gray-50 transition-all text-left min-h-[130px]"
           >
             <Settings size={20} className="text-green-600 mb-3" />
 
