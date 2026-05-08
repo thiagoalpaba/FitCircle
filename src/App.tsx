@@ -1166,6 +1166,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
       if (normalized.includes('banana')) finalQty = Math.min(finalQty, 1);
       if (normalized.includes('maca') || normalized.includes('maçã')) finalQty = Math.min(finalQty, 1);
+      if (normalized.includes('whey')) finalQty = Math.min(finalQty, 1);
 
             if (
         strict &&
@@ -1190,9 +1191,12 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     if (normalized.includes('arroz')) finalQty = Math.min(finalQty, 150);
     if (normalized.includes('feijao')) finalQty = Math.min(finalQty, 120);
     if (normalized.includes('macarrao')) finalQty = Math.min(finalQty, 180);
-    if (normalized.includes('iogurte natural')) finalQty = Math.min(finalQty, 170);
     if (normalized.includes('iogurte grego')) finalQty = Math.min(finalQty, 170);
-    if (normalized.includes('melao')) finalQty = Math.min(finalQty, 180);
+        if (normalized.includes('melao') || normalized.includes('melão')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('melancia')) finalQty = Math.min(finalQty, 200);
+    if (normalized.includes('mamao') || normalized.includes('mamão')) finalQty = Math.min(finalQty, 180);
+    if (normalized.includes('morango')) finalQty = Math.min(finalQty, 150);
+    if (normalized.includes('uva')) finalQty = Math.min(finalQty, 120);
     if (normalized.includes('laranja')) finalQty = Math.min(finalQty, 1);
 
     if (strict && (strict.unit === 'g' || strict.unit === 'gramas')) {
@@ -1895,7 +1899,27 @@ const emergencyOptions =
 
 emergencyOptions.forEach(option => addUniqueOption(uniqueFinalOptions, option));
 
-return uniqueFinalOptions.slice(0, 3).map((option, index) => ({
+const finalDedupedOptions: any[] = [];
+const seenOptionNames = new Set<string>();
+const seenOptionSignatures = new Set<string>();
+
+for (const option of uniqueFinalOptions) {
+  const nameKey = normalizeLocal(option.name || '');
+  const signatureKey = getOptionSignature(option);
+
+  if (!nameKey) continue;
+  if (seenOptionNames.has(nameKey)) continue;
+  if (signatureKey && seenOptionSignatures.has(signatureKey)) continue;
+
+  seenOptionNames.add(nameKey);
+  if (signatureKey) seenOptionSignatures.add(signatureKey);
+
+  finalDedupedOptions.push(option);
+
+  if (finalDedupedOptions.length >= 3) break;
+}
+
+return finalDedupedOptions.map((option, index) => ({
   ...option,
   badge:
     index === 0
@@ -5367,7 +5391,15 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
 }
 
 function PlanoScreen() {
-  const { userProfile, mealPlan, generateNewPlan, swapMealItem, updateProfile, handleProfileUpdate } = useApp();
+ const {
+  userProfile,
+  mealPlan,
+  generateNewPlan,
+  swapMealItem,
+  updateProfile,
+  handleProfileUpdate,
+  setPendingMealType,
+} = useApp();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
 
 const [blockInput, setBlockInput] = useState('');
@@ -5627,18 +5659,40 @@ const handleAddBlock = () => {
                   </div>
                 </div>
 
-<button
+<div className="flex gap-2 pt-2">
+  <button
+    type="button"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      swapMealItem(cfg.key, i);
+    }}
+    className="flex-[0.8] inline-flex justify-center items-center gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+  >
+    <Shuffle size={14} />
+    Trocar opção
+  </button>
+
+  <button
   type="button"
   onClick={(e) => {
     e.preventDefault();
     e.stopPropagation();
-swapMealItem(cfg.key, i);
+
+    setPendingMealType(cfg.key);
+
+    window.dispatchEvent(
+      new CustomEvent('fitcircle:navigate', {
+        detail: { screen: 'registrar' },
+      })
+    );
   }}
-  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-green-50 text-gray-500 hover:text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"
+  className="flex-[1.2] inline-flex justify-center items-center gap-2 px-4 py-3 bg-green-50 text-green-600 hover:bg-green-100 border border-green-100 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
 >
-  <Shuffle size={13} />
-  Trocar opção
+  <Plus size={14} />
+  Registrar Hoje
 </button>
+</div>
               </div>
 
               <div className="text-right flex flex-col items-end pl-3 border-l border-gray-50 min-w-[58px]">
@@ -7276,40 +7330,6 @@ function PerfilScreen() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm min-h-[130px]"
-          >
-            <Share size={20} className="text-green-600 mb-3" />
-
-            <p className="text-sm font-black text-gray-900">
-              Compartilhar
-            </p>
-
-            <p className="text-[10px] font-bold text-gray-400 mt-1">
-              Convide alguém para seu círculo.
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm active:bg-gray-50 transition-all text-left min-h-[130px]"
-          >
-            <Settings size={20} className="text-green-600 mb-3" />
-
-            <p className="text-sm font-black text-gray-900">
-              Preferências
-            </p>
-
-            <p className="text-[10px] font-bold text-gray-400 mt-1">
-              Ajuste meta, refeições e treinos.
-            </p>
-          </button>
-        </div>
-
         <div className="space-y-4 pt-2">
           <button
             type="button"
@@ -8159,13 +8179,22 @@ function CirculoScreenFoodstagram() {
           </div>
 
           <button
-            type="button"
-            onClick={() => setSelectedMember(members[0])}
-            className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
-            aria-label="Abrir meu resumo do dia"
-          >
-            <Users size={24} />
-          </button>
+  type="button"
+  onClick={async () => {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'FitCircle',
+        text: 'Venha participar do meu Círculo no FitCircle!',
+      });
+    } else {
+      alert('Venha participar do meu Círculo no FitCircle!');
+    }
+  }}
+  className="w-12 h-12 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
+  aria-label="Convidar para o círculo"
+>
+  <Users size={24} />
+</button>
         </div>
 
         <div className="mt-6 bg-white/15 border border-white/10 rounded-[28px] p-4 backdrop-blur-md flex items-center gap-3">
@@ -8450,6 +8479,7 @@ function AddMealScreen({
   } = useApp();
 
   const [showManualModal, setShowManualModal] = useState(false);
+  const [manualItems, setManualItems] = useState<MealEntry[]>([]);
 
   const currentMealType = pendingMealType || 'cafe';
   const planOptions = mealPlan[currentMealType] || [];
@@ -8458,10 +8488,23 @@ function AddMealScreen({
     setPendingMealType(null);
     setPendingEditMealId(null);
     setShowManualModal(false);
+    setManualItems([]);
     onBack();
   };
 
-  const handleAddEntry = (entry: MealEntry) => {
+  const saveMealWithItems = (items: MealEntry[]) => {
+    if (items.length === 0) return;
+
+    const totals = items.reduce(
+      (acc, item) => ({
+        cal: acc.cal + safeNumber(item.cal),
+        p: acc.p + safeNumber(item.p),
+        c: acc.c + safeNumber(item.c),
+        f: acc.f + safeNumber(item.f),
+      }),
+      { cal: 0, p: 0, c: 0, f: 0 }
+    );
+
     const now = new Date();
 
     const newMeal = {
@@ -8470,11 +8513,11 @@ function AddMealScreen({
         hour: '2-digit',
         minute: '2-digit',
       }),
-      items: [entry],
-      cal: Math.round(safeNumber(entry.cal)),
-      p: safeNumber(entry.p),
-      c: safeNumber(entry.c),
-      f: safeNumber(entry.f),
+      items,
+      cal: Math.round(totals.cal),
+      p: Math.round(totals.p),
+      c: Math.round(totals.c),
+      f: Math.round(totals.f),
     };
 
     if (pendingEditMealId) {
@@ -8486,28 +8529,93 @@ function AddMealScreen({
     closeAndBack();
   };
 
-  const addPlanOption = (option: any) => {
-    const optionMacros = getPlanOptionMacros(option.qty || '');
-
-    const entry: MealEntry = {
-      food: {
-        name: option.name,
-        cal: safeNumber(option.cal),
-        p: optionMacros.p,
-        c: optionMacros.c,
-        f: optionMacros.f,
-        category: 'Plano',
-      } as FoodItem,
-      qty: 1,
-      unit: 'un',
-      cal: Math.round(safeNumber(option.cal)),
-      p: optionMacros.p,
-      c: optionMacros.c,
-      f: optionMacros.f,
-    };
-
-    handleAddEntry(entry);
+  const handleManualAdd = (entry: MealEntry) => {
+    setManualItems((prev) => [...prev, entry]);
+    setShowManualModal(false);
   };
+
+  const removeManualItem = (indexToRemove: number) => {
+    setManualItems((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const addPlanOption = (option: any) => {
+    const lines = sanitizeOptionQtyText(option.qty || '')
+      .split(' + ')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    const items: MealEntry[] = lines.map((line) => {
+      const matchedFood = [...FOOD_DATABASE]
+        .sort((a, b) => b.name.length - a.name.length)
+        .find(food =>
+          normalizePlanText(line).includes(normalizePlanText(food.name))
+        );
+
+      if (!matchedFood) {
+        return {
+          food: {
+            name: line,
+            cal: 0,
+            p: 0,
+            c: 0,
+            f: 0,
+            category: 'Plano',
+          } as FoodItem,
+          qty: 1,
+          unit: 'un',
+          cal: 0,
+          p: 0,
+          c: 0,
+          f: 0,
+        };
+      }
+
+      const grams = getApproxGramsFromPlanLine(line, matchedFood);
+      const safeGrams = grams > 0 ? grams : 100;
+      const factor = safeGrams / 100;
+
+      return {
+        food: matchedFood,
+        qty: Math.round(safeGrams),
+        unit: 'g',
+        cal: Math.round(safeNumber(matchedFood.cal) * factor),
+        p: Math.round(safeNumber(matchedFood.p) * factor),
+        c: Math.round(safeNumber(matchedFood.c) * factor),
+        f: Math.round(safeNumber(matchedFood.f) * factor),
+      };
+    });
+
+    const validItems = items.length > 0 ? items : [
+      {
+        food: {
+          name: option.name,
+          cal: safeNumber(option.cal),
+          p: 0,
+          c: 0,
+          f: 0,
+          category: 'Plano',
+        } as FoodItem,
+        qty: 1,
+        unit: 'un',
+        cal: Math.round(safeNumber(option.cal)),
+        p: 0,
+        c: 0,
+        f: 0,
+      },
+    ];
+
+    saveMealWithItems(validItems);
+  };
+
+  const manualTotals = manualItems.reduce(
+    (acc, item) => ({
+      cal: acc.cal + safeNumber(item.cal),
+      p: acc.p + safeNumber(item.p),
+      c: acc.c + safeNumber(item.c),
+      f: acc.f + safeNumber(item.f),
+    }),
+    { cal: 0, p: 0, c: 0, f: 0 }
+  );
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
@@ -8535,11 +8643,11 @@ function AddMealScreen({
         <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
           <div className="mb-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
-              Opções do plano
+              Sugestões do seu plano
             </p>
 
             <p className="mt-1 text-xs font-bold text-green-700/70">
-              Toque em uma sugestão para registrar rápido.
+              Toque em uma opção para registrar todos os itens.
             </p>
           </div>
 
@@ -8573,30 +8681,18 @@ function AddMealScreen({
 
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <div className="rounded-2xl bg-blue-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-blue-500">
-                          Prot.
-                        </p>
-                        <p className="text-xs font-black text-blue-700">
-                          {optionMacros.p}g
-                        </p>
+                        <p className="text-[8px] font-black uppercase text-blue-500">Prot.</p>
+                        <p className="text-xs font-black text-blue-700">{optionMacros.p}g</p>
                       </div>
 
                       <div className="rounded-2xl bg-green-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-green-500">
-                          Carbo
-                        </p>
-                        <p className="text-xs font-black text-green-700">
-                          {optionMacros.c}g
-                        </p>
+                        <p className="text-[8px] font-black uppercase text-green-500">Carbo</p>
+                        <p className="text-xs font-black text-green-700">{optionMacros.c}g</p>
                       </div>
 
                       <div className="rounded-2xl bg-orange-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-orange-500">
-                          Gord.
-                        </p>
-                        <p className="text-xs font-black text-orange-700">
-                          {optionMacros.f}g
-                        </p>
+                        <p className="text-[8px] font-black uppercase text-orange-500">Gord.</p>
+                        <p className="text-xs font-black text-orange-700">{optionMacros.f}g</p>
                       </div>
                     </div>
                   </button>
@@ -8616,33 +8712,88 @@ function AddMealScreen({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowManualModal(true)}
-          className="w-full rounded-[28px] border border-gray-100 bg-white p-5 text-left shadow-sm active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-green-600">
-              <Plus size={22} />
-            </div>
+        <div className="rounded-[30px] border border-gray-100 bg-white p-4 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setShowManualModal(true)}
+            className="w-full rounded-[24px] bg-gray-50 p-4 text-left active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-green-600 shadow-sm">
+                <Plus size={22} />
+              </div>
 
-            <div>
-              <p className="text-sm font-black text-gray-900">
-                Adicionar alimento avulso
+              <div>
+                <p className="text-sm font-black text-gray-900">
+                  Adicionar alimento avulso
+                </p>
+
+                <p className="mt-1 text-xs font-bold text-gray-400">
+                  Monte sua refeição item por item.
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {manualItems.length > 0 && (
+            <div className="mt-4 space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Itens adicionados
               </p>
 
-              <p className="mt-1 text-xs font-bold text-gray-400">
-                Use quando quiser montar a refeição item por item.
-              </p>
+              {manualItems.map((item, index) => (
+                <div
+                  key={`${item.food.name}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-gray-800 truncate">
+                      {item.food.name}
+                    </p>
+
+                    <p className="text-[10px] font-bold text-gray-400">
+                      {item.qty}{item.unit === 'g' ? 'g' : item.food.un || 'un'} · {Math.round(safeNumber(item.cal))} cal
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeManualItem(index)}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-gray-400"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+
+              <div className="rounded-2xl bg-green-50 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-black text-green-800">
+                    Total da refeição
+                  </p>
+
+                  <p className="text-lg font-black text-green-700">
+                    {Math.round(manualTotals.cal)} cal
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => saveMealWithItems(manualItems)}
+                  className="mt-4 w-full rounded-2xl bg-green-500 py-4 text-[10px] font-black uppercase tracking-widest text-white active:scale-95 transition-all"
+                >
+                  Salvar refeição
+                </button>
+              </div>
             </div>
-          </div>
-        </button>
+          )}
+        </div>
       </div>
 
       <AddFoodModal
         isOpen={showManualModal}
         onClose={() => setShowManualModal(false)}
-        onAdd={handleAddEntry}
+        onAdd={handleManualAdd}
       />
     </div>
   );
@@ -8651,6 +8802,21 @@ function Navigation() {
   const { isLoggedIn, onboarded, completeScreening, setPendingEditMealId, setPendingMealType } = useApp();
   
   const [screen, setScreen] = useState<'hoje' | 'plano' | 'registrar' | 'circulo' | 'perfil' | 'lista'>('hoje');
+  useEffect(() => {
+  const handleNavigate = (event: Event) => {
+    const customEvent = event as CustomEvent<{ screen?: any }>;
+
+    if (customEvent.detail?.screen) {
+      setScreen(customEvent.detail.screen);
+    }
+  };
+
+  window.addEventListener('fitcircle:navigate', handleNavigate);
+
+  return () => {
+    window.removeEventListener('fitcircle:navigate', handleNavigate);
+  };
+}, []);
   const [onboardingSub, setOnboardingSub] = useState<'welcome' | 'auth' | 'triagem'>('welcome');
   const [tempProfile, setTempProfile] = useState<UserProfile | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
