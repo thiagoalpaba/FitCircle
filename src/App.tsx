@@ -3073,13 +3073,13 @@ function CalorieRing({
     ? 'Passou da meta hoje'
     : remaining === 0
     ? 'Meta atingida'
-    : 'Restante hoje';
+    : 'Disponível hoje';
 
   const statusValue = isOver
     ? 'Ajuste com calma na próxima refeição.'
     : remaining === 0
     ? 'Bom trabalho por hoje.'
-    : `${remaining} calorias disponíveis`;
+    : `${remaining} calorias para usar no dia`;
 
   return (
     <div className="relative flex flex-col items-center justify-center">
@@ -4322,7 +4322,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <Zap size={16} className="fill-current shrink-0" />
             <div className="leading-tight">
               <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
-                Restante hoje
+                Ainda disponível
               </p>
               <p className="text-sm font-black uppercase tracking-tight">
                 {formatKcal(remaining)}
@@ -4336,7 +4336,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <Sparkles size={14} className="text-green-200 shrink-0" />
 
             <p className="text-[10px] text-white/85 font-bold leading-tight">
-              Dica: O equilíbrio é melhor que a restrição severa.
+              Hoje: O equilíbrio é melhor que a restrição severa.
             </p>
           </div>
         </div>
@@ -6215,7 +6215,7 @@ function CirculoScreen() {
 
        <div className="px-5 mt-10 pb-10 flex flex-col gap-10 text-gray-900 font-sans">
           <div className="bg-white rounded-[40px] p-8 shadow-2xl border border-gray-50 overflow-hidden relative">
-             <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest">Membros do Círculo</h3>
+             <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest">Seu círculo</h3>
              <div className="flex flex-col gap-4">
                 {membersData.map((m: any) => (
                    <div key={m.id} className="bg-gray-50/50 rounded-[28px] p-4 border border-gray-100 flex flex-col group active:bg-gray-100 transition-all">
@@ -6268,7 +6268,7 @@ function CirculoScreen() {
 
           {/* Activity Feed */}
           <div className="bg-white rounded-[40px] p-8 shadow-2xl border border-gray-50">
-             <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest text-center">Atividade Recente</h3>
+             <h3 className="font-black text-gray-900 border-l-4 border-indigo-500 pl-4 uppercase text-[10px] mb-8 tracking-widest text-center">Atualizações</h3>
              <div className="space-y-8">
                 {feedItems.map((item) => (
                    <div key={item.id} className="relative pl-6 border-l-2 border-indigo-50 pb-2">
@@ -7885,7 +7885,7 @@ function CirculoScreenFoodstagram() {
         <div className="bg-white rounded-[30px] border border-gray-100 shadow-xl shadow-gray-100/70 p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">
-              Membros do círculo
+              Seu círculo
             </p>
 
             <button
@@ -7920,11 +7920,11 @@ function CirculoScreenFoodstagram() {
         <div className="mt-5 space-y-5">
           <div>
             <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em] mb-2">
-              Atividade recente
+              Atualizações
             </p>
 
             <h2 className="text-xl font-black text-gray-900">
-              Feed do círculo
+              O que rolou hoje
             </h2>
           </div>
 
