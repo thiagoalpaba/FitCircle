@@ -7720,7 +7720,7 @@ function RefeicoesListScreen({
                     <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
                       {registeredMeals.length > 0
                         ? `${registeredMeals.length} registro(s)`
-                        : 'Ainda não registrado'}
+                        : 'Sem registro ainda'}
                     </p>
                   </div>
                 </div>
@@ -7730,7 +7730,7 @@ function RefeicoesListScreen({
                   onClick={() => onAdd(cfg.key)}
                   className="px-4 py-3 rounded-2xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
                 >
-                  Adicionar
+                  Registrar
                 </button>
               </div>
 
