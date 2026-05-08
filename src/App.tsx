@@ -2901,7 +2901,7 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
                            </div>
                            <div>
                              <p className="font-black text-gray-900 text-sm">{food.name}</p>
-                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{food.category} · 100g</p>
+                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{food.category} · {food.un ? `1 ${food.un}` : '100g'}</p>
                            </div>
                         </div>
                         <div className="text-right">
@@ -4118,116 +4118,367 @@ function PlanBuilderScreen({ profile, onComplete }: { profile: UserProfile; onCo
 }
 
 function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { calorieGoal, meals, selectedDate, setSelectedDate } = useApp();
-  
+  const {
+    calorieGoal,
+    meals,
+    workouts,
+    selectedDate,
+    setSelectedDate,
+    mealCount,
+  } = useApp();
+
+  const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
+
   const today = new Date();
   const isSelectedToday = selectedDate.toDateString() === today.toDateString();
 
-  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const currentDays = daysInMonth(selectedDate.getFullYear(), selectedDate.getMonth());
-  
+  const daysInMonth = (year: number, month: number) =>
+    new Date(year, month + 1, 0).getDate();
+
+  const currentDays = daysInMonth(
+    selectedDate.getFullYear(),
+    selectedDate.getMonth()
+  );
+
+  const configs = MEAL_CONFIGS[mealCount] || MEAL_CONFIGS[4];
+
+  const getMealOrder = (type: string) => {
+    const index = configs.findIndex(cfg => cfg.key === type);
+    return index === -1 ? 99 : index;
+  };
+
+  const formatMealLabel = (type: string) => {
+    const found = configs.find(cfg => cfg.key === type);
+
+    if (found?.label) return found.label;
+
+    const normalized = String(type || '').toLowerCase();
+
+    if (normalized === 'cafe') return 'Café da manhã';
+    if (normalized === 'almoco') return 'Almoço';
+    if (normalized === 'lanche') return 'Lanche da tarde';
+    if (normalized === 'jantar') return 'Jantar';
+    if (normalized === 'ceia') return 'Ceia';
+
+    return type || 'Refeição';
+  };
+
+  const sortedMeals = [...meals].sort(
+    (a, b) => getMealOrder(a.type) - getMealOrder(b.type)
+  );
+
+  const totalCalories = meals.reduce(
+    (acc, meal) => acc + safeNumber(meal.cal || meal.calories),
+    0
+  );
+
+  const totalWorkoutCalories = Array.isArray(workouts)
+    ? workouts.reduce((acc, workout: any) => acc + safeNumber(workout.burned), 0)
+    : 0;
+
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 text-gray-900">
-           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-           <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bg-white w-full max-w-lg rounded-t-[40px] sm:rounded-[40px] shadow-2xl p-8 z-10 max-h-[90vh] overflow-y-auto no-scrollbar">
-              <div className="flex justify-between items-center mb-8">
-                 <h2 className="text-2xl font-black">Ver dia</h2>
-                 <button onClick={onClose} className="p-2 bg-gray-100 rounded-xl"><X size={20}/></button>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            className="bg-white w-full max-w-lg rounded-t-[40px] sm:rounded-[40px] shadow-2xl p-8 z-10 max-h-[90vh] overflow-y-auto no-scrollbar"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                  Histórico
+                </p>
+
+                <h2 className="text-2xl font-black">
+                  Ver dia
+                </h2>
               </div>
 
-              <div className="bg-gray-50 rounded-3xl p-6 mb-8">
-                 <div className="flex justify-between items-center mb-6">
-                    <button 
-                      onClick={() => {
-                        const d = new Date(selectedDate);
-                        d.setMonth(d.getMonth() - 1);
-                        setSelectedDate(d);
-                      }} 
-                      className="p-2 bg-white rounded-xl shadow-sm"
-                    >
-                      <ChevronUp className="-rotate-90 text-green-600" size={18} />
-                    </button>
-                    <p className="font-black text-sm uppercase tracking-widest text-green-600">
-                      {selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                    </p>
-                    <button 
-                      onClick={() => {
-                        const d = new Date(selectedDate);
-                        d.setMonth(d.getMonth() + 1);
-                        setSelectedDate(d);
-                      }} 
-                      className="p-2 bg-white rounded-xl shadow-sm"
-                    >
-                      <ChevronUp className="rotate-90 text-green-600" size={18} />
-                    </button>
-                 </div>
-                 <div className="grid grid-cols-7 gap-2">
-                    {['D','S','T','Q','Q','S','S'].map(d => <div key={d} className="text-[10px] font-black text-gray-300 text-center">{d}</div>)}
-                    {Array.from({length: currentDays}).map((_, i) => {
-                      const dayNum = i + 1;
-                      const dateObj = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), dayNum);
-                      const isSelected = dateObj.toDateString() === selectedDate.toDateString();
-                      
-                      return (
-                        <div 
-                          key={i} 
-                          onClick={() => setSelectedDate(dateObj)}
-                          className={`aspect-square flex items-center justify-center text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                            isSelected ? 'bg-green-500 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-100'
-                          }`}
-                        >
-                          {dayNum}
-                        </div>
-                      );
-                    })}
-                 </div>
-              </div>
-
-              <div className="space-y-6">
-                 <div className="flex justify-between border-b pb-4 border-gray-100">
-                    <div>
-                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resumo de {selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}</p>
-                       <p className="text-2xl font-black text-gray-900">{meals.length > 0 ? (meals.reduce((acc, m) => acc + m.cal, 0) <= calorieGoal ? 'Dentro da Meta' : 'Acima da Meta') : 'Sem registros'}</p>
-                    </div>
-                    {meals.length > 0 && (
-                      <div className="text-right">
-                         <p className={`text-3xl font-black ${meals.reduce((acc, m) => acc + m.cal, 0) <= calorieGoal ? 'text-green-500' : 'text-red-500'}`}>
-                           {meals.reduce((acc, m) => acc + m.cal, 0)}<span className="text-xs uppercase ml-1">calorias</span>
-                         </p>
-                      </div>
-                    )}
-                 </div>
-                 
-                 {meals.length > 0 ? (
-                   <div className="space-y-3">
-                      {meals.map(m => (
-                        <div key={m.id} className="flex justify-between items-center p-5 bg-gray-50 rounded-[28px] border border-gray-100">
-                           <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-green-600 shadow-sm">
-                                 <Utensils size={18} />
-                              </div>
-                              <span className="font-extrabold text-gray-800 text-sm uppercase tracking-tighter">{m.type}</span>
-                           </div>
-                           <span className="font-black text-gray-900">{m.cal} cal</span>
-                        </div>
-                      ))}
-                   </div>
-                 ) : (
-                   <div className="py-8 text-center bg-gray-50 rounded-3xl">
-                      <p className="text-xs font-bold text-gray-300">Nenhum registro</p>
-                   </div>
-                 )}
-              </div>
-
-              <button 
-                onClick={onClose} 
-                className="w-full py-5 mt-8 bg-green-500 text-white font-black rounded-[32px] text-xs uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 bg-gray-100 rounded-xl"
               >
-                Fechar Histórico
+                <X size={20} />
               </button>
-           </motion.div>
+            </div>
+
+            <div className="bg-gray-50 rounded-3xl p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setMonth(d.getMonth() - 1);
+                    setSelectedDate(d);
+                    setExpandedMealId(null);
+                  }}
+                  className="p-2 bg-white rounded-xl shadow-sm"
+                >
+                  <ChevronUp className="-rotate-90 text-green-600" size={18} />
+                </button>
+
+                <p className="font-black text-sm uppercase tracking-widest text-green-600">
+                  {selectedDate.toLocaleDateString('pt-BR', {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setMonth(d.getMonth() + 1);
+                    setSelectedDate(d);
+                    setExpandedMealId(null);
+                  }}
+                  className="p-2 bg-white rounded-xl shadow-sm"
+                >
+                  <ChevronUp className="rotate-90 text-green-600" size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dayLabel, index) => (
+                  <div
+                    key={`${dayLabel}-${index}`}
+                    className="text-[10px] font-black text-gray-300 text-center"
+                  >
+                    {dayLabel}
+                  </div>
+                ))}
+
+                {Array.from({ length: currentDays }).map((_, i) => {
+                  const dayNum = i + 1;
+                  const dateObj = new Date(
+                    selectedDate.getFullYear(),
+                    selectedDate.getMonth(),
+                    dayNum
+                  );
+
+                  const isSelected =
+                    dateObj.toDateString() === selectedDate.toDateString();
+
+                  return (
+                    <button
+                      type="button"
+                      key={dayNum}
+                      onClick={() => {
+                        setSelectedDate(dateObj);
+                        setExpandedMealId(null);
+                      }}
+                      className={`aspect-square flex items-center justify-center text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-green-500 text-white shadow-lg'
+                          : 'text-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      {dayNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex justify-between border-b pb-4 border-gray-100">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    Resumo de{' '}
+                    {selectedDate.toLocaleDateString('pt-BR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </p>
+
+                  <p className="text-2xl font-black text-gray-900">
+                    {meals.length > 0
+                      ? totalCalories <= calorieGoal
+                        ? 'Dentro da Meta'
+                        : 'Acima da Meta'
+                      : 'Sem registros'}
+                  </p>
+
+                  {isSelectedToday && (
+                    <p className="mt-1 text-[10px] font-bold text-green-600 uppercase tracking-widest">
+                      Hoje
+                    </p>
+                  )}
+                </div>
+
+                {meals.length > 0 && (
+                  <div className="text-right">
+                    <p
+                      className={`text-3xl font-black ${
+                        totalCalories <= calorieGoal
+                          ? 'text-green-500'
+                          : 'text-red-500'
+                      }`}
+                    >
+                      {Math.round(totalCalories)}
+                      <span className="text-xs uppercase ml-1">
+                        calorias
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {sortedMeals.length > 0 ? (
+                <div className="space-y-3">
+                  {sortedMeals.map((m: any) => (
+                    <div
+                      key={m.id}
+                      className="bg-gray-50 rounded-[28px] border border-gray-100 overflow-hidden transition-all"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedMealId(expandedMealId === m.id ? null : m.id)
+                        }
+                        className="w-full flex justify-between items-center p-5 cursor-pointer active:bg-gray-100 text-left"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-green-600 shadow-sm shrink-0">
+                            <Utensils size={18} />
+                          </div>
+
+                          <span className="font-extrabold text-gray-800 text-sm uppercase tracking-tighter truncate">
+                            {formatMealLabel(m.type)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="font-black text-gray-900">
+                            {Math.round(safeNumber(m.cal || m.calories))} cal
+                          </span>
+
+                          {expandedMealId === m.id ? (
+                            <ChevronUp size={16} className="text-gray-400" />
+                          ) : (
+                            <ChevronDown size={16} className="text-gray-400" />
+                          )}
+                        </div>
+                      </button>
+
+                      <AnimatePresence>
+                        {expandedMealId === m.id && (
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: 'auto' }}
+                            exit={{ height: 0 }}
+                            className="overflow-hidden bg-white border-t border-dashed border-gray-200"
+                          >
+                            <div className="p-5 space-y-3">
+                              {Array.isArray(m.items) && m.items.length > 0 ? (
+                                m.items.map((it: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="flex justify-between items-center gap-4"
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold text-gray-800 truncate">
+                                        {it.food?.name || 'Alimento'}
+                                      </p>
+
+                                      <p className="text-[10px] text-gray-400 font-semibold truncate">
+                                        {it.qty}
+                                        {it.unit === 'g'
+                                          ? 'g'
+                                          : it.food?.un || 'un'}{' '}
+                                        · P:{it.p} C:{it.c} G:{it.f}
+                                      </p>
+                                    </div>
+
+                                    <span className="text-xs font-black text-gray-500 shrink-0">
+                                      {Math.round(safeNumber(it.cal))} cal
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-xs font-bold text-gray-400">
+                                  Sem itens detalhados nesta refeição.
+                                </p>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Nenhum registro
+                  </p>
+                </div>
+              )}
+
+              {workouts.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3">
+                    Treinos do dia
+                  </p>
+
+                  <div className="space-y-3">
+                    {workouts.map((w: any) => (
+                      <div
+                        key={w.id}
+                        className="flex justify-between items-center p-5 bg-orange-50/50 rounded-[28px] border border-orange-100"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-10 h-10 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0">
+                            <Dumbbell size={18} />
+                          </div>
+
+                          <div className="min-w-0">
+                            <span className="font-extrabold text-gray-900 text-sm uppercase tracking-tighter block truncate">
+                              {WORKOUT_TYPES.find(wt => wt.key === w.type)?.label ||
+                                w.type ||
+                                'Treino'}
+                            </span>
+
+                            <span className="text-[10px] font-bold text-gray-500">
+                              {safeNumber(w.duration) > 0
+                                ? `${w.duration} min`
+                                : 'Manual'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="font-black text-orange-600">
+                            {Math.round(safeNumber(w.burned))} cal
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-5 mt-8 bg-green-500 text-white font-black rounded-[32px] text-xs uppercase tracking-widest shadow-xl shadow-green-100 active:scale-95 transition-all"
+            >
+              Fechar Histórico
+            </button>
+          </motion.div>
         </div>
       )}
     </AnimatePresence>
@@ -4317,15 +4568,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <div className="bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-2 max-w-[320px]">
-            <Sparkles size={14} className="text-green-200 shrink-0" />
-
-            <p className="text-[10px] text-white/85 font-bold leading-tight">
-              Hoje: O equilíbrio é melhor que a restrição severa.
-            </p>
-          </div>
-        </div>
+      
       </div>
 
       {/* Macros */}
