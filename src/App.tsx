@@ -3997,7 +3997,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               : 'bg-green-500 text-white shadow-green-100'
           }`}
         >
-          {step === totalSteps ? 'Gerar Meu Plano' : 'Próximo'}
+          {step === totalSteps ? 'Próximo Passo' : 'Próximo'}
         </button>
       </div>
     </div>
@@ -5294,7 +5294,15 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
   );
 }
 
-function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void; onSave: (w: Workout) => void; estimateBurned: any }) {
+function WorkoutForm({
+  onClose,
+  onSave,
+  estimateBurned,
+}: {
+  onClose: () => void;
+  onSave: (w: Workout) => void;
+  estimateBurned: any;
+}) {
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [type, setType] = useState<WorkoutType>('musculacao');
   const [duration, setDuration] = useState(45);
@@ -5304,109 +5312,201 @@ function WorkoutForm({ onClose, onSave, estimateBurned }: { onClose: () => void;
   const estimated = estimateBurned(type, duration, intensity);
 
   const handleConfirm = () => {
-    const burned = mode === 'manual' ? (parseInt(manualCal) || 0) : estimated;
+    const burned = mode === 'manual' ? parseInt(manualCal) || 0 : estimated;
+
     if (burned <= 0) return;
+
     onSave({
       id: Math.random().toString(36).substr(2, 9),
       type,
       duration: mode === 'manual' ? 0 : duration,
       intensity: mode === 'manual' ? 'moderada' : intensity,
       burned,
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     });
   };
 
   return (
-    <div className="space-y-8">
-       <div className="flex bg-gray-100 p-1.5 rounded-[24px]">
-          <button onClick={() => setMode('auto')} className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'auto' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}>Estimativa Auto</button>
-          <button onClick={() => setMode('manual')} className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'manual' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}>Manual (calorias)</button>
-       </div>
+    <div className="space-y-7">
+      <div className="flex bg-gray-100 p-1.5 rounded-[24px]">
+        <button
+          type="button"
+          onClick={() => setMode('auto')}
+          className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all ${
+            mode === 'auto'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-gray-400'
+          }`}
+        >
+          Estimativa
+        </button>
 
-       {mode === 'auto' ? (
-         <div className="space-y-8">
-            <div className="grid grid-cols-3 gap-3">
-              {WORKOUT_TYPES.map(wt => (
-                <button 
-                  key={wt.key} 
-                  onClick={() => setType(wt.key)}
-                  className={`flex flex-col items-center gap-2.5 p-4 rounded-3xl border-2 transition-all group ${type === wt.key ? 'border-orange-500 bg-orange-50' : 'border-gray-50 bg-white'}`}
+        <button
+          type="button"
+          onClick={() => setMode('manual')}
+          className={`flex-1 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all ${
+            mode === 'manual'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-gray-400'
+          }`}
+        >
+          Manual
+        </button>
+      </div>
+
+      {mode === 'auto' ? (
+        <div className="space-y-7">
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+              Tipo de treino
+            </p>
+
+            <div className="flex overflow-x-auto gap-3 pb-4 snap-x no-scrollbar -mx-2 px-2">
+              {WORKOUT_TYPES.map((wt: any) => (
+                <button
+                  key={wt.key}
+                  type="button"
+                  onClick={() => setType(wt.key as WorkoutType)}
+                  className={`shrink-0 w-28 h-24 flex flex-col items-center justify-center gap-2 rounded-3xl border-2 transition-all snap-center ${
+                    type === wt.key
+                      ? 'border-orange-500 bg-orange-50 text-orange-600 shadow-md'
+                      : 'border-gray-100 bg-white text-gray-400 hover:bg-gray-50'
+                  }`}
                 >
-                  <wt.icon size={20} className={type === wt.key ? 'text-orange-500' : 'text-gray-300'} />
-                  <span className={`text-[9px] font-black uppercase tracking-tight ${type === wt.key ? 'text-orange-600' : 'text-gray-400'}`}>{wt.label}</span>
+                  <wt.icon
+                    size={24}
+                    className={type === wt.key ? 'text-orange-500' : 'text-gray-400'}
+                  />
+
+                  <span
+                    className={`text-[10px] font-black uppercase tracking-widest text-center px-1 ${
+                      type === wt.key ? 'text-orange-600' : 'text-gray-500'
+                    }`}
+                  >
+                    {wt.label}
+                  </span>
                 </button>
               ))}
             </div>
-
-            <div className="space-y-6">
-               <div className="flex justify-between items-end px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Duração (minutos)</p>
-                  <p className="text-xl font-black text-gray-900">{duration} min</p>
-               </div>
-               <input type="range" min="5" max="180" step="5" value={duration} onChange={e => setDuration(parseInt(e.target.value))} className="w-full accent-orange-500 h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer" />
-               
-               <div className="space-y-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Intensidade</p>
-                  <div className="flex gap-2">
-                     {INTENSITIES.map(int => (
-                       <button 
-                         key={int.key} 
-                         onClick={() => setIntensity(int.key as any)}
-                         className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase transition-all border-2 ${intensity === int.key ? 'bg-white border-orange-500 text-orange-600 shadow-sm' : 'bg-gray-50 border-transparent text-gray-400'}`}
-                       >
-                         {int.label}
-                       </button>
-                     ))}
-                  </div>
-               </div>
-            </div>
-
-            <div className="bg-orange-50 p-6 rounded-[32px] border border-orange-100 flex justify-between items-center">
-               <div>
-                  <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Gasto Estimado</p>
-                  <p className="text-3xl font-black text-orange-600">{estimated} <span className="text-[10px] uppercase opacity-40">calorias</span></p>
-               </div>
-               <Flame size={40} className="text-orange-200" />
-            </div>
-         </div>
-       ) : (
-         <div className="space-y-8 py-4">
-            <div className="flex flex-col items-center">
-               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Calorias Gastas</p>
-               <input 
-                 autoFocus
-                 type="number"
-                 placeholder="0"
-                 value={manualCal}
-                 onChange={e => setManualCal(e.target.value)}
-                 className="text-6xl font-black text-gray-900 text-center w-full focus:outline-none bg-transparent"
-               />
-               <div className="h-1.5 w-24 bg-orange-500 rounded-full mt-4" />
-            </div>
-            <p className="text-[10px] text-gray-400 font-medium text-center px-8 leading-relaxed">
-               Ideal para quem usa smartwatch ou apps que informam o gasto real.
-            </p>
-         </div>
-       )}
-
-       <div className="pt-4 space-y-4">
-          <p className="text-[9px] text-gray-400 font-medium italic text-center px-4">
-            "As calorias do treino são estimativas. Use como referência, não como obrigação de comer mais."
-          </p>
-          <div className="flex gap-4">
-            <button onClick={onClose} className="flex-1 py-5 font-black text-gray-400 bg-gray-50 rounded-3xl text-xs uppercase">Cancelar</button>
-            <button onClick={handleConfirm} className="flex-[2] py-5 font-black text-white bg-orange-500 rounded-3xl shadow-xl shadow-orange-100 text-xs uppercase tracking-widest">Salvar Treino</button>
           </div>
-       </div>
+
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+              Duração em minutos
+            </p>
+
+            <input
+              type="number"
+              value={duration || ''}
+              onChange={e => setDuration(Number(e.target.value))}
+              placeholder="Ex: 45"
+              className="w-full text-center text-3xl font-black text-gray-800 bg-gray-50 border-2 border-gray-100 rounded-3xl py-4 focus:outline-none focus:border-orange-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+              Intensidade
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {INTENSITIES.map((intensityOption: any) => (
+                <button
+                  key={intensityOption.key}
+                  type="button"
+                  onClick={() => setIntensity(intensityOption.key as Intensity)}
+                  className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                    intensity === intensityOption.key
+                      ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-100'
+                      : 'bg-white text-gray-400 border-gray-100'
+                  }`}
+                >
+                  {intensityOption.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[30px] bg-orange-50 border border-orange-100 p-5 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
+                Gasto estimado
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-orange-700">
+                Baseado no seu peso, tempo e intensidade.
+              </p>
+            </div>
+
+            <div className="text-right">
+              <p className="text-3xl font-black text-orange-600">
+                {Math.round(estimated)}
+              </p>
+
+              <p className="text-[9px] font-black text-orange-400 uppercase">
+                calorias
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+              Calorias gastas
+            </p>
+
+            <input
+              type="number"
+              value={manualCal}
+              onChange={e => setManualCal(e.target.value)}
+              placeholder="Ex: 300"
+              className="w-full text-center text-3xl font-black text-gray-800 bg-gray-50 border-2 border-gray-100 rounded-3xl py-4 focus:outline-none focus:border-orange-500 transition-colors"
+            />
+          </div>
+
+          <div className="rounded-[30px] bg-orange-50 border border-orange-100 p-5">
+            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
+              Registro manual
+            </p>
+
+            <p className="mt-2 text-xs font-bold text-orange-700 leading-relaxed">
+              Use essa opção quando o relógio, esteira ou aplicativo já informou o gasto calórico.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-4 rounded-[24px] bg-gray-100 text-gray-400 text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="flex-[1.4] py-4 rounded-[24px] bg-orange-500 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-orange-100 active:scale-95 transition-all"
+        >
+          Salvar treino
+        </button>
+      </div>
     </div>
   );
 }
 
 function RecipeLibrary() {
   const { userProfile, addRecipeToPlan } = useApp();
+
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<FitnessRecipe | null>(null);
-  const [hiddenRecipeImages, setHiddenRecipeImages] = useState<Record<string, boolean>>({});
+  const [showMealPicker, setShowMealPicker] = useState(false);
 
   const recipeIsAllowed = (recipe: FitnessRecipe) => {
     if (!userProfile) return true;
@@ -5429,25 +5529,29 @@ function RecipeLibrary() {
   };
 
   const hiddenRecipeIds = new Set([
-  'pipoca-queijo-fruta',
-  'pipoca-fruta-chia',
-  'banana-canela',
-]);
+    'pipoca-queijo-fruta',
+    'pipoca-fruta-chia',
+    'banana-canela',
+  ]);
 
-const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
-  recipe => !hiddenRecipeIds.has(recipe.id)
-);
-  const configs = userProfile ? MEAL_CONFIGS[userProfile.mealCount] : MEAL_CONFIGS[4];
+  const visibleRecipes = FITNESS_RECIPES
+    .filter(recipeIsAllowed)
+    .filter(recipe => !hiddenRecipeIds.has(recipe.id));
 
-  // Mostra imagem só nas receitas que estão confiáveis por enquanto.
-  const curatedImageIds = new Set([
-  'panqueca-banana-aveia',
-]);
+  const configs = userProfile
+    ? MEAL_CONFIGS[userProfile.mealCount] || MEAL_CONFIGS[4]
+    : MEAL_CONFIGS[4];
 
   const handleAddRecipeToPlan = (recipe: FitnessRecipe, mealKey: string) => {
     addRecipeToPlan(recipe, mealKey as any);
     setSelectedRecipe(null);
+    setShowMealPicker(false);
     setIsOpen(false);
+  };
+
+  const closeSelectedRecipe = () => {
+    setSelectedRecipe(null);
+    setShowMealPicker(false);
   };
 
   return (
@@ -5492,12 +5596,12 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/40 px-4 py-6 overflow-y-auto"
+            className="fixed inset-0 z-[120] bg-black/45 px-4 py-6 overflow-y-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="mx-auto max-w-md rounded-[36px] bg-white p-5 shadow-2xl">
+            <div className="mx-auto max-w-md rounded-[36px] bg-white p-5 pb-28 shadow-2xl">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-green-600">
@@ -5523,106 +5627,78 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
               </div>
 
               <div className="space-y-4">
-                {visibleRecipes.map((recipe) => {
-                  const canShowImage =
-                    !!recipe.image &&
-                    curatedImageIds.has(recipe.id) &&
-                    !hiddenRecipeImages[recipe.id];
-
-                  return (
-                    <div
-                      key={recipe.id}
-                      className="overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
-                    >
-                      <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                        {canShowImage ? (
-                          <img
-                            src={recipe.image}
-                            alt={recipe.friendlyTitle}
-                            className="relative z-10 h-full w-full object-cover"
-                            onError={() => {
-                              setHiddenRecipeImages((prev) => ({
-                                ...prev,
-                                [recipe.id]: true,
-                              }));
-                            }}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white shadow-sm">
-                              <Utensils size={24} className="text-green-600" />
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
-
-                        <div className="absolute bottom-4 left-4 right-4 z-30">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
-                            {recipe.cal} kcal
-                          </p>
-
-                          <h4 className="mt-1 text-xl font-black leading-tight text-white">
-                            {recipe.friendlyTitle}
-                          </h4>
+                {visibleRecipes.map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    className="overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-sm"
+                  >
+                    <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white shadow-sm">
+                          <Utensils size={24} className="text-green-600" />
                         </div>
                       </div>
 
-                      <div className="p-4">
-                        <p className="text-xs font-bold leading-relaxed text-gray-500">
-                          {recipe.description}
+                      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+
+                      <div className="absolute bottom-4 left-4 right-4 z-30">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
+                          {recipe.cal} kcal
                         </p>
 
-                        <div className="mt-4 grid grid-cols-3 gap-2">
-                          <div className="rounded-2xl bg-blue-50 px-3 py-2">
-                            <p className="text-[9px] font-black uppercase text-blue-500">
-                              Prot.
-                            </p>
-                            <p className="mt-1 text-sm font-black text-blue-700">
-                              {recipe.p}g
-                            </p>
-                          </div>
-
-                          <div className="rounded-2xl bg-green-50 px-3 py-2">
-                            <p className="text-[9px] font-black uppercase text-green-500">
-                              Carbo
-                            </p>
-                            <p className="mt-1 text-sm font-black text-green-700">
-                              {recipe.c}g
-                            </p>
-                          </div>
-
-                          <div className="rounded-2xl bg-orange-50 px-3 py-2">
-                            <p className="text-[9px] font-black uppercase text-orange-500">
-                              Gord.
-                            </p>
-                            <p className="mt-1 text-sm font-black text-orange-700">
-                              {recipe.f}g
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedRecipe(recipe)}
-                            className="rounded-2xl border border-gray-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-gray-600"
-                          >
-                            Ver preparo
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setSelectedRecipe(recipe)}
-                            className="rounded-2xl bg-green-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white"
-                          >
-                            Escolher refeição
-                          </button>
-                        </div>
+                        <h4 className="mt-1 text-xl font-black leading-tight text-white">
+                          {recipe.friendlyTitle}
+                        </h4>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="p-4">
+                      <p className="text-xs font-bold leading-relaxed text-gray-500">
+                        {recipe.description}
+                      </p>
+
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <div className="rounded-2xl bg-blue-50 px-3 py-2">
+                          <p className="text-[9px] font-black uppercase text-blue-500">
+                            Prot.
+                          </p>
+                          <p className="mt-1 text-sm font-black text-blue-700">
+                            {recipe.p}g
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl bg-green-50 px-3 py-2">
+                          <p className="text-[9px] font-black uppercase text-green-500">
+                            Carbo
+                          </p>
+                          <p className="mt-1 text-sm font-black text-green-700">
+                            {recipe.c}g
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl bg-orange-50 px-3 py-2">
+                          <p className="text-[9px] font-black uppercase text-orange-500">
+                            Gord.
+                          </p>
+                          <p className="mt-1 text-sm font-black text-orange-700">
+                            {recipe.f}g
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRecipe(recipe);
+                          setShowMealPicker(false);
+                        }}
+                        className="mt-4 w-full rounded-2xl bg-green-600 px-3 py-4 text-[10px] font-black uppercase tracking-widest text-white active:scale-95 transition-all"
+                      >
+                        Ver receita
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -5632,38 +5708,22 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
       <AnimatePresence>
         {selectedRecipe && (
           <motion.div
-            className="fixed inset-0 z-[60] bg-black/40 px-4 py-6 overflow-y-auto"
+            className="fixed inset-0 z-[130] bg-black/45 px-4 py-6 overflow-y-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="mx-auto max-w-md overflow-hidden rounded-[36px] bg-white shadow-2xl">
+            <div className="mx-auto max-w-md overflow-hidden rounded-[36px] bg-white shadow-2xl pb-28">
               <div className="relative h-56 bg-gradient-to-br from-green-50 to-emerald-100">
-                {selectedRecipe.image &&
-                curatedImageIds.has(selectedRecipe.id) &&
-                !hiddenRecipeImages[selectedRecipe.id] ? (
-                  <img
-                    src={selectedRecipe.image}
-                    alt={selectedRecipe.friendlyTitle}
-                    className="relative z-10 h-full w-full object-cover"
-                    onError={() => {
-                      setHiddenRecipeImages((prev) => ({
-                        ...prev,
-                        [selectedRecipe.id]: true,
-                      }));
-                    }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Utensils size={34} className="text-green-600" />
-                  </div>
-                )}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Utensils size={34} className="text-green-600" />
+                </div>
 
                 <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
                 <button
                   type="button"
-                  onClick={() => setSelectedRecipe(null)}
+                  onClick={closeSelectedRecipe}
                   className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/90 text-gray-700"
                 >
                   <X size={18} />
@@ -5687,18 +5747,30 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
 
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-2xl bg-blue-50 p-3 text-center">
-                    <p className="text-[9px] font-black uppercase text-blue-500">Proteína</p>
-                    <p className="mt-1 text-lg font-black text-blue-700">{selectedRecipe.p}g</p>
+                    <p className="text-[9px] font-black uppercase text-blue-500">
+                      Proteína
+                    </p>
+                    <p className="mt-1 text-lg font-black text-blue-700">
+                      {selectedRecipe.p}g
+                    </p>
                   </div>
 
                   <div className="rounded-2xl bg-green-50 p-3 text-center">
-                    <p className="text-[9px] font-black uppercase text-green-500">Carbos</p>
-                    <p className="mt-1 text-lg font-black text-green-700">{selectedRecipe.c}g</p>
+                    <p className="text-[9px] font-black uppercase text-green-500">
+                      Carbos
+                    </p>
+                    <p className="mt-1 text-lg font-black text-green-700">
+                      {selectedRecipe.c}g
+                    </p>
                   </div>
 
                   <div className="rounded-2xl bg-orange-50 p-3 text-center">
-                    <p className="text-[9px] font-black uppercase text-orange-500">Gorduras</p>
-                    <p className="mt-1 text-lg font-black text-orange-700">{selectedRecipe.f}g</p>
+                    <p className="text-[9px] font-black uppercase text-orange-500">
+                      Gorduras
+                    </p>
+                    <p className="mt-1 text-lg font-black text-orange-700">
+                      {selectedRecipe.f}g
+                    </p>
                   </div>
                 </div>
 
@@ -5749,18 +5821,58 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  {configs.map((config) => (
-                    <button
-                      key={`${selectedRecipe.id}-${config.key}`}
-                      type="button"
-                      onClick={() => handleAddRecipeToPlan(selectedRecipe, config.key)}
-                      className="rounded-2xl border border-green-100 bg-green-50 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-green-700"
-                    >
-                      Adicionar no {config.label}
-                    </button>
-                  ))}
-                </div>
+                {!showMealPicker ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowMealPicker(true)}
+                    className="w-full rounded-[26px] bg-green-600 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-green-100 active:scale-95 transition-all"
+                  >
+                    Adicionar ao plano
+                  </button>
+                ) : (
+                  <div className="bg-gray-50 rounded-[32px] p-5 mt-6 border border-gray-100 shadow-inner">
+                    <div className="flex justify-between items-start mb-5">
+                      <div>
+                        <p className="text-sm font-black text-gray-800 tracking-tight">
+                          Onde essa receita entra melhor?
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowMealPicker(false)}
+                        className="p-2.5 bg-white rounded-full text-gray-400 hover:text-gray-600 shadow-sm border border-gray-100 active:scale-95 transition-all"
+                      >
+                        <X size={16} strokeWidth={3} />
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      {configs.map((cfg) => (
+                        <button
+                          key={cfg.key}
+                          type="button"
+                          onClick={() => handleAddRecipeToPlan(selectedRecipe, cfg.key)}
+                          className="group w-full flex items-center justify-between bg-white hover:border-green-500 hover:ring-1 hover:ring-green-500 border border-gray-200 rounded-2xl p-4 transition-all active:scale-95 shadow-sm"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                              <cfg.icon size={22} strokeWidth={2.5} />
+                            </div>
+
+                            <span className="text-sm font-black text-gray-800 uppercase tracking-tight group-hover:text-green-700 transition-colors">
+                              {cfg.label}
+                            </span>
+                          </div>
+
+                          <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                            <ChevronRight size={18} className="text-gray-400 group-hover:text-green-600 transition-colors" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -8492,10 +8604,12 @@ function CirculoScreenFoodstagram() {
   const { userProfile, meals, workouts, calorieGoal, getTotals } = useApp();
 
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
-  const [selectedMember, setSelectedMember] = useState<any | null>(null);
-  const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
-  const [showInviteModal, setShowInviteModal] = useState(false);
+const [selectedMember, setSelectedMember] = useState<any | null>(null);
+const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
+const [showInviteModal, setShowInviteModal] = useState(false);
 const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
+
+  const inviteCode = 'FC-9921';
 
   const totals = getTotals();
   const consumed = Math.round(safeNumber(totals.cal));
@@ -8614,6 +8728,37 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
     }));
   };
 
+  const copyInviteCode = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setInviteCopied(true);
+
+      setTimeout(() => {
+        setInviteCopied(false);
+      }, 1800);
+    } catch {
+      setInviteCopied(true);
+
+      setTimeout(() => {
+        setInviteCopied(false);
+      }, 1800);
+    }
+  };
+
+  const shareInvite = async () => {
+    const text = `Venha participar do meu Círculo no FitCircle! Código: ${inviteCode}`;
+
+    if (navigator.share) {
+      await navigator.share({
+        title: 'FitCircle',
+        text,
+      });
+      return;
+    }
+
+    await copyInviteCode();
+  };
+
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
       <div className="bg-[#16A34A] pt-12 px-6 pb-8 rounded-b-[42px] text-white shadow-xl">
@@ -8628,14 +8773,14 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
             </h1>
           </div>
 
-        <button
-  type="button"
-  onClick={() => setShowInviteModal(true)}
-  className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-95 transition-all"
-  aria-label="Convidar para o círculo"
->
-  <UserPlus size={20} className="text-white" />
-</button>
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-95 transition-all"
+            aria-label="Convidar para o círculo"
+          >
+            <UserPlus size={20} className="text-white" />
+          </button>
         </div>
 
         <div className="mt-6 bg-white/15 border border-white/10 rounded-[28px] p-4 backdrop-blur-md flex items-center gap-3">
@@ -8810,6 +8955,109 @@ const [incentiveFeedback, setIncentiveFeedback] = useState<string | null>(null);
         </div>
       </div>
 
+<AnimatePresence>
+  {showInviteModal && (
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setShowInviteModal(false)}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
+
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        className="relative z-10 w-full max-w-sm overflow-hidden rounded-[36px] bg-white p-6 shadow-2xl"
+      >
+        <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50 rounded-full -mr-20 -mt-20 opacity-50" />
+
+        <div className="relative z-10 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-gray-900">
+              Convidar amigos
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(false)}
+            className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors shadow-sm"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-6 relative z-10 mt-5">
+          <p className="text-sm font-bold text-gray-500 leading-relaxed text-center px-4">
+            Compartilhe seu link exclusivo. Quem clicar poderá entrar no seu círculo.
+          </p>
+
+          <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-2xl p-2 pl-4">
+            <span className="text-sm font-bold text-gray-600 truncate mr-2 select-all">
+              fitcircle.app/c/FC-9921
+            </span>
+
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText('https://fitcircle.app/c/FC-9921');
+                  setIncentiveFeedback('Link copiado!');
+                  setTimeout(() => setIncentiveFeedback(null), 2000);
+                } catch (error) {
+                  setIncentiveFeedback('Copie: fitcircle.app/c/FC-9921');
+                  setTimeout(() => setIncentiveFeedback(null), 2500);
+                }
+              }}
+              className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-sm"
+            >
+              Copiar
+            </button>
+          </div>
+
+          {incentiveFeedback && (
+            <div className="rounded-2xl bg-green-50 border border-green-100 px-4 py-3 text-center">
+              <p className="text-xs font-black text-green-600 uppercase tracking-widest">
+                {incentiveFeedback}
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={async () => {
+              const shareData = {
+                title: 'Convite FitCircle',
+                text: 'Vem treinar comigo no FitCircle! Entre no meu círculo:',
+                url: 'https://fitcircle.app/c/FC-9921',
+              };
+
+              try {
+                if (navigator.share) {
+                  await navigator.share(shareData);
+                } else {
+                  await navigator.clipboard.writeText(shareData.url);
+                  setIncentiveFeedback('Link copiado!');
+                  setTimeout(() => setIncentiveFeedback(null), 2000);
+                }
+              } catch (error) {
+                setIncentiveFeedback('Compartilhamento cancelado');
+                setTimeout(() => setIncentiveFeedback(null), 2000);
+              }
+            }}
+            className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-200/50"
+          >
+            Compartilhar link
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )}
+</AnimatePresence>
+
       <AnimatePresence>
         {selectedMember && (
           <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-4">
@@ -8916,14 +9164,39 @@ function AddMealScreen({
     setPendingEditMealId,
     addMeal,
     updateMeal,
+    deleteMeal,
     mealPlan,
+    meals,
   } = useApp();
 
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualItems, setManualItems] = useState<MealEntry[]>([]);
 
-  const currentMealType = pendingMealType || 'cafe';
+  const editingMeal = pendingEditMealId
+    ? meals.find((meal: any) => meal.id === pendingEditMealId)
+    : null;
+
+  const currentMealType = editingMeal?.type || pendingMealType || 'cafe';
   const planOptions = mealPlan[currentMealType] || [];
+
+  useEffect(() => {
+    if (editingMeal?.items?.length) {
+      setManualItems(editingMeal.items);
+    }
+  }, [pendingEditMealId]);
+
+  const getMealTitle = () => {
+    const normalized = String(currentMealType || '').toLowerCase();
+
+    if (normalized === 'cafe') return 'Café da manhã';
+    if (normalized === 'almoco') return 'Almoço';
+    if (normalized === 'jantar') return 'Jantar';
+    if (normalized === 'lanche') return 'Lanche da tarde';
+    if (normalized === 'lanchemanha') return 'Lanche da manhã';
+    if (normalized === 'ceia') return 'Ceia';
+
+    return 'Refeição';
+  };
 
   const closeAndBack = () => {
     setPendingMealType(null);
@@ -8933,64 +9206,22 @@ function AddMealScreen({
     onBack();
   };
 
-  const saveMealWithItems = (items: MealEntry[]) => {
-    if (items.length === 0) return;
-
-    const totals = items.reduce(
-      (acc, item) => ({
-        cal: acc.cal + safeNumber(item.cal),
-        p: acc.p + safeNumber(item.p),
-        c: acc.c + safeNumber(item.c),
-        f: acc.f + safeNumber(item.f),
-      }),
-      { cal: 0, p: 0, c: 0, f: 0 }
-    );
-
-    const now = new Date();
-
-    const newMeal = {
-      type: currentMealType,
-      time: now.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      items,
-      cal: Math.round(totals.cal),
-      p: Math.round(totals.p),
-      c: Math.round(totals.c),
-      f: Math.round(totals.f),
-    };
-
-    if (pendingEditMealId) {
-      updateMeal(pendingEditMealId, newMeal);
-    } else {
-      addMeal(newMeal);
-    }
-
-    closeAndBack();
+  const getFoodFromLine = (line: string) => {
+    return [...FOOD_DATABASE]
+      .sort((a, b) => b.name.length - a.name.length)
+      .find(food =>
+        normalizePlanText(line).includes(normalizePlanText(food.name))
+      );
   };
 
-  const handleManualAdd = (entry: MealEntry) => {
-    setManualItems((prev) => [...prev, entry]);
-    setShowManualModal(false);
-  };
-
-  const removeManualItem = (indexToRemove: number) => {
-    setManualItems((prev) => prev.filter((_, index) => index !== indexToRemove));
-  };
-
-  const addPlanOption = (option: any) => {
-    const lines = sanitizeOptionQtyText(option.qty || '')
+  const buildItemsFromPlanOption = (option: any): MealEntry[] => {
+    const lines = sanitizeOptionQtyText(option?.qty || '')
       .split(' + ')
       .map(line => line.trim())
       .filter(Boolean);
 
-    const items: MealEntry[] = lines.map((line) => {
-      const matchedFood = [...FOOD_DATABASE]
-        .sort((a, b) => b.name.length - a.name.length)
-        .find(food =>
-          normalizePlanText(line).includes(normalizePlanText(food.name))
-        );
+    const items = lines.map((line) => {
+      const matchedFood = getFoodFromLine(line);
 
       if (!matchedFood) {
         return {
@@ -9020,43 +9251,219 @@ function AddMealScreen({
         qty: Math.round(safeGrams),
         unit: 'g',
         cal: Math.round(safeNumber(matchedFood.cal) * factor),
-        p: Math.round(safeNumber(matchedFood.p) * factor),
-        c: Math.round(safeNumber(matchedFood.c) * factor),
-        f: Math.round(safeNumber(matchedFood.f) * factor),
+        p: Number((safeNumber(matchedFood.p) * factor).toFixed(1)),
+        c: Number((safeNumber(matchedFood.c) * factor).toFixed(1)),
+        f: Number((safeNumber(matchedFood.f) * factor).toFixed(1)),
       };
     });
 
-    const validItems = items.length > 0 ? items : [
-      {
-        food: {
-          name: option.name,
-          cal: safeNumber(option.cal),
+    return items;
+  };
+
+  const getItemsTotals = (items: MealEntry[]) => {
+    const totals = items.reduce(
+      (acc, item) => ({
+        cal: acc.cal + safeNumber(item.cal),
+        p: acc.p + safeNumber(item.p),
+        c: acc.c + safeNumber(item.c),
+        f: acc.f + safeNumber(item.f),
+      }),
+      { cal: 0, p: 0, c: 0, f: 0 }
+    );
+
+    return {
+      cal: Math.round(totals.cal),
+      p: Math.round(totals.p),
+      c: Math.round(totals.c),
+      f: Math.round(totals.f),
+    };
+  };
+
+  const getPlanOptionTotals = (option: any) => {
+    const items = buildItemsFromPlanOption(option);
+    const totals = getItemsTotals(items);
+
+    return {
+      items,
+      cal: totals.cal || Math.round(safeNumber(option?.cal)),
+      p: totals.p,
+      c: totals.c,
+      f: totals.f,
+    };
+  };
+
+  const cleanFoodName = (value: string) => {
+    return String(value || '')
+      .replace(/\s+\d+([,.]\d+)?\s*(g|ml|unidade|unidades|un|fatia|fatias|pote|potes|colher|colheres|colher de sopa|colheres de sopa|à vontade)/gi, '')
+      .replace(/\s+à vontade/gi, '')
+      .trim();
+  };
+
+  const getHumanizedPlanTitle = (option: any) => {
+    const rawTitle = String(option?.name || '').trim();
+    const qtyText = sanitizeOptionQtyText(option?.qty || '');
+
+    const text = normalizePlanText(`${rawTitle} ${qtyText}`);
+
+    const hasFrango = text.includes('frango');
+    const hasPatinho = text.includes('patinho') || text.includes('carne moida') || text.includes('carne moída');
+    const hasTofu = text.includes('tofu');
+    const hasPeixe = text.includes('tilapia') || text.includes('tilápia') || text.includes('peixe') || text.includes('atum');
+    const hasOvo = text.includes('ovo');
+    const hasLentilha = text.includes('lentilha');
+    const hasGraoBico = text.includes('grao-de-bico') || text.includes('grão-de-bico');
+
+    const hasArroz = text.includes('arroz');
+    const hasArrozIntegral = text.includes('arroz integral');
+    const arrozLabel = hasArrozIntegral ? 'arroz integral' : 'arroz';
+
+    const hasFeijao = text.includes('feijao') || text.includes('feijão');
+    const hasLegumes = text.includes('legumes');
+    const hasSalada = text.includes('salada');
+    const hasBatata = text.includes('batata');
+    const hasMacarrao = text.includes('macarrao') || text.includes('macarrão');
+    const hasMandioca = text.includes('mandioca');
+    const hasInhame = text.includes('inhame');
+
+    if (currentMealType === 'almoco' || currentMealType === 'jantar') {
+      if (hasFrango && hasArroz && hasFeijao) return `Frango com ${arrozLabel}, feijão e salada`;
+      if (hasPatinho && hasArroz && hasFeijao) return `Carne moída com ${arrozLabel} e feijão`;
+      if (hasTofu && hasArroz && hasFeijao) return `Tofu com ${arrozLabel}, feijão e salada`;
+      if (hasPeixe && hasBatata) return 'Peixe com batata e legumes';
+      if (hasFrango && hasBatata) return 'Frango com batata e salada';
+      if (hasPatinho && hasMacarrao) return 'Macarrão com carne moída';
+      if (hasFrango && hasMandioca) return 'Frango com mandioca e salada';
+      if (hasPatinho && hasInhame) return 'Carne magra com inhame';
+      if (hasLentilha && hasBatata) return 'Lentilha com batata e salada';
+      if (hasGraoBico) return 'Grão-de-bico com legumes';
+      if (hasOvo && hasSalada) return 'Omelete com salada';
+      if (hasLegumes && hasFrango) return 'Frango com legumes';
+      if (hasLegumes && hasPatinho) return 'Carne moída com legumes';
+    }
+
+    if (currentMealType === 'cafe') {
+      if (text.includes('tapioca') && text.includes('banana')) return 'Tapioca com banana';
+      if (text.includes('pao') || text.includes('pão')) {
+        if (hasOvo) return 'Pão integral com ovos';
+        if (text.includes('queijo')) return 'Pão integral com queijo';
+        if (text.includes('requeijao') || text.includes('requeijão')) return 'Pão integral com requeijão';
+      }
+      if (text.includes('iogurte') && text.includes('aveia')) return 'Iogurte com aveia e fruta';
+      if (text.includes('panqueca')) return 'Panqueca de banana com aveia';
+      if (text.includes('aveia') && text.includes('banana')) return 'Aveia com banana';
+    }
+
+    if (currentMealType.includes('lanche') || currentMealType === 'ceia') {
+      if (text.includes('sanduiche') || text.includes('sanduíche')) {
+        if (hasFrango) return 'Sanduíche de frango';
+        if (text.includes('atum')) return 'Sanduíche de atum';
+      }
+      if (text.includes('iogurte') && text.includes('whey')) return 'Iogurte com whey e fruta';
+      if (text.includes('iogurte')) return 'Iogurte com fruta';
+      if (text.includes('queijo')) return 'Queijo minas com fruta';
+      if (text.includes('banana') && text.includes('aveia')) return 'Banana com aveia';
+      if (text.includes('batata-doce') && hasFrango) return 'Batata-doce com frango';
+    }
+
+    if (rawTitle) return rawTitle;
+
+    const firstLine = qtyText.split(' + ')[0] || 'Opção do plano';
+    return cleanFoodName(firstLine);
+  };
+
+  const getOptionDescription = (option: any) => {
+    const lines = sanitizeOptionQtyText(option?.qty || '')
+      .split(' + ')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) return 'Itens do seu plano alimentar.';
+
+    return lines
+      .slice(0, 4)
+      .map(line => {
+        const food = getFoodFromLine(line);
+        return food?.name || cleanFoodName(line);
+      })
+      .join(' + ');
+  };
+
+  const saveMealWithItems = (items: MealEntry[]) => {
+    if (items.length === 0) return;
+
+    const totals = getItemsTotals(items);
+    const now = new Date();
+
+    const newMeal = {
+      type: currentMealType,
+      time: now.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      items,
+      cal: totals.cal,
+      p: totals.p,
+      c: totals.c,
+      f: totals.f,
+    };
+
+    if (pendingEditMealId) {
+      updateMeal(pendingEditMealId, newMeal);
+    } else {
+      addMeal(newMeal);
+    }
+
+    closeAndBack();
+  };
+
+  const handleManualAdd = (entry: MealEntry) => {
+    setManualItems(prev => [...prev, entry]);
+  };
+
+  const removeManualItem = (indexToRemove: number) => {
+    setManualItems(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const confirmDeleteMeal = () => {
+    if (!pendingEditMealId) return;
+
+    const confirmed = window.confirm('Excluir esta refeição? Essa ação não pode ser desfeita.');
+
+    if (!confirmed) return;
+
+    deleteMeal(pendingEditMealId);
+    closeAndBack();
+  };
+
+  const addPlanOption = (option: any) => {
+    const parsed = getPlanOptionTotals(option);
+
+    if (parsed.items.length === 0) {
+      saveMealWithItems([
+        {
+          food: {
+            name: option.name || 'Opção do plano',
+            cal: safeNumber(option.cal),
+            p: 0,
+            c: 0,
+            f: 0,
+            category: 'Plano',
+          } as FoodItem,
+          qty: 1,
+          unit: 'un',
+          cal: Math.round(safeNumber(option.cal)),
           p: 0,
           c: 0,
           f: 0,
-          category: 'Plano',
-        } as FoodItem,
-        qty: 1,
-        unit: 'un',
-        cal: Math.round(safeNumber(option.cal)),
-        p: 0,
-        c: 0,
-        f: 0,
-      },
-    ];
+        },
+      ]);
+      return;
+    }
 
-    saveMealWithItems(validItems);
+    saveMealWithItems(parsed.items);
   };
 
-  const manualTotals = manualItems.reduce(
-    (acc, item) => ({
-      cal: acc.cal + safeNumber(item.cal),
-      p: acc.p + safeNumber(item.p),
-      c: acc.c + safeNumber(item.c),
-      f: acc.f + safeNumber(item.f),
-    }),
-    { cal: 0, p: 0, c: 0, f: 0 }
-  );
+  const manualTotals = getItemsTotals(manualItems);
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
@@ -9075,104 +9482,115 @@ function AddMealScreen({
           </p>
 
           <h1 className="text-xl font-black text-gray-900">
-            Registrar refeição
+            {pendingEditMealId ? `Editar ${getMealTitle()}` : 'Registrar refeição'}
           </h1>
+
+          <p className="mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            {getMealTitle()}
+          </p>
         </div>
       </div>
 
-      <div className="px-5 mt-5 space-y-5">
-        <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
-          <div className="mb-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
-              Sugestões do seu plano
-            </p>
+      {!pendingEditMealId && (
+        <div className="px-5 mt-5">
+          <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
+            <div className="mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-green-700">
+                Sugestões do seu plano
+              </p>
 
-            <p className="mt-1 text-xs font-bold text-green-700/70">
-              Toque em uma opção para registrar todos os itens.
-            </p>
+              <p className="mt-1 text-xs font-bold text-green-700/70">
+                Toque no botão verde para registrar a opção escolhida.
+              </p>
+            </div>
+
+            {planOptions.length > 0 ? (
+              <div className="space-y-3">
+                {planOptions.slice(0, 3).map((option: any, index: number) => {
+                  const parsed = getPlanOptionTotals(option);
+                  const title = getHumanizedPlanTitle(option);
+                  const description = getOptionDescription(option);
+
+                  return (
+                    <div
+                      key={`${option.name}-${index}`}
+                      className="rounded-[26px] bg-white p-4 border border-gray-100 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-gray-900 leading-tight">
+                            {title}
+                          </p>
+
+                          <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400 line-clamp-2">
+                            {description}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <span className="rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
+                            {parsed.cal} cal
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => addPlanOption(option)}
+                            className="w-10 h-10 shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-100 active:scale-90 transition-all"
+                            aria-label={`Registrar ${title}`}
+                          >
+                            <Plus size={20} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="rounded-2xl bg-blue-50 px-3 py-2">
+                          <p className="text-[8px] font-black uppercase text-blue-500">
+                            Prot.
+                          </p>
+                          <p className="text-xs font-black text-blue-700">
+                            {parsed.p}g
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl bg-green-50 px-3 py-2">
+                          <p className="text-[8px] font-black uppercase text-green-500">
+                            Carbo
+                          </p>
+                          <p className="text-xs font-black text-green-700">
+                            {parsed.c}g
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl bg-orange-50 px-3 py-2">
+                          <p className="text-[8px] font-black uppercase text-orange-500">
+                            Gord.
+                          </p>
+                          <p className="text-xs font-black text-orange-700">
+                            {parsed.f}g
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-[24px] bg-white p-5 text-center">
+                <p className="text-sm font-black text-gray-900">
+                  Nenhuma sugestão disponível
+                </p>
+
+                <p className="mt-1 text-xs font-bold text-gray-400">
+                  Use a opção de alimento avulso abaixo.
+                </p>
+              </div>
+            )}
           </div>
-
-          {planOptions.length > 0 ? (
-            <div className="space-y-3">
-              {planOptions.slice(0, 3).map((option: any, index: number) => {
-                const optionMacros = getPlanOptionMacros(option.qty || '');
-           return (
-  <div
-    key={`${option.name}-${index}`}
-    className="w-full rounded-[24px] bg-white border border-gray-100 p-4 shadow-sm"
-  >
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-black text-gray-900 leading-tight">
-          {option.name}
-        </p>
-
-        <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400">
-          {sanitizeOptionQtyText(option.qty || '')}
-        </p>
-      </div>
-
-      <div className="flex flex-col items-end gap-2 shrink-0">
-        <span className="rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
-          {Math.round(safeNumber(option.cal))} cal
-        </span>
-
-        <button
-          type="button"
-          onClick={() => addPlanOption(option)}
-          className="w-10 h-10 shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-100 active:scale-90 transition-all"
-          aria-label={`Registrar ${option.name}`}
-        >
-          <Plus size={20} />
-        </button>
-      </div>
-    </div>
-
-    <div className="mt-3 grid grid-cols-3 gap-2">
-      <div className="rounded-2xl bg-blue-50 px-3 py-2">
-        <p className="text-[8px] font-black uppercase text-blue-500">
-          Prot.
-        </p>
-        <p className="text-xs font-black text-blue-700">
-          {optionMacros.p}g
-        </p>
-      </div>
-
-      <div className="rounded-2xl bg-green-50 px-3 py-2">
-        <p className="text-[8px] font-black uppercase text-green-500">
-          Carbo
-        </p>
-        <p className="text-xs font-black text-green-700">
-          {optionMacros.c}g
-        </p>
-      </div>
-
-      <div className="rounded-2xl bg-orange-50 px-3 py-2">
-        <p className="text-[8px] font-black uppercase text-orange-500">
-          Gord.
-        </p>
-        <p className="text-xs font-black text-orange-700">
-          {optionMacros.f}g
-        </p>
-      </div>
-    </div>
-  </div>
-);
-              })}
-            </div>
-          ) : (
-            <div className="rounded-[24px] bg-white p-5 text-center">
-              <p className="text-sm font-black text-gray-900">
-                Nenhuma sugestão disponível
-              </p>
-
-              <p className="mt-1 text-xs font-bold text-gray-400">
-                Use a opção de alimento avulso abaixo.
-              </p>
-            </div>
-          )}
         </div>
+      )}
 
+      <div className="px-5 mt-5">
         <div className="rounded-[30px] border border-gray-100 bg-white p-4 shadow-sm">
           <button
             type="button"
@@ -9213,8 +9631,7 @@ function AddMealScreen({
                     </p>
 
                     <p className="text-[10px] font-bold text-gray-400">
-                      {item.qty}
-                      {item.unit === 'g' ? 'g' : item.food.un || 'un'} ·{' '}
+                      {item.qty} {item.unit === 'g' ? 'g' : item.food.un || 'un'} ·{' '}
                       {Math.round(safeNumber(item.cal))} cal
                     </p>
                   </div>
@@ -9236,8 +9653,37 @@ function AddMealScreen({
                   </p>
 
                   <p className="text-lg font-black text-green-700">
-                    {Math.round(manualTotals.cal)} cal
+                    {manualTotals.cal} cal
                   </p>
+                </div>
+
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                    <p className="text-[8px] font-black uppercase text-blue-500">
+                      Prot.
+                    </p>
+                    <p className="text-xs font-black text-blue-700">
+                      {manualTotals.p}g
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                    <p className="text-[8px] font-black uppercase text-green-500">
+                      Carbo
+                    </p>
+                    <p className="text-xs font-black text-green-700">
+                      {manualTotals.c}g
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                    <p className="text-[8px] font-black uppercase text-orange-500">
+                      Gord.
+                    </p>
+                    <p className="text-xs font-black text-orange-700">
+                      {manualTotals.f}g
+                    </p>
+                  </div>
                 </div>
 
                 <button
@@ -9245,8 +9691,18 @@ function AddMealScreen({
                   onClick={() => saveMealWithItems(manualItems)}
                   className="mt-4 w-full rounded-2xl bg-green-500 py-4 text-[10px] font-black uppercase tracking-widest text-white active:scale-95 transition-all"
                 >
-                  Salvar refeição
+                  {pendingEditMealId ? 'Salvar alterações' : 'Salvar refeição'}
                 </button>
+
+                {pendingEditMealId && (
+                  <button
+                    type="button"
+                    onClick={confirmDeleteMeal}
+                    className="mt-3 w-full rounded-2xl bg-red-50 py-4 text-[10px] font-black uppercase tracking-widest text-red-500 active:scale-95 transition-all"
+                  >
+                    Excluir refeição
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -9262,28 +9718,37 @@ function AddMealScreen({
   );
 }
 function Navigation() {
-  const { isLoggedIn, onboarded, completeScreening, setPendingEditMealId, setPendingMealType } = useApp();
-  
+  const {
+    isLoggedIn,
+    onboarded,
+    completeScreening,
+    setPendingEditMealId,
+    setPendingMealType,
+    addWorkout,
+    estimateBurned,
+  } = useApp();
+
   const [screen, setScreen] = useState<'hoje' | 'plano' | 'registrar' | 'circulo' | 'perfil' | 'lista'>('hoje');
-  useEffect(() => {
-  const handleNavigate = (event: Event) => {
-    const customEvent = event as CustomEvent<{ screen?: any }>;
-
-    if (customEvent.detail?.screen) {
-      setScreen(customEvent.detail.screen);
-    }
-  };
-
-  window.addEventListener('fitcircle:navigate', handleNavigate);
-
-  return () => {
-    window.removeEventListener('fitcircle:navigate', handleNavigate);
-  };
-}, []);
   const [onboardingSub, setOnboardingSub] = useState<'welcome' | 'auth' | 'triagem'>('welcome');
   const [tempProfile, setTempProfile] = useState<UserProfile | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+
+  useEffect(() => {
+    const handleNavigate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ screen?: any }>;
+
+      if (customEvent.detail?.screen) {
+        setScreen(customEvent.detail.screen);
+      }
+    };
+
+    window.addEventListener('fitcircle:navigate', handleNavigate);
+
+    return () => {
+      window.removeEventListener('fitcircle:navigate', handleNavigate);
+    };
+  }, []);
 
   useEffect(() => {
     const main = document.querySelector('main');
@@ -9298,35 +9763,56 @@ function Navigation() {
     { icon: User, label: 'Perfil', key: 'perfil' },
   ];
 
-  // Logic for Quick Add
   const handleQuickAdd = (type: 'meal' | 'workout') => {
     setShowQuickAdd(false);
+
     if (type === 'meal') {
       setScreen('lista');
-    } else {
-      setShowWorkoutModal(true);
+      return;
     }
+
+    setShowWorkoutModal(true);
   };
 
   if (!isLoggedIn) {
-    if (onboardingSub === 'welcome') return <WelcomeScreen onNext={() => setOnboardingSub('auth')} />;
-    return <AuthScreen onLogin={() => setOnboardingSub('triagem')} onSignup={() => setOnboardingSub('triagem')} />;
+    if (onboardingSub === 'welcome') {
+      return <WelcomeScreen onNext={() => setOnboardingSub('auth')} />;
+    }
+
+    return (
+      <AuthScreen
+        onLogin={() => setOnboardingSub('triagem')}
+        onSignup={() => setOnboardingSub('triagem')}
+      />
+    );
   }
 
   if (!onboarded) {
     if (!tempProfile) {
       return <TriagemScreen onComplete={(p) => setTempProfile(p)} />;
     }
-    return <PlanBuilderScreen profile={tempProfile} onComplete={(final) => completeScreening(final)} />;
+
+    return (
+      <PlanBuilderScreen
+        profile={tempProfile}
+        onComplete={(final) => completeScreening(final)}
+      />
+    );
   }
 
   return (
-        <div className="relative flex flex-col h-full min-h-0 overflow-hidden bg-gray-50">
-        <main className="flex-1 min-h-0 overflow-y-auto w-full no-scrollbar scroll-smooth pb-20">
-        {screen === 'hoje' && <HojeScreen onGoToList={() => setScreen('lista')} onNavigate={setScreen} />}
+    <div className="relative flex flex-col h-full min-h-0 overflow-hidden bg-gray-50">
+      <main className="flex-1 min-h-0 overflow-y-auto w-full no-scrollbar scroll-smooth pb-20">
+        {screen === 'hoje' && (
+          <HojeScreen
+            onGoToList={() => setScreen('lista')}
+            onNavigate={setScreen}
+          />
+        )}
+
         {screen === 'lista' && (
-          <RefeicoesListScreen 
-            onBack={() => setScreen('hoje')} 
+          <RefeicoesListScreen
+            onBack={() => setScreen('hoje')}
             onEdit={(id) => {
               setPendingEditMealId(id);
               setScreen('registrar');
@@ -9337,100 +9823,170 @@ function Navigation() {
             }}
           />
         )}
+
         {screen === 'plano' && <PlanoScreen />}
-        {screen === 'registrar' && <AddMealScreen onBack={() => setScreen('hoje')} />}
         {screen === 'circulo' && <CirculoScreenFoodstagram />}
         {screen === 'perfil' && <PerfilScreen />}
+
+        {screen === 'registrar' && (
+          <AddMealScreen onBack={() => setScreen('hoje')} />
+        )}
       </main>
 
-      <RegisterWorkoutModal isOpen={showWorkoutModal} onClose={() => setShowWorkoutModal(false)} />
+      <div className="fixed bottom-0 w-full max-w-md mx-auto h-24 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = screen === item.key;
 
-      <AnimatePresence>
-       {showQuickAdd && (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => setShowQuickAdd(false)}
-      className="absolute inset-0 bg-black/55 backdrop-blur-sm"
-    />
+          if (item.central) {
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setShowQuickAdd(true)}
+                className="relative -top-5 w-16 h-16 rounded-[28px] bg-green-500 text-white flex items-center justify-center shadow-xl shadow-green-200 border-4 border-white active:scale-95 transition-all"
+              >
+                <Plus size={32} />
+              </button>
+            );
+          }
 
-    <motion.div
-      initial={{ scale: 0.94, y: 16, opacity: 0 }}
-      animate={{ scale: 1, y: 0, opacity: 1 }}
-      exit={{ scale: 0.94, y: 16, opacity: 0 }}
-      className="bg-white w-full max-w-[340px] rounded-[32px] p-5 shadow-2xl relative z-10 text-gray-900"
-    >
-      <h3 className="text-lg font-black text-center mb-5">
-        O que fazer agora?
-      </h3>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => handleQuickAdd('meal')}
-          data-testid="quick-add-meal"
-          className="bg-green-50 p-4 rounded-[24px] flex flex-col items-center gap-2.5 border border-green-100 active:scale-95 transition-all"
-        >
-          <div className="w-11 h-11 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-100">
-            <Utensils size={22} />
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-tight text-green-700 text-center leading-tight">
-            Planejamento do dia
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleQuickAdd('workout')}
-          data-testid="quick-add-workout"
-          className="bg-orange-50 p-4 rounded-[24px] flex flex-col items-center gap-2.5 border border-orange-100 active:scale-95 transition-all"
-        >
-          <div className="w-11 h-11 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-100">
-            <Dumbbell size={22} />
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-tight text-orange-700 text-center leading-tight">
-            Registrar treino
-          </span>
-        </button>
-      </div>
-
-      <button
-        onClick={() => setShowQuickAdd(false)}
-        className="w-full py-3 bg-gray-100 text-gray-400 font-black rounded-2xl text-[10px] uppercase tracking-widest mt-4"
-      >
-        Fechar
-      </button>
-    </motion.div>
-  </div>
-)}
-      </AnimatePresence>
-
-      {/* Bottom Nav */}
-      {screen !== 'registrar' && (
-        <div className="fixed bottom-0 w-full max-w-md mx-auto h-24 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-          {navItems.map((item) => (
+          return (
             <button
               key={item.key}
-              data-testid={item.central ? 'nav-add' : `nav-${item.key}`}
-                onClick={() => item.central ? setShowQuickAdd(true) : setScreen(item.key as any)}
-              className={`flex flex-col items-center gap-1.5 transition-all ${
-                item.central ? 'mb-8' : ''
-              } ${screen === item.key ? 'text-green-600' : 'text-gray-400'}`}
+              type="button"
+              onClick={() => setScreen(item.key as any)}
+              className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${
+                active ? 'text-green-600' : 'text-gray-400'
+              }`}
             >
-              {item.central ? (
-                <div className="bg-green-500 p-4 rounded-3xl shadow-xl shadow-green-200 border-4 border-white active:scale-90 transition-all">
-                  <Plus size={28} className="text-white" />
-                </div>
-              ) : (
-                <>
-                  <item.icon size={22} className={screen === item.key ? 'stroke-[2.5px]' : 'stroke-2'} />
-                  <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
-                </>
-              )}
+              <Icon size={21} />
+              <span className="text-[9px] font-black uppercase">
+                {item.label}
+              </span>
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
+
+      <AnimatePresence>
+        {showQuickAdd && (
+          <div className="fixed inset-0 z-[80] flex items-end justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowQuickAdd(false)}
+              className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="relative z-10 w-full max-w-sm rounded-[34px] bg-white p-5 shadow-2xl mb-24"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                    Adicionar
+                  </p>
+
+                  <h2 className="text-xl font-black text-gray-900">
+                    O que você quer registrar?
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAdd(false)}
+                  className="h-10 w-10 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-500"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleQuickAdd('meal')}
+                  className="rounded-[26px] border border-green-100 bg-green-50 p-5 text-left active:scale-95 transition-all"
+                >
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-green-600 shadow-sm">
+                    <Utensils size={24} />
+                  </div>
+
+                  <p className="text-sm font-black text-gray-900">
+                    Refeição
+                  </p>
+
+                  <p className="mt-1 text-[10px] font-bold text-gray-400 leading-relaxed">
+                    Registrar comida do dia
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickAdd('workout')}
+                  className="rounded-[26px] border border-orange-100 bg-orange-50 p-5 text-left active:scale-95 transition-all"
+                >
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-orange-600 shadow-sm">
+                    <Dumbbell size={24} />
+                  </div>
+
+                  <p className="text-sm font-black text-gray-900">
+                    Treino
+                  </p>
+
+                  <p className="mt-1 text-[10px] font-bold text-gray-400 leading-relaxed">
+                    Registrar atividade física
+                  </p>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showWorkoutModal && (
+          <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWorkoutModal(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="bg-white w-full max-w-lg rounded-t-[44px] sm:rounded-[44px] shadow-2xl p-8 pt-12 z-10 max-h-[90vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="w-16 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" />
+
+              <h2 className="text-3xl font-black text-gray-900 mb-2">
+                Novo Exercício
+              </h2>
+
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-10">
+                Adicione um ou mais realizados hoje
+              </p>
+
+              <WorkoutForm
+                onClose={() => setShowWorkoutModal(false)}
+                onSave={(w) => {
+                  addWorkout(w);
+                  setShowWorkoutModal(false);
+                }}
+                estimateBurned={estimateBurned}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
