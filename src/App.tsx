@@ -2602,16 +2602,17 @@ const addRecipeToPlan = (recipe: any, mealKey: string) => {
   };
 
   const resetApp = () => {
-    setIsLoggedIn(false);
-    setOnboarded(false);
-    setUserProfile(null);
-    setHistory({});
-    setMealCount(4);
-    setCustomFoods([]);
-    setPendingMealType(null);
-    setPendingEditMealId(null);
-    setMyCheckin('Estou bem');
-  };
+  setIsLoggedIn(false);
+  setOnboarded(false);
+  setUserProfile(null);
+  setHistory({});
+  setMealCount(4);
+  setCustomFoods([]);
+  setPendingMealType(null);
+  setPendingEditMealId(null);
+  setMyCheckin('Estou bem');
+  window.location.reload();
+};
 
   const fillDemo = () => {
     const demoProfile: UserProfile = {
@@ -6752,53 +6753,52 @@ function PerfilScreen() {
       ? 'Manutenção'
       : 'Recomposição';
 
-  const getBmiInfo = () => {
-    if (!userProfile) {
-      return {
-        label: 'Não informado',
-        color: '#9CA3AF',
-        position: 0,
-      };
-    }
+ const getBmiInfo = () => {
+  if (!userProfile) return { label: 'Não informado', color: '#9CA3AF', position: 0 };
 
-    if (bmi < 18.5) {
-      return {
-        label: 'Abaixo do peso',
-        color: '#60A5FA',
-        position: 12,
-      };
-    }
+  const calculatedPosition = Math.max(
+    0,
+    Math.min(100, ((bmi - 15) / (40 - 15)) * 100)
+  );
 
-    if (bmi < 25) {
-      return {
-        label: 'Faixa saudável',
-        color: '#22C55E',
-        position: 38,
-      };
-    }
-
-    if (bmi < 30) {
-      return {
-        label: 'Sobrepeso',
-        color: '#F59E0B',
-        position: 63,
-      };
-    }
-
-    if (bmi < 35) {
-      return {
-        label: 'Obesidade I',
-        color: '#F97316',
-        position: 80,
-      };
-    }
-
+  if (bmi < 18.5) {
     return {
-      label: 'Obesidade II+',
-      color: '#EF4444',
-      position: 94,
+      label: 'Abaixo do peso',
+      color: '#60A5FA',
+      position: calculatedPosition,
     };
+  }
+
+  if (bmi < 24.9) {
+    return {
+      label: 'Faixa saudável',
+      color: '#22C55E',
+      position: calculatedPosition,
+    };
+  }
+
+  if (bmi < 29.9) {
+    return {
+      label: 'Sobrepeso',
+      color: '#F59E0B',
+      position: calculatedPosition,
+    };
+  }
+
+  if (bmi < 34.9) {
+    return {
+      label: 'Obesidade I',
+      color: '#F97316',
+      position: calculatedPosition,
+    };
+  }
+
+  return {
+    label: 'Obesidade II+',
+    color: '#EF4444',
+    position: calculatedPosition,
   };
+};
 
   const bmiInfo = getBmiInfo();
 
@@ -6942,12 +6942,20 @@ function PerfilScreen() {
 
   <div className="relative pt-4 pb-2">
     <div
-      className="h-3 rounded-full"
-      style={{
-        background:
-          'linear-gradient(to right, #60A5FA 0%, #60A5FA 18.5%, #22C55E 18.5%, #22C55E 24.9%, #FACC15 24.9%, #FACC15 29.9%, #EF4444 29.9%, #EF4444 100%)',
-      }}
-    />
+  className="relative h-4 rounded-full overflow-hidden shadow-inner"
+  style={{
+    background:
+      'linear-gradient(to right, #60A5FA 0%, #60A5FA 14%, #22C55E 25%, #22C55E 40%, #F59E0B 55%, #F97316 75%, #EF4444 100%)',
+  }}
+>
+  <div
+    className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full border-4 shadow-lg transition-all duration-500 ease-out"
+    style={{
+      left: `calc(${bmiInfo.position}% - 10px)`,
+      borderColor: bmiInfo.color,
+    }}
+  />
+</div>
 
     <div
       className="absolute top-[10px] h-7 w-7 rounded-full border-4 bg-white shadow-lg"
@@ -8193,24 +8201,79 @@ function AddMealScreen({
 }: {
   onBack: () => void;
 }) {
-  const { pendingMealType, pendingEditMealId, setPendingMealType, setPendingEditMealId } = useApp();
+  const {
+    pendingMealType,
+    pendingEditMealId,
+    setPendingMealType,
+    setPendingEditMealId,
+    addMeal,
+    updateMeal,
+    mealPlan,
+  } = useApp();
 
-  useEffect(() => {
-    if (!pendingMealType && !pendingEditMealId) {
-      onBack();
+  const currentMealType = pendingMealType || 'cafe';
+  const planOptions = mealPlan[currentMealType] || [];
+
+  const closeAndBack = () => {
+    setPendingMealType(null);
+    setPendingEditMealId(null);
+    onBack();
+  };
+
+  const handleAddEntry = (entry: MealEntry) => {
+    const now = new Date();
+
+    const newMeal = {
+      type: currentMealType,
+      time: now.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      items: [entry],
+      cal: Math.round(safeNumber(entry.cal)),
+      p: safeNumber(entry.p),
+      c: safeNumber(entry.c),
+      f: safeNumber(entry.f),
+    };
+
+    if (pendingEditMealId) {
+      updateMeal(pendingEditMealId, newMeal);
+    } else {
+      addMeal(newMeal);
     }
-  }, [pendingMealType, pendingEditMealId, onBack]);
+
+    closeAndBack();
+  };
+
+  const addPlanOption = (option: any) => {
+    const macros = getPlanOptionMacros(option.qty || '');
+
+    const entry: MealEntry = {
+      food: {
+        name: option.name,
+        cal: safeNumber(option.cal),
+        p: macros.p,
+        c: macros.c,
+        f: macros.f,
+        category: 'Plano',
+      } as FoodItem,
+      qty: 1,
+      unit: 'un',
+      cal: Math.round(safeNumber(option.cal)),
+      p: macros.p,
+      c: macros.c,
+      f: macros.f,
+    };
+
+    handleAddEntry(entry);
+  };
 
   return (
     <div className="w-full max-w-md bg-gray-50 min-h-screen pb-32">
       <div className="bg-white pt-12 px-6 pb-6 border-b border-gray-100 flex items-center gap-4 sticky top-0 z-30">
         <button
           type="button"
-          onClick={() => {
-            setPendingMealType(null);
-            setPendingEditMealId(null);
-            onBack();
-          }}
+          onClick={closeAndBack}
           className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
         >
           <X size={18} className="text-gray-500" />
@@ -8227,29 +8290,57 @@ function AddMealScreen({
         </div>
       </div>
 
-      <div className="px-6 py-10">
-        <div className="rounded-[32px] border border-gray-100 bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-green-50 text-green-600">
-            <Plus size={26} />
-          </div>
+      <div className="px-6 py-6 space-y-4">
+        {planOptions.length > 0 && (
+          <div className="rounded-[30px] border border-green-100 bg-green-50 p-4">
+            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-green-700">
+              Opções do plano
+            </p>
 
-          <p className="text-lg font-black text-gray-900">
-            Abrindo registro...
+            <div className="space-y-2">
+              {planOptions.slice(0, 3).map((option: any, index: number) => (
+                <button
+                  key={`${option.name}-${index}`}
+                  type="button"
+                  onClick={() => addPlanOption(option)}
+                  className="w-full rounded-2xl bg-white p-4 text-left shadow-sm active:scale-[0.99] transition-all"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-gray-900">
+                        {option.name}
+                      </p>
+
+                      <p className="mt-1 text-[10px] font-bold leading-relaxed text-gray-400">
+                        {sanitizeOptionQtyText(option.qty || '')}
+                      </p>
+                    </div>
+
+                    <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-[9px] font-black uppercase text-green-700">
+                      {Math.round(safeNumber(option.cal))} cal
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-[30px] border border-gray-100 bg-white p-4 text-center shadow-sm">
+          <p className="text-sm font-black text-gray-900">
+            Ou escolha um alimento manualmente
           </p>
 
-          <p className="mt-2 text-xs font-bold leading-relaxed text-gray-400">
-            Escolha os alimentos e salve sua refeição.
+          <p className="mt-1 text-xs font-bold text-gray-400">
+            Busque ingredientes soltos para montar sua refeição.
           </p>
         </div>
       </div>
 
       <AddFoodModal
         isOpen={Boolean(pendingMealType || pendingEditMealId)}
-        onClose={() => {
-          setPendingMealType(null);
-          setPendingEditMealId(null);
-          onBack();
-        }}
+        onClose={closeAndBack}
+        onAdd={handleAddEntry}
       />
     </div>
   );
@@ -8386,7 +8477,7 @@ function Navigation() {
 
       {/* Bottom Nav */}
       {screen !== 'registrar' && (
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-2xl">
+        <div className="fixed bottom-0 w-full max-w-md mx-auto h-24 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
           {navItems.map((item) => (
             <button
               key={item.key}
