@@ -70,6 +70,10 @@ const MEAL_STRICT_LIMITS: Record<string, { max: number; unit: string }> = {
   'Banana prata': { max: 1, unit: 'unidade' },
   'Maçã': { max: 1, unit: 'unidade' },
   'Mamão papaia': { max: 200, unit: 'g' },
+  'Iogurte grego': { max: 1, unit: 'pote' },
+  'Whey Protein': { max: 30, unit: 'g' },
+  'Melão': { max: 180, unit: 'g' },
+  'Laranja': { max: 1, unit: 'unidade' },
 };
 
 
@@ -1158,7 +1162,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       if (normalized.includes('ovo de galinha')) finalQty = Math.min(finalQty, isBreakfast ? 2 : 3);
       if (normalized.includes('clara de ovo')) finalQty = Math.min(finalQty, 4);
 
-      if (strict && (strict.unit === 'unidade' || strict.unit === 'fatia')) {
+            if (
+        strict &&
+        ['unidade', 'fatia', 'pote'].includes(strict.unit)
+      ) {
         finalQty = Math.min(finalQty, strict.max);
       }
 
@@ -1168,7 +1175,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     if (normalized.includes('clara de ovo')) finalQty = Math.min(finalQty, 120);
     if (normalized.includes('manteiga')) finalQty = Math.min(finalQty, 10);
     if (normalized.includes('requeijao')) finalQty = Math.min(finalQty, 30);
-    if (normalized.includes('whey')) finalQty = Math.min(finalQty, 35);
+    if (normalized.includes('whey')) finalQty = Math.min(finalQty, 30);
     if (normalized.includes('lentilha')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('grao-de-bico')) finalQty = Math.min(finalQty, 180);
     if (normalized.includes('tofu')) finalQty = Math.min(finalQty, 200);
@@ -3826,7 +3833,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               className={`w-full rounded-[30px] border-2 p-5 text-left transition-all ${
                 profile.restrictions.includes('Nenhuma')
                   ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-green-100 bg-green-50/60 text-green-700'
+                  : 'border-gray-100 bg-gray-50 text-gray-600'
               }`}
             >
               <div className="flex items-center justify-between gap-3">
@@ -3843,7 +3850,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
                 <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
                   profile.restrictions.includes('Nenhuma')
                     ? 'bg-green-500 text-white'
-                    : 'bg-white text-green-500'
+                    : 'bg-white text-gray-300'
                 }`}>
                   <Check size={17} />
                 </div>
