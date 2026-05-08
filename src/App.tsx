@@ -2750,28 +2750,35 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
   }, [selectedFood]);
 
   const handleAdd = () => {
-    if (!selectedFood) return;
-    const qv = parseFloat(qty) || 0;
-    if (qv <= 0) return;
-    
-    let grams = qv;
-    if (unit === 'un' && selectedFood.amountPerUn) {
-      grams = qv * selectedFood.amountPerUn;
-    }
-    
-    const factor = grams / 100;
-    onAdd({
-      food: selectedFood,
-      qty: qv,
-      unit,
-      cal: Math.round(selectedFood.cal * factor),
-      p: Number((selectedFood.p * factor).toFixed(1)),
-      c: Number((selectedFood.c * factor).toFixed(1)),
-      f: Number((selectedFood.f * factor).toFixed(1)),
-    });
-    setSelectedFood(null);
-    setSearch('');
-  };
+  if (!selectedFood) return;
+
+  const qv = parseFloat(qty) || 0;
+  if (qv <= 0) return;
+
+  let grams = qv;
+
+  if (unit === 'un' && selectedFood.amountPerUn) {
+    grams = qv * selectedFood.amountPerUn;
+  }
+
+  const factor = grams / 100;
+
+  onAdd({
+    food: selectedFood,
+    qty: qv,
+    unit,
+    cal: Math.round(selectedFood.cal * factor),
+    p: Number((selectedFood.p * factor).toFixed(1)),
+    c: Number((selectedFood.c * factor).toFixed(1)),
+    f: Number((selectedFood.f * factor).toFixed(1)),
+  });
+
+  setSelectedFood(null);
+  setSearch('');
+  setQty('100');
+  setUnit('g');
+  onClose();
+};
 
   const handleCreateFood = () => {
     if (!newName || !newCal) return;
@@ -2789,23 +2796,25 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
     setSelectedFood(food);
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
+  if (!isOpen) return null;
+
+return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
-          <motion.div 
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            className="bg-white w-full max-w-lg rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden relative z-10 max-h-[90vh] flex flex-col"
-          >
+          <motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  transition={{ duration: 0.12 }}
+  onClick={onClose}
+  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+/>
+          <motion.div
+  initial={{ y: '100%' }}
+  animate={{ y: 0 }}
+  exit={{ opacity: 0 }}
+  transition={{ duration: 0.18, ease: 'easeOut' }}
+  className="bg-white w-full max-w-lg rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden relative z-10 max-h-[90vh] flex flex-col"
+>
             <div className="p-8 border-b flex justify-between items-center bg-gray-50/50">
               <div>
                 <h3 className="text-xl font-black text-gray-900">{showCreateFood ? 'Novo Alimento' : 'Adicionar Alimento'}</h3>
@@ -2925,7 +2934,7 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
                            </div>
                            <div>
                              <p className="font-black text-gray-900 text-sm">{food.name}</p>
-                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{food.category} · {food.un ? `1 ${food.un}` : '100g'}</p>
+                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{food.category} · {food.portionNote || (food.un ? `1 ${food.un}` : '100g')}</p>
                            </div>
                         </div>
                         <div className="text-right">
@@ -3075,9 +3084,7 @@ function AddFoodModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
               )}
             </div>
           </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+                </div>
   );
 }
 
@@ -8681,18 +8688,30 @@ function AddMealScreen({
 
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       <div className="rounded-2xl bg-blue-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-blue-500">Prot.</p>
-                        <p className="text-xs font-black text-blue-700">{optionMacros.p}g</p>
+                        <p className="text-[8px] font-black uppercase text-blue-500">
+                          Prot.
+                        </p>
+                        <p className="text-xs font-black text-blue-700">
+                          {optionMacros.p}g
+                        </p>
                       </div>
 
                       <div className="rounded-2xl bg-green-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-green-500">Carbo</p>
-                        <p className="text-xs font-black text-green-700">{optionMacros.c}g</p>
+                        <p className="text-[8px] font-black uppercase text-green-500">
+                          Carbo
+                        </p>
+                        <p className="text-xs font-black text-green-700">
+                          {optionMacros.c}g
+                        </p>
                       </div>
 
                       <div className="rounded-2xl bg-orange-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase text-orange-500">Gord.</p>
-                        <p className="text-xs font-black text-orange-700">{optionMacros.f}g</p>
+                        <p className="text-[8px] font-black uppercase text-orange-500">
+                          Gord.
+                        </p>
+                        <p className="text-xs font-black text-orange-700">
+                          {optionMacros.f}g
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -8752,7 +8771,9 @@ function AddMealScreen({
                     </p>
 
                     <p className="text-[10px] font-bold text-gray-400">
-                      {item.qty}{item.unit === 'g' ? 'g' : item.food.un || 'un'} · {Math.round(safeNumber(item.cal))} cal
+                      {item.qty}
+                      {item.unit === 'g' ? 'g' : item.food.un || 'un'} ·{' '}
+                      {Math.round(safeNumber(item.cal))} cal
                     </p>
                   </div>
 
