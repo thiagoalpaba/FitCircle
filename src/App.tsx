@@ -8911,14 +8911,13 @@ function CirculoScreenFoodstagram() {
                 Grupo atual
               </h2>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowInviteModal(true)}
-              className="px-4 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
-            >
-              Convidar
-            </button>
+<button
+  type="button"
+  onClick={() => setSelectedMember(members[0])}
+  className="px-4 py-2 rounded-2xl bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+>
+  Ver dia
+</button>
           </div>
 
           <div className="flex justify-between gap-3">
@@ -8979,22 +8978,6 @@ function CirculoScreenFoodstagram() {
                   >
                     💜
                   </button>
-                </div>
-
-                <div className="mx-4 mb-4 rounded-[28px] bg-green-50 border border-green-100 min-h-[150px] flex items-center justify-center text-center p-6">
-                  <div>
-                    <div className="mx-auto mb-4 w-16 h-16 rounded-[24px] bg-white shadow-sm flex items-center justify-center text-3xl">
-                      {post.type === 'workout' ? '🏋️' : '📷'}
-                    </div>
-
-                    <p className="text-sm font-black text-green-700">
-                      {post.type === 'workout' ? 'Treino registrado' : 'Registro do dia'}
-                    </p>
-
-                    <p className="mt-1 text-[11px] font-bold text-green-600">
-                      {post.type === 'workout' ? 'Movimento registrado' : 'Sem foto publicada'}
-                    </p>
-                  </div>
                 </div>
 
                 <div className="p-4 pt-0">
@@ -9230,12 +9213,336 @@ function CirculoScreenFoodstagram() {
     </div>
   );
 }
+function Navigation() {
+  const {
+    isLoggedIn,
+    onboarded,
+    login,
+    signup,
+    completeScreening,
+    setPendingMealType,
+    setPendingEditMealId,
+  } = useApp();
+
+  const [screen, setScreen] = useState<'hoje' | 'plano' | 'circulo' | 'perfil' | 'refeicoes' | 'registrar'>('hoje');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+  const [tempProfile, setTempProfile] = useState<UserProfile | null>(null);
+
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  const scrollMainToTop = () => {
+    requestAnimationFrame(() => {
+      mainRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  };
+
+  const goToScreen = (nextScreen: typeof screen) => {
+    setScreen(nextScreen);
+    scrollMainToTop();
+  };
+
+  useEffect(() => {
+    scrollMainToTop();
+  }, [screen]);
+
+  useEffect(() => {
+    const handleNavigate = (event: any) => {
+      const nextScreen = event?.detail?.screen;
+
+      if (
+        nextScreen === 'hoje' ||
+        nextScreen === 'plano' ||
+        nextScreen === 'circulo' ||
+        nextScreen === 'perfil' ||
+        nextScreen === 'refeicoes' ||
+        nextScreen === 'registrar'
+      ) {
+        goToScreen(nextScreen);
+      }
+    };
+
+    window.addEventListener('fitcircle:navigate', handleNavigate);
+
+    return () => {
+      window.removeEventListener('fitcircle:navigate', handleNavigate);
+    };
+  }, []);
+
+  if (!isLoggedIn) {
+    return (
+      <AuthScreen
+        onLogin={login}
+        onSignup={signup}
+      />
+    );
+  }
+
+  if (!onboarded) {
+    if (!tempProfile) {
+      return (
+        <TriagemScreen
+          onComplete={(profile) => {
+            setTempProfile(profile);
+          }}
+        />
+      );
+    }
+
+    return (
+      <PlanBuilderScreen
+        profile={tempProfile}
+        onComplete={(finalProfile) => {
+          completeScreening(finalProfile);
+          goToScreen('hoje');
+        }}
+      />
+    );
+  }
+
+  const goToMealList = () => {
+    setPendingMealType(null);
+    setPendingEditMealId(null);
+    goToScreen('refeicoes');
+  };
+
+  const goToAddMeal = (mealType: string) => {
+    setPendingEditMealId(null);
+    setPendingMealType(mealType);
+    goToScreen('registrar');
+  };
+
+  const goToEditMeal = (mealId: string) => {
+    setPendingMealType(null);
+    setPendingEditMealId(mealId);
+    goToScreen('registrar');
+  };
+
+  const navItems = [
+    { key: 'hoje', label: 'Hoje', icon: Calendar },
+    { key: 'plano', label: 'Plano', icon: Book },
+    { key: 'add', label: 'Adicionar', icon: Plus, central: true },
+    { key: 'circulo', label: 'Círculo', icon: Users },
+    { key: 'perfil', label: 'Perfil', icon: User },
+  ] as const;
+
+  const renderCurrentScreen = () => {
+    if (screen === 'hoje') {
+      return (
+        <HojeScreen
+          onGoToList={goToMealList}
+          onNavigate={(nextScreen: string) => {
+            if (nextScreen === 'registrar') {
+              goToMealList();
+              return;
+            }
+
+            if (
+              nextScreen === 'hoje' ||
+              nextScreen === 'plano' ||
+              nextScreen === 'circulo' ||
+              nextScreen === 'perfil' ||
+              nextScreen === 'refeicoes' ||
+              nextScreen === 'registrar'
+            ) {
+              goToScreen(nextScreen as any);
+            }
+          }}
+        />
+      );
+    }
+
+    if (screen === 'plano') return <PlanoScreen />;
+    if (screen === 'circulo') return <CirculoScreenFoodstagram />;
+    if (screen === 'perfil') return <PerfilScreen />;
+
+    if (screen === 'refeicoes') {
+      return (
+        <RefeicoesListScreen
+          onBack={() => goToScreen('hoje')}
+          onEdit={goToEditMeal}
+          onAdd={goToAddMeal}
+        />
+      );
+    }
+
+    if (screen === 'registrar') {
+      return (
+        <AddMealScreen
+          onBack={() => goToScreen('hoje')}
+        />
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="relative w-full max-w-md h-[100dvh] bg-gray-50 overflow-hidden">
+      <main
+        ref={mainRef}
+        className="h-[100dvh] overflow-y-auto overflow-x-hidden pb-28 overscroll-contain"
+      >
+        {renderCurrentScreen()}
+      </main>
+
+      {screen !== 'registrar' && (
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md h-24 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 rounded-t-[32px] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            if (item.central) {
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  data-testid="nav-add"
+                  onClick={() => setShowQuickAdd(true)}
+                  className="relative -top-5 w-16 h-16 rounded-[28px] bg-green-500 text-white flex items-center justify-center shadow-xl shadow-green-200 border-4 border-white active:scale-95 transition-all"
+                  aria-label="Adicionar"
+                >
+                  <Plus size={32} />
+                </button>
+              );
+            }
+
+            const active = screen === item.key;
+
+            return (
+              <button
+                key={item.key}
+                type="button"
+                data-testid={`nav-${item.key}`}
+                onClick={() => goToScreen(item.key as any)}
+                className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl transition-all ${
+                  active ? 'text-green-600 bg-green-50' : 'text-gray-400'
+                }`}
+              >
+                <Icon size={22} />
+                <span className="text-[9px] font-black uppercase tracking-widest">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showQuickAdd && (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowQuickAdd(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="relative z-10 w-full max-w-md rounded-[36px] bg-white p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                    Registrar
+                  </p>
+
+                  <h2 className="text-2xl font-black text-gray-900 mt-1">
+                    O que você quer adicionar?
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAdd(false)}
+                  className="p-3 bg-gray-100 rounded-2xl text-gray-500"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  data-testid="quick-add-meal"
+                  onClick={() => {
+                    setShowQuickAdd(false);
+                    goToMealList();
+                  }}
+                  className="rounded-[28px] bg-green-50 border border-green-100 p-5 text-left active:scale-95 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-green-600 shadow-sm mb-4">
+                    <Utensils size={24} />
+                  </div>
+
+                  <p className="text-sm font-black text-gray-900">
+                    Refeição
+                  </p>
+
+                  <p className="text-[10px] font-bold text-gray-400 mt-1">
+                    Registrar comida
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="quick-add-workout"
+                  onClick={() => {
+                    setShowQuickAdd(false);
+                    setShowWorkoutModal(true);
+                  }}
+                  className="rounded-[28px] bg-orange-50 border border-orange-100 p-5 text-left active:scale-95 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-orange-500 shadow-sm mb-4">
+                    <Dumbbell size={24} />
+                  </div>
+
+                  <p className="text-sm font-black text-gray-900">
+                    Treino
+                  </p>
+
+                  <p className="text-[10px] font-bold text-gray-400 mt-1">
+                    Registrar atividade
+                  </p>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <RegisterWorkoutModal
+        isOpen={showWorkoutModal}
+        onClose={() => setShowWorkoutModal(false)}
+      />
+    </div>
+  );
+}
 function App() {
+  useEffect(() => {
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, []);
+
   return (
     <AppProvider>
-      <MobileFrame>
-        <Navigation />
-      </MobileFrame>
+      <div className="min-h-[100dvh] w-full bg-gray-100 flex justify-center">
+        <div className="w-full max-w-md min-h-[100dvh] bg-white">
+          <Navigation />
+        </div>
+      </div>
     </AppProvider>
   );
 }
