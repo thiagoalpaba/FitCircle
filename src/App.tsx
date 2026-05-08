@@ -3065,27 +3065,12 @@ function CalorieRing({
 
   const safeConsumed = Math.max(0, Math.round(safeNumber(consumed)));
   const safeGoal = Math.max(1, Math.round(safeNumber(goal, 1)));
-  const safeBurned = Math.max(0, Math.round(safeNumber(burned)));
-  const remaining = Math.max(safeGoal - safeConsumed, 0);
 
   const progress = Math.min(safeConsumed / safeGoal, 1);
   const isOver = safeConsumed > safeGoal;
 
   const strokeDashoffset = circumference - progress * circumference;
-
-  const ringColor = isOver ? '#F59E0B' : '#22C55E';
-
-  const statusTitle = isOver
-    ? 'Passou da meta hoje'
-    : remaining === 0
-    ? 'Meta atingida'
-    : 'Disponível hoje';
-
-  const statusValue = isOver
-    ? 'Ajuste com calma na próxima refeição.'
-    : remaining === 0
-    ? 'Bom trabalho por hoje.'
-    : `${remaining} calorias para usar no dia`;
+  const ringColor = isOver ? '#F59E0B' : '#FFFFFF';
 
   return (
     <div className="relative flex flex-col items-center justify-center">
@@ -3095,7 +3080,7 @@ function CalorieRing({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="rgba(255,255,255,0.12)"
+            stroke="rgba(255,255,255,0.18)"
             strokeWidth={stroke}
             fill="transparent"
           />
@@ -3115,45 +3100,28 @@ function CalorieRing({
           />
         </svg>
 
-        <div className="absolute flex flex-col items-center max-w-[160px] text-center">
-          <span className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">
             Consumido
-          </span>
+          </p>
 
-          <div className="flex items-baseline gap-1">
-            <span className="text-5xl font-black text-white">
-              {safeConsumed}
-            </span>
+          <p className="mt-1 text-5xl font-black leading-none text-white">
+            {safeConsumed}
+          </p>
 
-            <span className="text-sm font-bold text-white/60 uppercase">
-              cal
-            </span>
-          </div>
-
-          <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">
-            Calorias registradas
-          </span>
-          <p className="mt-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">
-  Meta diária: {Math.round(goal)} calorias
-</p>
+          <p className="mt-1 text-xs font-black uppercase tracking-widest text-white/65">
+            cal
+          </p>
         </div>
       </div>
 
-      <div className="mt-5 bg-white/14 backdrop-blur-md px-5 py-3 rounded-3xl border border-white/10 text-center min-w-[210px]">
-        <p className="text-[9px] font-black text-white/65 uppercase tracking-[0.18em]">
-          {statusTitle}
-        </p>
+      <p className="mt-3 text-center text-[10px] font-bold text-white/60">
+        Meta diária: {safeGoal} calorias
+      </p>
 
-        <p className="text-sm font-black text-white mt-1 leading-tight">
-          {statusValue}
-        </p>
-
-        {safeBurned > 0 && (
-          <p className="text-[10px] font-bold text-white/70 mt-2">
-            🔥 {safeBurned} calorias de treino hoje
-          </p>
-        )}
-      </div>
+      <span className="sr-only">
+        Treino registrado: {Math.round(safeNumber(burned))} calorias
+      </span>
     </div>
   );
 }
@@ -4154,7 +4122,7 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bg-white w-full max-w-lg rounded-t-[40px] sm:rounded-[40px] shadow-2xl p-8 z-10 max-h-[90vh] overflow-y-auto no-scrollbar">
               <div className="flex justify-between items-center mb-8">
-                 <h2 className="text-2xl font-black">Histórico</h2>
+                 <h2 className="text-2xl font-black">Ver dia</h2>
                  <button onClick={onClose} className="p-2 bg-gray-100 rounded-xl"><X size={20}/></button>
               </div>
 
@@ -4329,7 +4297,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             <Zap size={16} className="fill-current shrink-0" />
             <div className="leading-tight">
               <p className="text-[8px] font-black uppercase tracking-widest opacity-60">
-                Ainda disponível
+                Disponível hoje
               </p>
               <p className="text-sm font-black uppercase tracking-tight">
                 {formatKcal(remaining)}
@@ -4398,7 +4366,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
             onClick={onGoToList}
             className="text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-xl transition-all active:scale-95"
           >
-            Histórico
+            Ver dia
           </button>
         </div>
 
@@ -4509,7 +4477,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
           ) : (
             <div
               key={cfg.key}
-              className="bg-white rounded-[28px] p-5 border border-dashed border-gray-200 shadow-sm"
+              className="bg-white rounded-[28px] p-5 border border-gray-100 shadow-sm"
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 rounded-2xl" style={{ backgroundColor: `${cfg.color}10` }}>
@@ -4521,7 +4489,7 @@ function HojeScreen({ onGoToList, onNavigate }: { onGoToList: () => void; onNavi
                     {cfg.label}
                   </p>
                   <p className="text-[10px] text-green-600 font-black uppercase mt-0.5">
-                    Plano
+                    Sugestão
                   </p>
                 </div>
               </div>
