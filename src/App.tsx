@@ -5037,14 +5037,8 @@ const visibleRecipes = FITNESS_RECIPES.filter(recipeIsAllowed).filter(
 
   // Mostra imagem só nas receitas que estão confiáveis por enquanto.
   const curatedImageIds = new Set([
-    'aveia-gelada-banana',
-    'panqueca-banana-aveia',
-    'wrap-frango',
-    'sanduiche-frango',
-    'omelete-queijo-tomate',
-    'bowl-frango-quinoa',
-    'smoothie-morango-iogurte',
-  ]);
+  'panqueca-banana-aveia',
+]);
 
   const handleAddRecipeToPlan = (recipe: FitnessRecipe, mealKey: string) => {
     addRecipeToPlan(recipe, mealKey as any);
@@ -8121,7 +8115,7 @@ function CirculoScreenFoodstagram() {
       subtitle: 'Almoço registrado',
       calories: 559,
       time: '12:30',
-      image: '/recipes/bowl-frango-quinoa.jpg',
+      image: '',
       type: 'meal',
     },
     {
