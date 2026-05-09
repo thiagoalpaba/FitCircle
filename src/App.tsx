@@ -3277,7 +3277,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
         msg = 'Preencha seu e-mail para continuar.';
       } else if (!email.includes('@')) {
         fields.push('email');
-        msg = 'Digite um e-mail vÃ¡lido.';
+        msg = 'Digite um e-mail válido.';
       } else if (!password.trim()) {
         fields.push('password');
         msg = 'Digite sua senha.';
@@ -3287,23 +3287,23 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
         fields.push('name');
         msg = 'Digite seu nome.';
       } else if (!email.trim()) {
-         fields.push('email');
-         msg = 'Digite seu e-mail.';
+        fields.push('email');
+        msg = 'Digite seu e-mail.';
       } else if (!email.includes('@')) {
-         fields.push('email');
-         msg = 'Digite um e-mail vÃ¡lido.';
+        fields.push('email');
+        msg = 'Digite um e-mail válido.';
       } else if (!password.trim()) {
-         fields.push('password');
-         msg = 'Digite uma senha.';
+        fields.push('password');
+        msg = 'Digite uma senha.';
       } else if (password.length < 6) {
-         fields.push('password');
-         msg = 'A senha deve ter pelo menos 6 caracteres.';
+        fields.push('password');
+        msg = 'A senha deve ter pelo menos 6 caracteres.';
       } else if (!confirmPassword.trim()) {
-         fields.push('confirmPassword');
-         msg = 'Confirme sua senha.';
+        fields.push('confirmPassword');
+        msg = 'Confirme sua senha.';
       } else if (password !== confirmPassword) {
-         fields.push('password', 'confirmPassword');
-         msg = 'As senhas nÃ£o conferem.';
+        fields.push('password', 'confirmPassword');
+        msg = 'As senhas não conferem.';
       }
     }
 
@@ -3314,9 +3314,8 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
 
   const handleAction = async () => {
     if (!validate()) return;
-    
+
     setIsLoading(true);
-    // Simulate a short delay for premium feel
     await new Promise(res => setTimeout(res, 800));
 
     if (mode === 'login') {
@@ -3326,143 +3325,183 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
       signup(email);
       onSignup();
     }
+
     setIsLoading(false);
   };
 
   const handleDemo = async () => {
     setIsLoading(true);
     await new Promise(res => setTimeout(res, 500));
-    login('demo@test.com'); 
+    login('demo@test.com');
     onLogin();
     setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-white p-8 flex flex-col relative">
-       {mode === 'signup' && (
-         <button 
-           onClick={() => setMode('login')}
-           className="absolute top-8 left-8 p-3 bg-gray-50 rounded-2xl text-gray-400 active:scale-95 transition-all"
-         >
-           <ChevronUp className="-rotate-90" size={20} />
-         </button>
-       )}
+      {mode === 'signup' && (
+        <button
+          type="button"
+          onClick={() => setMode('login')}
+          className="absolute top-8 left-8 p-3 bg-gray-50 rounded-2xl text-gray-400 active:scale-95 transition-all"
+        >
+          <ChevronUp className="-rotate-90" size={20} />
+        </button>
+      )}
 
-       <div className="flex-1 flex flex-col justify-center">
-          <div className={`mb-8 flex justify-center transition-all ${mode === 'signup' ? 'scale-75' : 'scale-100'}`}>
-             <Logo />
+      <div className="flex-1 flex flex-col justify-center">
+        <div className={`mb-8 flex justify-center transition-all ${mode === 'signup' ? 'scale-75' : 'scale-100'}`}>
+          <Logo />
+        </div>
+
+        <h2 className="text-3xl font-black text-gray-900 mb-2 leading-tight">
+          {mode === 'login' ? 'Bem-vindo de volta!' : 'Crie sua conta'}
+        </h2>
+
+        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-10">
+          {mode === 'login' ? 'Entre para continuar seu progresso' : 'Comece sua jornada FitCircle hoje'}
+        </p>
+
+        <div className="space-y-4">
+          {mode === 'signup' && (
+            <div className="space-y-1">
+              <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('name') ? 'text-red-500' : 'text-gray-400'}`}>
+                Nome
+              </label>
+
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${
+                  errorFields.includes('name')
+                    ? 'border-red-100 bg-red-50/30'
+                    : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'
+                }`}
+                placeholder="Seu nome"
+              />
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('email') ? 'text-red-500' : 'text-gray-400'}`}>
+              E-mail
+            </label>
+
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+              placeholder="seu@email.com"
+            />
           </div>
-          <h2 className="text-3xl font-black text-gray-900 mb-2 leading-tight">
-            {mode === 'login' ? 'Bem-vindo de volta!' : 'Crie sua conta'}
-          </h2>
-          <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-10">
-            {mode === 'login' ? 'Entre para continuar seu progresso' : 'Comece sua jornada FitCircle hoje'}
-          </p>
 
-          <div className="space-y-4">
-             {mode === 'signup' && (
-               <div className="space-y-1">
-                  <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('name') ? 'text-red-500' : 'text-gray-400'}`}>Nome</label>
-                  <input 
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${errorFields.includes('name') ? 'border-red-100 bg-red-50/30' : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'}`} 
-                    placeholder="Seu nome" 
-                  />
-               </div>
-             )}
-             <div className="space-y-1">
-                <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('email') ? 'text-red-500' : 'text-gray-400'}`}>E-mail</label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
-                  placeholder="seu@email.com" 
-                />
-             </div>
-             <div className="space-y-1">
-                <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('password') ? 'text-red-500' : 'text-gray-400'}`}>Senha</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                 className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
-                />
-             </div>
-             {mode === 'signup' && (
-               <div className="space-y-1">
-                  <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('confirmPassword') ? 'text-red-500' : 'text-gray-400'}`}>Confirmar Senha</label>
-                  <input 
-                    type="password" 
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${errorFields.includes('confirmPassword') ? 'border-red-100 bg-red-50/30' : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'}`} 
-                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
-                  />
-               </div>
-             )}
+          <div className="space-y-1">
+            <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('password') ? 'text-red-500' : 'text-gray-400'}`}>
+              Senha
+            </label>
 
-             {error && (
-               <div className="flex items-center gap-2 px-2 py-1">
-                  <AlertCircle size={14} className="text-red-500" />
-                  <p className="text-xs font-bold text-red-500">{error}</p>
-               </div>
-             )}
-             <button
-  type="button"
-  className="self-end text-xs font-bold text-green-700 hover:text-green-800"
->
-  Esqueci minha senha
-</button>
-             <button 
-              onClick={handleAction}
-              disabled={isLoading}
-              className={`w-full bg-green-500 text-white font-black py-5 mt-6 rounded-[32px] shadow-xl shadow-green-100 uppercase tracking-widest text-sm active:scale-95 transition-all flex items-center justify-center gap-2 ${isLoading ? 'opacity-80' : ''}`}
-             >
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+              placeholder="Sua senha"
+            />
+          </div>
+
+          {mode === 'signup' && (
+            <div className="space-y-1">
+              <label className={`text-[10px] font-black uppercase ml-1 ${errorFields.includes('confirmPassword') ? 'text-red-500' : 'text-gray-400'}`}>
+                Confirmar senha
+              </label>
+
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${
+                  errorFields.includes('confirmPassword')
+                    ? 'border-red-100 bg-red-50/30'
+                    : 'border-transparent focus:bg-white focus:ring-2 focus:ring-green-500'
+                }`}
+                placeholder="Confirme sua senha"
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 px-2 py-1">
+              <AlertCircle size={14} className="text-red-500" />
+              <p className="text-xs font-bold text-red-500">{error}</p>
+            </div>
+          )}
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              className="self-end text-xs font-bold text-green-700 hover:text-green-800"
+            >
+              Esqueci minha senha
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleAction}
+            disabled={isLoading}
+            className={`w-full bg-green-500 text-white font-black py-5 mt-6 rounded-[32px] shadow-xl shadow-green-100 uppercase tracking-widest text-sm active:scale-95 transition-all flex items-center justify-center gap-2 ${
+              isLoading ? 'opacity-80' : ''
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                {mode === 'login' ? 'Entrando...' : 'Criando conta...'}
+              </>
+            ) : (
+              <>{mode === 'login' ? 'Entrar' : 'Continuar'}</>
+            )}
+          </button>
+
+          {mode === 'login' && (
+            <>
+              <div className="flex items-center gap-4 py-6">
+                <div className="h-px bg-gray-100 flex-1" />
+                <span className="text-[10px] font-black text-gray-300 uppercase">
+                  ou
+                </span>
+                <div className="h-px bg-gray-100 flex-1" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDemo}
+                disabled={isLoading}
+                className="w-full bg-gray-50 text-gray-400 font-black py-5 rounded-[28px] text-[10px] uppercase tracking-widest border border-gray-100 active:bg-gray-100 transition-all mb-4 flex items-center justify-center gap-2"
+              >
                 {isLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {mode === 'login' ? 'Entrando...' : 'Criando conta...'}
-                  </>
+                  <span className="w-3 h-3 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
                 ) : (
-                  <>{mode === 'login' ? 'Entrar' : 'Continuar'}</>
+                  <span>Entrar como demo</span>
                 )}
-             </button>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
-             {mode === 'login' && (
-               <>
-                 <div className="flex items-center gap-4 py-6">
-                    <div className="h-px bg-gray-100 flex-1"/>
-                    <span className="text-[10px] font-black text-gray-300 uppercase">ou</span>
-                    <div className="h-px bg-gray-100 flex-1"/>
-                 </div>
+      <div className="text-center text-xs text-gray-400 font-medium pb-2">
+        {mode === 'login' ? 'Não tem uma conta?' : 'Já tem uma conta?'}
 
-                 <button 
-                  onClick={handleDemo}
-                  disabled={isLoading}
-                  className="w-full bg-gray-50 text-gray-400 font-black py-5 rounded-[28px] text-[10px] uppercase tracking-widest border border-gray-100 active:bg-gray-100 transition-all mb-4 flex items-center justify-center gap-2"
-                 >
-                    {isLoading ? (
-                       <span className="w-3 h-3 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
-                    ) : (
-                       <span>Entrar como Demo</span>
-                    )}
-                 </button>
-               </>
-             )}
-          </div>
-       </div>
-       <div className="text-center text-xs text-gray-400 font-medium pb-2">
-         {mode === 'login' ? 'NÃ£o tem uma conta?' : 'JÃ¡ tem uma conta?'}
-         <button 
+        <button
+          type="button"
           onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
           className="text-green-600 font-black ml-1 outline-none hover:underline"
-         >
-           {mode === 'login' ? 'Criar agora' : 'Entrar agora'}
-         </button>
-       </div>
+        >
+          {mode === 'login' ? 'Criar agora' : 'Entrar agora'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -3505,15 +3544,15 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
 
   const restrictionOptions = [
     'Lactose',
-    'GlÃºten',
+    'Glúten',
     'Amendoim',
     'Castanhas/nozes',
     'Ovo',
     'Leite',
     'Soja',
     'Peixes',
-    'CrustÃ¡ceos',
-    'Frutos do Mar',
+    'Crustáceos',
+    'Frutos do mar',
     'Gergelim',
     'Corantes/aditivos',
     'Outro',
@@ -3527,7 +3566,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
     setScreeningError('');
 
     if (step === 9 && (!profile.restrictions || profile.restrictions.length === 0)) {
-      setScreeningError('Selecione uma restriÃ§Ã£o ou marque "Nenhuma" para continuar.');
+      setScreeningError('Selecione uma restrição ou marque "Nenhuma" para continuar.');
       return;
     }
 
@@ -3575,8 +3614,9 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
           <div className="space-y-8">
             <div className="space-y-2">
               <p className="text-xs font-bold text-green-600">
-  Boas-vindas
-</p>
+                Boas-vindas
+              </p>
+
               <h2 className="text-4xl font-black text-gray-900 leading-tight">
                 Como podemos te chamar?
               </h2>
@@ -3596,7 +3636,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              Sua idade e sexo biolÃ³gico
+              Sua idade e sexo biológico
             </h2>
 
             <div className="grid grid-cols-2 gap-4">
@@ -3643,7 +3683,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              Peso e Altura
+              Peso e altura
             </h2>
 
             <div className="grid grid-cols-2 gap-4">
@@ -3693,13 +3733,13 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              Perfil Alimentar
+              Perfil alimentar
             </h2>
 
             <div className="grid grid-cols-1 gap-3">
               {[
-                { k: 'sem_restricao', l: 'Sem restriÃ§Ã£o', d: 'Como de tudo' },
-                { k: 'vegetariano', l: 'Vegetariano', d: 'Sem carne (frango, carne, peixe)' },
+                { k: 'sem_restricao', l: 'Sem restrição', d: 'Como de tudo' },
+                { k: 'vegetariano', l: 'Vegetariano', d: 'Sem carne, frango ou peixe' },
                 { k: 'vegano', l: 'Vegano', d: 'Sem nenhum item de origem animal' },
                 { k: 'pescetariano', l: 'Pescetariano', d: 'Sem carne, mas como peixe' },
               ].map(opt => {
@@ -3750,8 +3790,8 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
             <div className="grid grid-cols-1 gap-3">
               {[
                 { k: 'perda', l: 'Emagrecer', d: 'Focar em queima de gordura' },
-                { k: 'manutencao', l: 'Manter Peso', d: 'SaÃºde e definiÃ§Ã£o' },
-                { k: 'ganho', l: 'Ganhar Massa', d: 'Foco em mÃºsculos e forÃ§a' },
+                { k: 'manutencao', l: 'Manter peso', d: 'Saúde e definição' },
+                { k: 'ganho', l: 'Ganhar massa', d: 'Foco em músculos e força' },
               ].map(opt => {
                 const selected = profile.goal === opt.k;
 
@@ -3794,12 +3834,12 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              FrequÃªncia de treinos
+              Frequência de treinos
             </h2>
 
             <div className="space-y-8 text-center">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                SessÃµes por semana
+                Sessões por semana
               </p>
 
               <div className="flex justify-center text-9xl font-black text-green-500">
@@ -3822,7 +3862,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
         return (
           <div className="space-y-8">
             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-              RefeiÃ§Ãµes por dia
+              Refeições por dia
             </h2>
 
             <div className="grid grid-cols-2 gap-3 mt-8">
@@ -3845,7 +3885,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
                     </span>
 
                     <span className="text-[10px] font-bold uppercase mt-1">
-                      RefeiÃ§Ãµes
+                      Refeições
                     </span>
                   </button>
                 );
@@ -3863,12 +3903,12 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
 
             <div className="grid grid-cols-1 gap-2">
               {[
-                'Falta de Tempo',
-                'Vontade de Doces',
-                'Fome Excessiva',
-                'Rotina Social',
-                'NÃ£o saber cozinhar',
-                'OrganizaÃ§Ã£o das refeiÃ§Ãµes',
+                'Falta de tempo',
+                'Vontade de doces',
+                'Fome excessiva',
+                'Rotina social',
+                'Não saber cozinhar',
+                'Organização das refeições',
               ].map(diff => {
                 const selected = profile.mainDifficulty === diff;
 
@@ -3904,16 +3944,16 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
           <div className="space-y-8">
             <div className="space-y-2">
               <p className="text-xs font-bold text-red-500">
-  SeguranÃ§a
-</p>
+                Segurança
+              </p>
 
               <h2 className="text-4xl font-black text-gray-900 leading-tight">
-                RestriÃ§Ãµes ou Alergias?
+                Restrições ou alergias?
               </h2>
             </div>
 
             <p className="text-xs text-gray-500 font-bold px-1 uppercase tracking-tight">
-              Marque apenas o que vocÃª precisa evitar.
+              Marque apenas o que você precisa evitar.
             </p>
 
             {screeningError && (
@@ -3936,7 +3976,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-lg font-black">
-                    Nenhuma restriÃ§Ã£o
+                    Nenhuma restrição
                   </p>
 
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-tight text-green-600">
@@ -3985,7 +4025,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               <input
                 autoFocus
                 className="w-full mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100"
-                placeholder="Descreva outra restriÃ§Ã£o..."
+                placeholder="Descreva outra restrição..."
               />
             )}
           </div>
@@ -4058,7 +4098,7 @@ function TriagemScreen({ onComplete }: { onComplete: (profile: UserProfile) => v
               : 'bg-green-500 text-white shadow-green-100'
           }`}
         >
-          {step === totalSteps ? 'PrÃ³ximo Passo' : 'PrÃ³ximo'}
+          {step === totalSteps ? 'Próximo passo' : 'Próximo'}
         </button>
       </div>
     </div>
