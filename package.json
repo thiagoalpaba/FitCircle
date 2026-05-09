@@ -4,18 +4,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-  "dev": "vite --port=3000 --host=0.0.0.0",
-  "dev:test": "vite --host=127.0.0.1 --port=3010 --strictPort",
-  "build": "vite build",
-  "preview": "vite preview",
-  "typecheck": "tsc --noEmit",
-  "test:e2e": "playwright test",
-  "test:e2e:ui": "playwright test --ui",
-  "test:e2e:report": "playwright show-report",
-  "check": "npm run build && npm run test:e2e"
-},
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev:test": "vite --host=127.0.0.1 --port=3010 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "check": "npm run build && npm run test:e2e"
+  },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
@@ -33,6 +34,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.21",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"

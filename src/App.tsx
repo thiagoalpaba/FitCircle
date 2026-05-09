@@ -60,7 +60,7 @@ import {
 
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileFrame } from './components/MobileFrame';
-
+import { supabase } from './lib/supabase';
 import { MEAL_CONFIGS, type MealConfig, type MealCount } from './data/mealConfigs';
 import {
   BASE_CALS,
@@ -788,7 +788,117 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   const [myCheckin, setMyCheckin] = useState('Estou bem');
   const [mealPlan, setMealPlan] = useState<Record<string, { name: string; qty: string; cal: number; badge?: string; badgeDesc?: string }[]>>({});
   const [selectedCircleId, setSelectedCircleId] = useState('group1');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+const [isRestoringState, setIsRestoringState] = useState(true);
+const saveTimerRef = useRef<number | null>(null);
 
+const isE2EDemoMode = () => {
+  return new URLSearchParams(window.location.search).get('e2eDemo') === '1';
+};
+
+const buildPersistedState = () => ({
+  onboarded,
+  userProfile,
+  history,
+  selectedDate: selectedDate.toISOString(),
+  customFoods,
+  mealCount,
+  myCheckin,
+  mealPlan,
+  selectedCircleId,
+});
+
+const applyPersistedState = (state: any) => {
+  if (!state || typeof state !== 'object') return;
+
+  if (state.userProfile) {
+    setUserProfile(state.userProfile);
+    setOnboarded(Boolean(state.onboarded));
+    setMealCount((state.userProfile.mealCount || state.mealCount || 4) as MealCount);
+  } else {
+    setUserProfile(null);
+    setOnboarded(false);
+    setMealCount((state.mealCount || 4) as MealCount);
+  }
+
+  setHistory(state.history || {});
+  setCustomFoods(state.customFoods || []);
+  setMyCheckin(state.myCheckin || 'Estou bem');
+  setMealPlan(state.mealPlan || {});
+  setSelectedCircleId(state.selectedCircleId || 'group1');
+
+  if (state.selectedDate) {
+    const parsedDate = new Date(state.selectedDate);
+
+    if (!Number.isNaN(parsedDate.getTime())) {
+      setSelectedDate(parsedDate);
+    }
+  }
+};
+
+const loadUserAppState = async () => {
+  setIsRestoringState(true);
+
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setCurrentUserId(null);
+      setIsLoggedIn(false);
+      setIsRestoringState(false);
+      return;
+    }
+
+    const userId = userData.user.id;
+    setCurrentUserId(userId);
+
+    const { data, error } = await supabase
+      .from('user_app_state')
+      .select('app_state')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
+      setIsLoggedIn(true);
+      setIsRestoringState(false);
+      return;
+    }
+
+    if (data?.app_state) {
+      applyPersistedState(data.app_state);
+    } else {
+      setUserProfile(null);
+      setOnboarded(false);
+      setHistory({});
+      setMealPlan({});
+      setMealCount(4);
+    }
+
+    setIsLoggedIn(true);
+  } finally {
+    setIsRestoringState(false);
+  }
+};
+
+const saveUserAppState = async () => {
+  if (!currentUserId) return;
+  if (isE2EDemoMode()) return;
+
+  const payload = buildPersistedState();
+
+  const { error } = await supabase
+    .from('user_app_state')
+    .upsert({
+      user_id: currentUserId,
+      app_state: payload,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('Erro ao salvar dados do usuário:', error);
+  }
+};
   const updateHistory = (newMeals: Meal[], newWorkouts: Workout[]) => {
     setHistory(prev => ({
       ...prev,
@@ -873,23 +983,39 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     return Math.round((BASE_CALS[type] ?? 5) * (INT_MULT[intensity] ?? 1) * (weight / 70) * dur);
   };
 
-  const login = (email: string) => {
-    setIsLoggedIn(true);
-    // If demo, we want to go to screening with empty fields or default values
-    if (email === 'demo@test.com') {
-      setUserProfile(null); // Ensure fresh start
-      setOnboarded(false);
-    }
-  };
-  
-  const signup = (email: string) => {
-    setIsLoggedIn(true);
-    setOnboarded(false);
-  };
+  const login = async (email: string) => {
+  setIsLoggedIn(true);
 
-  const logout = () => {
-    setIsLoggedIn(false);
-  };
+  if (email === 'demo@test.com') {
+    setCurrentUserId(null);
+    return;
+  }
+
+  await loadUserAppState();
+};
+  
+  const signup = async (email: string) => {
+  setIsLoggedIn(true);
+  setOnboarded(false);
+  await loadUserAppState();
+};
+
+  const logout = async () => {
+  await saveUserAppState();
+  await supabase.auth.signOut();
+
+  setCurrentUserId(null);
+  setIsLoggedIn(false);
+  setOnboarded(false);
+  setUserProfile(null);
+  setHistory({});
+  setMealPlan({});
+  setMealCount(4);
+  setCustomFoods([]);
+  setPendingMealType(null);
+  setPendingEditMealId(null);
+  setMyCheckin('Estou bem');
+};
 
 const updateProfile = (p: Partial<UserProfile>) => {
   setUserProfile(prev => {
@@ -2723,13 +2849,68 @@ const addRecipeToPlan = (recipe: any, mealKey: string) => {
     setOnboarded(true);
     setIsLoggedIn(true);
   };
-  
+useEffect(() => {
+  if (!isLoggedIn) return;
+  if (!currentUserId) return;
+  if (isRestoringState) return;
+  if (isE2EDemoMode()) return;
+
+  if (saveTimerRef.current) {
+    window.clearTimeout(saveTimerRef.current);
+  }
+
+  saveTimerRef.current = window.setTimeout(() => {
+    saveUserAppState();
+  }, 900);
+
+  return () => {
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+  };
+}, [
+  isLoggedIn,
+  currentUserId,
+  isRestoringState,
+  onboarded,
+  userProfile,
+  history,
+  customFoods,
+  mealCount,
+  myCheckin,
+  mealPlan,
+  selectedCircleId,
+  selectedDate,
+]);  
+
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
 
   if (params.get('e2eDemo') === '1') {
     fillDemo();
+    setIsRestoringState(false);
+    return;
   }
+
+  loadUserAppState();
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session?.user) {
+      setCurrentUserId(null);
+      setIsLoggedIn(false);
+      setIsRestoringState(false);
+      return;
+    }
+
+    setCurrentUserId(session.user.id);
+    loadUserAppState();
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
 }, []);
 
   return (
@@ -3258,24 +3439,53 @@ function WelcomeScreen({ onNext }: { onNext: () => void }) {
 
 function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
   const { login, signup } = useApp();
+
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorFields, setErrorFields] = useState<string[]>([]);
+  const cleanEmail = email.trim().toLowerCase();
+
+  const translateAuthError = (message: string) => {
+    const normalized = String(message || '').toLowerCase();
+
+    if (normalized.includes('invalid login credentials')) {
+      return 'E-mail ou senha incorretos.';
+    }
+
+    if (normalized.includes('email not confirmed')) {
+      return 'Confirme seu e-mail antes de entrar.';
+    }
+
+    if (normalized.includes('user already registered') || normalized.includes('already registered')) {
+      return 'Esse e-mail já tem conta. Tente entrar.';
+    }
+
+    if (normalized.includes('password')) {
+      return 'Verifique sua senha. Ela deve ter pelo menos 6 caracteres.';
+    }
+
+    if (normalized.includes('email')) {
+      return 'Verifique o e-mail informado.';
+    }
+
+    return 'Não foi possível continuar agora. Tente novamente.';
+  };
 
   const validate = () => {
     const fields: string[] = [];
     let msg = '';
 
     if (mode === 'login') {
-      if (!email.trim()) {
+      if (!cleanEmail) {
         fields.push('email');
         msg = 'Preencha seu e-mail para continuar.';
-      } else if (!email.includes('@')) {
+      } else if (!cleanEmail.includes('@')) {
         fields.push('email');
         msg = 'Digite um e-mail válido.';
       } else if (!password.trim()) {
@@ -3286,10 +3496,10 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
       if (!name.trim()) {
         fields.push('name');
         msg = 'Digite seu nome.';
-      } else if (!email.trim()) {
+      } else if (!cleanEmail) {
         fields.push('email');
         msg = 'Digite seu e-mail.';
-      } else if (!email.includes('@')) {
+      } else if (!cleanEmail.includes('@')) {
         fields.push('email');
         msg = 'Digite um e-mail válido.';
       } else if (!password.trim()) {
@@ -3309,6 +3519,7 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
 
     setErrorFields(fields);
     setError(msg);
+    setSuccessMessage(null);
     return fields.length === 0;
   };
 
@@ -3316,25 +3527,79 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
     if (!validate()) return;
 
     setIsLoading(true);
-    await new Promise(res => setTimeout(res, 800));
+    setError(null);
+    setSuccessMessage(null);
 
-    if (mode === 'login') {
-      login(email);
-      onLogin();
-    } else {
-      signup(email);
-      onSignup();
+    try {
+      if (mode === 'login') {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (signInError || !data.user) {
+          setError(translateAuthError(signInError?.message || 'Invalid login credentials'));
+          setErrorFields(['email', 'password']);
+          return;
+        }
+
+        await Promise.resolve(login(cleanEmail));
+onLogin();
+        return;
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            name: name.trim(),
+          },
+        },
+      });
+
+      if (signUpError) {
+        setError(translateAuthError(signUpError.message));
+        setErrorFields(['email']);
+        return;
+      }
+
+      if (!data.user) {
+        setError('Não foi possível criar sua conta agora.');
+        return;
+      }
+
+     await Promise.resolve(signup(cleanEmail));
+onSignup();
+    } catch (err) {
+      setError('Erro inesperado. Tente novamente.');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
-  const handleDemo = async () => {
+  const handleForgotPassword = async () => {
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorFields(['email']);
+      setError('Digite seu e-mail para recuperar a senha.');
+      setSuccessMessage(null);
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise(res => setTimeout(res, 500));
-    login('demo@test.com');
-    onLogin();
+    setError(null);
+    setSuccessMessage(null);
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+
     setIsLoading(false);
+
+    if (resetError) {
+      setError(translateAuthError(resetError.message));
+      return;
+    }
+
+    setSuccessMessage('Enviamos um link de recuperação para seu e-mail.');
   };
 
   return (
@@ -3342,7 +3607,12 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
       {mode === 'signup' && (
         <button
           type="button"
-          onClick={() => setMode('login')}
+          onClick={() => {
+            setMode('login');
+            setError(null);
+            setSuccessMessage(null);
+            setErrorFields([]);
+          }}
           className="absolute top-8 left-8 p-3 bg-gray-50 rounded-2xl text-gray-400 active:scale-95 transition-all"
         >
           <ChevronUp className="-rotate-90" size={20} />
@@ -3371,7 +3641,11 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
 
               <input
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => {
+                  setName(e.target.value);
+                  setError(null);
+                  setSuccessMessage(null);
+                }}
                 className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${
                   errorFields.includes('name')
                     ? 'border-red-100 bg-red-50/30'
@@ -3390,8 +3664,14 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+              onChange={e => {
+                setEmail(e.target.value);
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`w-full rounded-2xl border bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 ${
+                errorFields.includes('email') ? 'border-red-200 bg-red-50/30' : 'border-gray-200'
+              }`}
               placeholder="seu@email.com"
             />
           </div>
@@ -3404,8 +3684,14 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
             <input
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100"
+              onChange={e => {
+                setPassword(e.target.value);
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`w-full rounded-2xl border bg-white px-4 py-4 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 ${
+                errorFields.includes('password') ? 'border-red-200 bg-red-50/30' : 'border-gray-200'
+              }`}
               placeholder="Sua senha"
             />
           </div>
@@ -3419,7 +3705,11 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               <input
                 type="password"
                 value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
+                onChange={e => {
+                  setConfirmPassword(e.target.value);
+                  setError(null);
+                  setSuccessMessage(null);
+                }}
                 className={`w-full p-4 bg-gray-50 rounded-2xl border-2 transition-all font-bold ${
                   errorFields.includes('confirmPassword')
                     ? 'border-red-100 bg-red-50/30'
@@ -3432,15 +3722,24 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
 
           {error && (
             <div className="flex items-center gap-2 px-2 py-1">
-              <AlertCircle size={14} className="text-red-500" />
+              <AlertCircle size={14} className="text-red-500 shrink-0" />
               <p className="text-xs font-bold text-red-500">{error}</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Check size={14} className="text-green-500 shrink-0" />
+              <p className="text-xs font-bold text-green-600">{successMessage}</p>
             </div>
           )}
 
           {mode === 'login' && (
             <button
               type="button"
-              className="self-end text-xs font-bold text-green-700 hover:text-green-800"
+              onClick={handleForgotPassword}
+              disabled={isLoading}
+              className="self-end text-xs font-bold text-green-700 hover:text-green-800 disabled:opacity-50"
             >
               Esqueci minha senha
             </button>
@@ -3463,31 +3762,6 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
               <>{mode === 'login' ? 'Entrar' : 'Continuar'}</>
             )}
           </button>
-
-          {mode === 'login' && (
-            <>
-              <div className="flex items-center gap-4 py-6">
-                <div className="h-px bg-gray-100 flex-1" />
-                <span className="text-[10px] font-black text-gray-300 uppercase">
-                  ou
-                </span>
-                <div className="h-px bg-gray-100 flex-1" />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDemo}
-                disabled={isLoading}
-                className="w-full bg-gray-50 text-gray-400 font-black py-5 rounded-[28px] text-[10px] uppercase tracking-widest border border-gray-100 active:bg-gray-100 transition-all mb-4 flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <span className="w-3 h-3 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
-                ) : (
-                  <span>Entrar como demo</span>
-                )}
-              </button>
-            </>
-          )}
         </div>
       </div>
 
@@ -3496,7 +3770,12 @@ function AuthScreen({ onLogin, onSignup }: { onLogin: () => void; onSignup: () =
 
         <button
           type="button"
-          onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+          onClick={() => {
+            setMode(mode === 'login' ? 'signup' : 'login');
+            setError(null);
+            setSuccessMessage(null);
+            setErrorFields([]);
+          }}
           className="text-green-600 font-black ml-1 outline-none hover:underline"
         >
           {mode === 'login' ? 'Criar agora' : 'Entrar agora'}
@@ -7401,6 +7680,11 @@ function PerfilScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState<string | null>(null);
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
   const fallbackProfile: UserProfile = {
     name: 'Usuário FitCircle',
     age: 25,
@@ -7503,13 +7787,43 @@ function PerfilScreen() {
     setIsEditing(false);
   };
 
-  const handleFeedback = () => {
-    const subject = encodeURIComponent('Feedback FitCircle');
-    const body = encodeURIComponent(
-      'Oi! Quero enviar um feedback sobre o FitCircle:\n\n'
-    );
+  const openFeedbackModal = () => {
+    setFeedbackStatus(null);
+    setFeedbackMessage('');
+    setShowFeedbackModal(true);
+  };
 
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+  const sendFeedback = async () => {
+    const message = feedbackMessage.trim();
+
+    if (!message) {
+      setFeedbackStatus('Escreva uma mensagem antes de enviar.');
+      return;
+    }
+
+    setIsSendingFeedback(true);
+    setFeedbackStatus(null);
+
+    const { error } = await supabase.from('feedbacks').insert({
+      message,
+      user_name: userProfile?.name || null,
+      user_email: (userProfile as any)?.email || null,
+    });
+
+    setIsSendingFeedback(false);
+
+    if (error) {
+      setFeedbackStatus('Não consegui enviar agora. Tente novamente em instantes.');
+      return;
+    }
+
+    setFeedbackStatus('Feedback enviado com sucesso. Obrigado!');
+    setFeedbackMessage('');
+
+    setTimeout(() => {
+      setShowFeedbackModal(false);
+      setFeedbackStatus(null);
+    }, 1300);
   };
 
   return (
@@ -7747,7 +8061,7 @@ function PerfilScreen() {
             <ChevronRight size={18} className="text-gray-300" />
           </button>
 
-          <div className="mt-2 mb-6 p-5 bg-blue-50 border border-blue-100 rounded-3xl">
+          <div className="mt-2 mb-3 p-5 bg-blue-50 border border-blue-100 rounded-3xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                 <MessageSquare size={18} />
@@ -7766,7 +8080,7 @@ function PerfilScreen() {
 
             <button
               type="button"
-              onClick={handleFeedback}
+              onClick={openFeedbackModal}
               className="w-full py-3 bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
             >
               Enviar feedback
@@ -7774,6 +8088,78 @@ function PerfilScreen() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showFeedbackModal && (
+          <div className="fixed inset-0 z-[170] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFeedbackModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              className="relative z-10 bg-white w-full max-w-sm rounded-[34px] p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div>
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                    Feedback
+                  </p>
+
+                  <h2 className="text-2xl font-black text-gray-900 mt-1">
+                    Conte o que aconteceu
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-95 transition-all"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <textarea
+                value={feedbackMessage}
+                onChange={(e) => {
+                  setFeedbackMessage(e.target.value);
+                  setFeedbackStatus(null);
+                }}
+                placeholder="Ex: encontrei um erro ao registrar refeição, tive uma ideia para melhorar o plano..."
+                className="w-full min-h-[150px] resize-none rounded-3xl bg-gray-50 border border-gray-100 p-4 text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-300"
+              />
+
+              {feedbackStatus && (
+                <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                  <p className="text-xs font-black text-gray-600 leading-relaxed">
+                    {feedbackStatus}
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={isSendingFeedback || feedbackMessage.trim().length === 0}
+                onClick={sendFeedback}
+                className={`w-full mt-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all ${
+                  isSendingFeedback || feedbackMessage.trim().length === 0
+                    ? 'bg-gray-100 text-gray-300'
+                    : 'bg-blue-600 text-white shadow-lg shadow-blue-100'
+                }`}
+              >
+                {isSendingFeedback ? 'Enviando...' : 'Enviar feedback'}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isEditing && (
@@ -9193,6 +9579,7 @@ function CirculoScreenFoodstagram() {
     workouts,
     getTotals,
     calorieGoal,
+    userProfile,
   } = useApp();
 
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -9206,8 +9593,6 @@ function CirculoScreenFoodstagram() {
     (acc: number, workout: any) => acc + safeNumber(workout.burned),
     0
   );
-
-  const streakDays = 8;
 
   const getMealLabel = (value: string) => {
     const normalized = String(value || '').toLowerCase();
@@ -9224,44 +9609,37 @@ function CirculoScreenFoodstagram() {
     return labels[normalized] || 'Refeição';
   };
 
+  const getInitials = (name?: string) => {
+    const cleanName = String(name || '').trim();
+
+    if (!cleanName) return 'V';
+
+    const parts = cleanName.split(/\s+/).filter(Boolean);
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 1).toUpperCase();
+    }
+
+    return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase();
+  };
+
+  const myName = userProfile?.name || 'Você';
+  const myAvatar = getInitials(userProfile?.name);
+
   const members = [
     {
       id: 'me',
-      name: 'Você',
-      avatar: 'V',
+      name: myName,
+      avatar: myAvatar,
       status: meals.length > 0 || workouts.length > 0 ? 'Registrou hoje' : 'Ainda sem registro',
       goal: calorieGoal,
       consumed: totals.cal,
       burned,
     },
-    {
-      id: 'partner',
-      name: 'Partner',
-      avatar: 'P',
-      status: 'Meta em andamento',
-      goal: 1800,
-      consumed: 1320,
-      burned: 260,
-    },
-    {
-      id: 'ana',
-      name: 'Ana',
-      avatar: 'A',
-      status: 'Registrou almoço',
-      goal: 1650,
-      consumed: 980,
-      burned: 180,
-    },
-    {
-      id: 'lucas',
-      name: 'Lucas',
-      avatar: 'L',
-      status: 'Treino feito',
-      goal: 2100,
-      consumed: 1450,
-      burned: 420,
-    },
   ];
+
+  const hasCircleMembers = members.length > 1;
+  const streakDays = hasCircleMembers ? 8 : 0;
 
   const mealPosts = Array.isArray(meals)
     ? meals.map((meal: any, index: number) => {
@@ -9285,7 +9663,7 @@ function CirculoScreenFoodstagram() {
         return {
           id: `meal-${meal.id || index}`,
           member: 'Você',
-          avatar: 'V',
+          avatar: myAvatar,
           time: meal.time || new Date().toLocaleTimeString('pt-BR', {
             hour: '2-digit',
             minute: '2-digit',
@@ -9308,7 +9686,7 @@ function CirculoScreenFoodstagram() {
         return {
           id: `workout-${workout.id || index}`,
           member: 'Você',
-          avatar: 'V',
+          avatar: myAvatar,
           time: workout.time || new Date().toLocaleTimeString('pt-BR', {
             hour: '2-digit',
             minute: '2-digit',
@@ -9326,16 +9704,6 @@ function CirculoScreenFoodstagram() {
   const posts = [
     ...mealPosts,
     ...workoutPosts,
-    {
-      id: 'partner-today',
-      member: 'Partner',
-      avatar: 'P',
-      time: '14:10',
-      type: 'meal',
-      title: 'Seguindo o plano do dia',
-      subtitle: 'No almoço',
-      calories: 520,
-    },
   ].sort((a, b) => String(b.time).localeCompare(String(a.time)));
 
   return (
@@ -9368,33 +9736,59 @@ function CirculoScreenFoodstagram() {
         <div className="relative z-10 mt-8 bg-white/10 backdrop-blur-md rounded-[28px] p-4 border border-white/20 shadow-inner">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
-              <div className="w-16 h-16 rounded-[24px] flex items-center justify-center shadow-inner bg-orange-100 ring-4 ring-orange-300/40">
-                <Flame size={32} className="text-orange-500" />
+              <div
+                className={`w-16 h-16 rounded-[24px] flex items-center justify-center shadow-inner ring-4 ${
+                  hasCircleMembers
+                    ? 'bg-orange-100 ring-orange-300/40'
+                    : 'bg-white/15 ring-white/15'
+                }`}
+              >
+                {hasCircleMembers ? (
+                  <Flame size={32} className="text-orange-500" />
+                ) : (
+                  <UserPlus size={30} className="text-white" />
+                )}
               </div>
 
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">
-                  Ofensiva do Círculo
+                  {hasCircleMembers ? 'Ofensiva do Círculo' : 'Círculo vazio'}
                 </p>
 
                 <p className="text-base font-black text-white tracking-tight leading-tight">
-                  Círculo em chamas!
+                  {hasCircleMembers ? 'Círculo em chamas!' : 'Monte seu círculo'}
                 </p>
 
                 <p className="text-[10px] font-bold text-white/65 leading-snug mt-1">
-                  Vocês estão mantendo a consistência juntos.
+                  {hasCircleMembers
+                    ? 'Vocês estão mantendo a consistência juntos.'
+                    : 'Convide amigos para começar uma ofensiva em grupo.'}
                 </p>
               </div>
             </div>
 
             <div className="text-right shrink-0">
-              <p className="text-4xl font-black text-white leading-none">
-                {streakDays}
-              </p>
+              {hasCircleMembers ? (
+                <>
+                  <p className="text-4xl font-black text-white leading-none">
+                    {streakDays}
+                  </p>
 
-              <p className="text-[9px] font-black text-white/65 uppercase tracking-widest mt-1">
-                dias
-              </p>
+                  <p className="text-[9px] font-black text-white/65 uppercase tracking-widest mt-1">
+                    dias
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-3xl font-black text-white leading-none">
+                    0
+                  </p>
+
+                  <p className="text-[9px] font-black text-white/65 uppercase tracking-widest mt-1">
+                    amigos
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -9414,14 +9808,14 @@ function CirculoScreenFoodstagram() {
             </div>
           </div>
 
-          <div className="flex justify-between gap-3">
+          <div className="flex justify-center gap-3">
             {members.map(member => (
               <button
                 key={member.id}
                 type="button"
                 aria-label={`Ver dia de ${member.name}`}
                 onClick={() => setSelectedMember(member)}
-                className="flex-1 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
+                className="w-20 min-w-0 flex flex-col items-center gap-2 active:scale-95 transition-all"
               >
                 <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-xl font-black text-green-700 overflow-hidden">
                   {member.avatar}
@@ -9550,118 +9944,23 @@ function CirculoScreenFoodstagram() {
             })}
 
             {posts.length === 0 && (
-              <div className="bg-white rounded-[34px] p-8 border border-gray-100 shadow-sm text-center">
-                <p className="text-sm font-bold text-gray-400 leading-relaxed">
-                  Nenhuma atividade recente ainda.
-                </p>
-              </div>
-            )}
+  <div className="bg-white rounded-[34px] p-8 border border-gray-100 shadow-sm text-center">
+    <div className="w-14 h-14 mx-auto rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-green-600 mb-4">
+      <Users size={22} />
+    </div>
+
+    <p className="text-base font-black text-gray-900">
+      Seu círculo está vazio por enquanto
+    </p>
+
+    <p className="text-xs font-bold text-gray-400 leading-relaxed mt-2">
+      Convide amigos para acompanhar a evolução de vocês juntos. Suas refeições e treinos aparecerão aqui quando forem registrados.
+    </p>
+  </div>
+)}
           </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {showInviteModal && (
-          <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowInviteModal(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-
-            <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              className="relative z-10 w-full max-w-sm overflow-hidden rounded-[36px] bg-white p-6 shadow-2xl"
-            >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-50 rounded-full -mr-20 -mt-20 opacity-50" />
-
-              <div className="relative z-10 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight text-gray-900">
-                    Convidar amigos
-                  </h2>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="p-3 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors shadow-sm"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="space-y-6 relative z-10 mt-5">
-                <p className="text-sm font-bold text-gray-500 leading-relaxed text-center px-4">
-                  Compartilhe seu link exclusivo. Quem clicar poderá entrar no seu círculo.
-                </p>
-
-                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-2xl p-2 pl-4">
-                  <span className="text-sm font-bold text-gray-600 truncate mr-2 select-all">
-                    fitcircle.app/c/FC-9921
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText('https://fitcircle.app/c/FC-9921');
-                        setIncentiveFeedback('Link copiado!');
-                        setTimeout(() => setIncentiveFeedback(null), 2000);
-                      } catch (error) {
-                        setIncentiveFeedback('Copie: fitcircle.app/c/FC-9921');
-                        setTimeout(() => setIncentiveFeedback(null), 2500);
-                      }
-                    }}
-                    className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-sm"
-                  >
-                    Copiar
-                  </button>
-                </div>
-
-                {incentiveFeedback && (
-                  <div className="rounded-2xl bg-green-50 border border-green-100 px-4 py-3 text-center">
-                    <p className="text-xs font-black text-green-600 uppercase tracking-widest">
-                      {incentiveFeedback}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const shareData = {
-                      title: 'Convite FitCircle',
-                      text: 'Vem treinar comigo no FitCircle! Entre no meu círculo:',
-                      url: 'https://fitcircle.app/c/FC-9921',
-                    };
-
-                    try {
-                      if (navigator.share) {
-                        await navigator.share(shareData);
-                      } else {
-                        await navigator.clipboard.writeText(shareData.url);
-                        setIncentiveFeedback('Link copiado!');
-                        setTimeout(() => setIncentiveFeedback(null), 2000);
-                      }
-                    } catch (error) {
-                      setIncentiveFeedback('Compartilhamento cancelado');
-                      setTimeout(() => setIncentiveFeedback(null), 2000);
-                    }
-                  }}
-                  className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-200/50"
-                >
-                  Compartilhar link
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {selectedMember && (
@@ -9756,22 +10055,36 @@ function CirculoScreenFoodstagram() {
     </div>
   );
 }
+
 function Navigation() {
-  const {
-    isLoggedIn,
-    onboarded,
-    login,
-    signup,
-    completeScreening,
-    setPendingMealType,
-    setPendingEditMealId,
-  } = useApp();
+ const {
+  isLoggedIn,
+  onboarded,
+  isRestoringState,
+  login,
+  signup,
+  completeScreening,
+  setPendingEditMealId,
+  setPendingMealType,
+} = useApp();
 
   const [screen, setScreen] = useState<'hoje' | 'plano' | 'circulo' | 'perfil' | 'refeicoes' | 'registrar'>('hoje');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
   const [tempProfile, setTempProfile] = useState<UserProfile | null>(null);
+if (isRestoringState) {
+  return (
+    <div className="relative h-full min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
+      <Logo />
 
+      <div className="mt-8 w-10 h-10 rounded-full border-4 border-green-100 border-t-green-500 animate-spin" />
+
+      <p className="mt-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">
+        Carregando seus dados
+      </p>
+    </div>
+  );
+}
   const mainRef = useRef<HTMLElement | null>(null);
 
   const scrollMainToTop = () => {

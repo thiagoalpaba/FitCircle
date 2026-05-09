@@ -5,7 +5,7 @@ import type { Intensity, WorkoutType } from './data/workouts';
 export interface MealEntry {
   food: FoodItem;
   qty: number;
-  unit: 'g' | 'un';
+  unit: 'g' | 'un' | 'fatia';
   cal: number;
   p: number;
   c: number;
@@ -21,8 +21,7 @@ export interface Meal {
   c: number;
   f: number;
   time: string;
-shared?: boolean
-
+  shared?: boolean;
 }
 
 export interface Workout {
@@ -40,7 +39,7 @@ export interface UserProfile {
   weight: number;
   height: number;
   gender: 'masculino' | 'feminino';
-  goal: 'perda' | 'ganho' | 'manutencao';
+  goal: 'perda' | 'ganho' | 'manutencao' | 'recomposicao';
   trainingsPerWeek: number;
   mealCount: MealCount;
   mainDifficulty: string;
@@ -51,8 +50,12 @@ export interface UserProfile {
     snacks: string[];
   };
   photo?: string;
+  profilePicture?: string;
+  dietaryProfile?: 'sem_restricao' | 'vegetariano' | 'vegano' | 'pescetariano' | 'flexivel';
   dietaryStyle?: 'sem_restricao' | 'vegetariano' | 'vegano' | 'pescetariano' | 'flexivel';
   blockedFoods?: string[];
+  mealStyles?: Record<string, 'balanced' | 'simple'>;
+  email?: string;
 }
 
 export interface AppCtx {
@@ -68,12 +71,17 @@ export interface AppCtx {
   userProfile: UserProfile | null;
   isLoggedIn: boolean;
   onboarded: boolean;
+  isRestoringState: boolean;
+
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
 
   addMeal: (m: Omit<Meal, 'id'>) => void;
   updateMeal: (id: string, m: Partial<Meal>) => void;
   deleteMeal: (id: string) => void;
   addCustomFood: (f: FoodItem) => void;
 
+  setMeals: (m: Meal[]) => void;
   setWorkouts: (w: Workout[]) => void;
   addWorkout: (w: Workout) => void;
   deleteWorkout: (id: string) => void;
@@ -86,31 +94,34 @@ export interface AppCtx {
   getTotals: () => { cal: number; p: number; c: number; f: number };
   estimateBurned: (type: WorkoutType, dur: number, intensity: Intensity) => number;
 
-  login: (email: string) => void;
-  signup: (email: string) => void;
-  logout: () => void;
+  login: (email: string) => void | Promise<void>;
+  signup: (email: string) => void | Promise<void>;
+  logout: () => void | Promise<void>;
+
   updateProfile: (profile: Partial<UserProfile>) => void;
+  handleProfileUpdate: (profile: Partial<UserProfile>) => void;
   completeScreening: (profile: UserProfile) => void;
   resetApp: () => void;
   fillDemo: () => void;
 
-  mealPlan: Record<string, { 
-  name: string; 
-  qty: string; 
-  cal: number; 
-  p?: number;
-  c?: number;
-  f?: number;
-  category?: string; 
-  isLowProt?: boolean; 
-  isLighter?: boolean; 
-  badge?: string; 
-  badgeDesc?: string;
-  fromRecipe?: boolean;
-  recipeId?: string;
-  swappedAt?: number;
-}[]>;
-generateNewPlan: (mealKey?: string) => void;
-swapMealItem: (mealKey: string, index: number) => void;
-addRecipeToPlan: (recipe: any, mealKey: string) => void;
+  mealPlan: Record<string, {
+    name: string;
+    qty: string;
+    cal: number;
+    p?: number;
+    c?: number;
+    f?: number;
+    category?: string;
+    isLowProt?: boolean;
+    isLighter?: boolean;
+    badge?: string;
+    badgeDesc?: string;
+    fromRecipe?: boolean;
+    recipeId?: string;
+    swappedAt?: number;
+  }[]>;
+
+  generateNewPlan: (mealKey?: string) => void;
+  swapMealItem: (mealKey: string, index: number) => void;
+  addRecipeToPlan: (recipe: any, mealKey: string) => void;
 }
